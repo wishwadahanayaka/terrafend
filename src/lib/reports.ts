@@ -4,6 +4,8 @@ import { supabase } from './supabase'
 
 export const NOTE_MAX_LENGTH = 280
 
+export type Vote = 'still_there' | 'gone'
+
 type NewReport = {
   hazardType: HazardType
   severity: Severity
@@ -39,4 +41,29 @@ export async function submitReport(report: NewReport): Promise<string | null> {
     return 'You’ve sent too many reports. You can send up to 10 an hour, so please try again later.'
   }
   return 'Couldn’t send your report. Please try again.'
+}
+
+export type VoteResult = 'ok' | 'already_voted' | 'inactive' | 'failed'
+
+export const VOTE_ERRORS: Record<Exclude<VoteResult, 'ok'>, string> = {
+  already_voted: 'You’ve already voted on this report.',
+  inactive: 'This report is no longer active.',
+  failed: 'Couldn’t send your vote. Please try again.',
+}
+
+// user_id fills itself in from the session, so only report_id and vote are sent
+export async function submitVote(reportId: string, vote: Vote): Promise<VoteResult> {
+  try {
+    await ensureAnonymousSession()
+  } catch {
+    return 'failed'
+  }
+
+  const { error } = await supabase.from('report_votes').insert({ report_id: reportId, vote })
+
+  if (!error) return 'ok'
+  // 23505 is Postgres' unique violation: one vote per user per report
+  if (error.code === '23505') return 'already_voted'
+  if (error.message.includes('row-level security')) return 'inactive'
+  return 'failed'
 }

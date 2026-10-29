@@ -12,6 +12,7 @@ import {
 } from '../lib/hazards'
 import { expiresIn, timeAgo } from '../lib/time'
 import { useReportsInView, type Bounds, type Report } from '../lib/useReports'
+import VoteSection from './VoteSection'
 
 const DEBOUNCE_MS = 400
 
@@ -75,7 +76,7 @@ export default function ReportMarkers({ hidden }: { hidden: boolean }) {
           icon={markerIcon(report.hazard_type, report.severity)}
           alt={hazardLabel(report.hazard_type)}
         >
-          <Popup minWidth={200}>
+          <Popup minWidth={220}>
             <ReportCard report={report} />
           </Popup>
         </Marker>
@@ -104,6 +105,7 @@ function ReportCard({ report }: { report: Report }) {
       <div className="mt-2 text-xs text-slate-500">
         {timeAgo(report.created_at)} &middot; {expiresIn(report.expires_at)}
       </div>
+      <VoteSection reportId={report.id} />
     </div>
   )
 }
