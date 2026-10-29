@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { MapPin, Plus } from 'lucide-react'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
+import { useQueryClient } from '@tanstack/react-query'
+import { REPORTS_KEY } from '../lib/useReports'
 import ReportSheet from './ReportSheet'
 
 export type ReportMode = 'idle' | 'picking' | 'form'
@@ -17,6 +19,7 @@ const TOAST_MS = 3500
 export default function ReportFlow({ map, userLatLng, mode, onModeChange }: Props) {
   const [spot, setSpot] = useState<LatLng | null>(null)
   const [toast, setToast] = useState(false)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (!toast) return
@@ -87,6 +90,7 @@ export default function ReportFlow({ map, userLatLng, mode, onModeChange }: Prop
           lng={spot.lng}
           onClose={() => onModeChange('idle')}
           onSent={() => {
+            queryClient.invalidateQueries({ queryKey: [REPORTS_KEY] })
             onModeChange('idle')
             setToast(true)
           }}

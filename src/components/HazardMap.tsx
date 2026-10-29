@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import type { LatLng, LatLngBoundsExpression, Map as LeafletMap } from 'leaflet'
 import LocateButton from './LocateButton'
-import ReportFlow, { type ReportMode } from './ReportFlow'
+import ReportMarkers from './ReportMarkers'
+import ReportFlow,{ type ReportMode } from './ReportFlow'
 
 // Fitting to bounds instead of a fixed zoom keeps the island filling the screen on any size
 const SRI_LANKA_BOUNDS: LatLngBoundsExpression = [
@@ -29,6 +30,7 @@ export default function HazardMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <ReportMarkers hidden={mode === 'picking'} />
         <LocateButton onLocated={setUserLatLng} raised={mode === 'picking'} />
       </MapContainer>
 

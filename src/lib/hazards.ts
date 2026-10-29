@@ -28,10 +28,11 @@ export const HAZARD_TYPES = [
   { value: 'other', label: 'Other', icon: CircleQuestionMark },
 ] as const satisfies readonly { value: string; label: string; icon: LucideIcon }[]
 
+// Class names are written out in full so Tailwind can find them
 export const SEVERITIES = [
-  { value: 'passable', label: 'Passable' },
-  { value: 'large_vehicles_only', label: 'Large vehicles only' },
-  { value: 'blocked', label: 'Blocked' },
+  { value: 'passable', label: 'Passable', bg: 'bg-green-600' },
+  { value: 'large_vehicles_only', label: 'Large vehicles only', bg: 'bg-amber-600' },
+  { value: 'blocked', label: 'Blocked', bg: 'bg-red-600' },
 ] as const
 
 export type HazardType = (typeof HAZARD_TYPES)[number]['value']
@@ -41,6 +42,14 @@ export function hazardLabel(value: HazardType): string {
   return HAZARD_TYPES.find((h) => h.value === value)?.label ?? value
 }
 
+export function hazardIcon(value: HazardType): LucideIcon {
+  return HAZARD_TYPES.find((h) => h.value === value)?.icon ?? CircleQuestionMark
+}
+
 export function severityLabel(value: Severity): string {
   return SEVERITIES.find((s) => s.value === value)?.label ?? value
+}
+
+export function severityBg(value: Severity): string {
+  return SEVERITIES.find((s) => s.value === value)?.bg ?? 'bg-slate-600'
 }
