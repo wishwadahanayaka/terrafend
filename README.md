@@ -72,7 +72,7 @@ Other commands:
 - `npm run build` type-checks and builds for production
 - `npm run lint` runs the linter
 
-API keys will go in a `.env` file that isn't committed.
+API keys go in a `.env` file that isn't committed. Copy `.env.example` to `.env` and fill in the values.
 
 ## Disclaimer
 
