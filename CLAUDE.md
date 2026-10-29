@@ -27,6 +27,7 @@ Only the packages needed for the current step are installed. Add the rest when t
 - Users sign in anonymously, so they use the `authenticated` role.
 - The frontend only ever uses the project URL and the anon (publishable) key, read from `.env`.
 - Never use the secret or `service_role` key in frontend code. It bypasses RLS.
+- Insert a point as the text `SRID=4326;POINT(lng lat)`, longitude first.
 - Schema changes live in `supabase/migrations/` as numbered SQL files, run by hand in the SQL Editor.
 
 ## Build plan

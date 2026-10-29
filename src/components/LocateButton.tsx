@@ -13,7 +13,13 @@ const ERROR_MESSAGES: Record<number, string> = {
 const ERROR_SHOW_MS = 6000
 const LOCATE_TIMEOUT_MS = 15000
 
-export default function LocateButton() {
+type Props = {
+  onLocated: (latlng: LatLng) => void
+  // Lifts the button clear of the bottom bar while picking a hazard spot
+  raised: boolean
+}
+
+export default function LocateButton({ onLocated, raised }: Props) {
   const map = useMap()
   const [position, setPosition] = useState<Position | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +34,7 @@ export default function LocateButton() {
   useMapEvents({
     locationfound(e) {
       setPosition({ latlng: e.latlng, accuracy: e.accuracy })
+      onLocated(e.latlng)
       setError(null)
       setLoading(false)
     },
@@ -60,9 +67,12 @@ export default function LocateButton() {
         </>
       )}
 
-      <div className="absolute bottom-6 right-4 z-[1000] flex flex-col items-end gap-2">
+      {/* Error sits to the left of the button so it doesn't cover the Report button above */}
+      <div
+        className={`absolute right-4 z-[1000] flex items-center gap-2 ${raised ? 'bottom-28' : 'bottom-6'}`}
+      >
         {error && (
-          <p className="rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow">{error}</p>
+          <p className="max-w-[65vw] rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow">{error}</p>
         )}
         <button
           type="button"
