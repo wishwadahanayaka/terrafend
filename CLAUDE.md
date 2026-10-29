@@ -19,6 +19,16 @@ It is a portfolio project by a beginner software engineering student.
 
 Only the packages needed for the current step are installed. Add the rest when their step starts.
 
+## Supabase
+
+- Project region: Mumbai.
+- Data API is on, but "automatically expose new tables" is off. Every new table needs explicit GRANTs for `anon` / `authenticated`, plus RLS policies.
+- Automatic RLS is on for new tables.
+- Users sign in anonymously, so they use the `authenticated` role.
+- The frontend only ever uses the project URL and the anon (publishable) key, read from `.env`.
+- Never use the secret or `service_role` key in frontend code. It bypasses RLS.
+- Schema changes live in `supabase/migrations/` as numbered SQL files, run by hand in the SQL Editor.
+
 ## Build plan
 
 1. Map with the user's location (done)
