@@ -18,6 +18,7 @@ export type Report = {
   lng: number
   created_at: string
   expires_at: string
+  photo_path: string | null
 }
 
 // Reports expire after a few hours, so a minute is fresh enough

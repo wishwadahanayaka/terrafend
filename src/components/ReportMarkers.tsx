@@ -12,6 +12,7 @@ import {
 } from '../lib/hazards'
 import { expiresIn, timeAgo } from '../lib/time'
 import { useReportsInView, type Bounds, type Report } from '../lib/useReports'
+import ReportPhoto from './ReportPhoto'
 import VoteSection from './VoteSection'
 
 const DEBOUNCE_MS = 400
@@ -102,6 +103,7 @@ function ReportCard({ report }: { report: Report }) {
         {severityLabel(report.severity)}
       </span>
       {report.note && <div className="mt-2 break-words text-sm text-slate-700">{report.note}</div>}
+      {report.photo_path && <ReportPhoto path={report.photo_path} />}
       <div className="mt-2 text-xs text-slate-500">
         {timeAgo(report.created_at)} &middot; {expiresIn(report.expires_at)}
       </div>

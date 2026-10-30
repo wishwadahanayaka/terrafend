@@ -10,6 +10,7 @@ type NewReport = {
   hazardType: HazardType
   severity: Severity
   note: string
+  photoPath: string | null
   lat: number
   lng: number
 }
@@ -26,6 +27,7 @@ export async function submitReport(report: NewReport): Promise<string | null> {
     hazard_type: report.hazardType,
     severity: report.severity,
     note: report.note.trim() || null,
+    photo_path: report.photoPath,
     // PostGIS wants longitude first
     location: `SRID=4326;POINT(${report.lng} ${report.lat})`,
   })

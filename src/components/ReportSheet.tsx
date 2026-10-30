@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { Camera, X } from 'lucide-react'
 import { HAZARD_TYPES, SEVERITIES, type HazardType, type Severity } from '../lib/hazards'
+import { shrinkPhoto, uploadPhoto } from '../lib/photos'
 import { NOTE_MAX_LENGTH, submitReport } from '../lib/reports'
 
 type Props = {
@@ -14,17 +15,71 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
   const [hazardType, setHazardType] = useState<HazardType | null>(null)
   const [severity, setSeverity] = useState<Severity | null>(null)
   const [note, setNote] = useState('')
-  const [sending, setSending] = useState(false)
+  const [stage, setStage] = useState<'idle' | 'uploading' | 'sending'>('idle')
   const [error, setError] = useState<string | null>(null)
 
-  const canSubmit = hazardType !== null && severity !== null && !sending
+  const [photo, setPhoto] = useState<{ file: File; previewUrl: string } | null>(null)
+  const [preparing, setPreparing] = useState(false)
+  // Kept so a retry after a failed send doesn't upload the same photo twice
+  const uploadedPath = useRef<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const busy = stage !== 'idle'
+  const canSubmit = hazardType !== null && severity !== null && !busy && !preparing
+
+  // Preview URLs hold the image in memory until revoked
+  const previewUrl = useRef<string | null>(null)
+  useEffect(() => () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current)
+  }, [])
+
+  function changePhoto(file: File | null) {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current)
+    previewUrl.current = file ? URL.createObjectURL(file) : null
+    setPhoto(file && previewUrl.current ? { file, previewUrl: previewUrl.current } : null)
+    uploadedPath.current = null
+  }
+
+  async function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // so choosing the same file again still fires onChange
+    if (!file) return
+
+    setError(null)
+    setPreparing(true)
+    try {
+      changePhoto(await shrinkPhoto(file))
+    } catch {
+      setError('Couldn’t use that photo. Try a different one.')
+    }
+    setPreparing(false)
+  }
 
   async function submit() {
     if (!hazardType || !severity) return
-    setSending(true)
     setError(null)
-    const message = await submitReport({ hazardType, severity, note, lat, lng })
-    setSending(false)
+
+    if (photo && !uploadedPath.current) {
+      setStage('uploading')
+      const result = await uploadPhoto(photo.file)
+      if (result.error) {
+        setStage('idle')
+        setError(result.error)
+        return
+      }
+      uploadedPath.current = result.path
+    }
+
+    setStage('sending')
+    const message = await submitReport({
+      hazardType,
+      severity,
+      note,
+      photoPath: uploadedPath.current,
+      lat,
+      lng,
+    })
+    setStage('idle')
     if (message) setError(message)
     else onSent()
   }
@@ -111,6 +166,41 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
           <p className="mt-1 text-right text-xs text-slate-500">
             {note.length}/{NOTE_MAX_LENGTH}
           </p>
+
+          <p className="mb-2 mt-3 text-sm font-medium text-slate-700">Photo (optional)</p>
+          {/* No capture attribute, so phones offer both the camera and the gallery */}
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            onChange={pickPhoto}
+            className="hidden"
+          />
+          {photo ? (
+            <div className="flex items-center gap-3">
+              <img src={photo.previewUrl} alt="Selected photo" className="h-20 w-20 rounded-xl object-cover" />
+              <p className="flex-1 text-sm text-slate-600">{Math.round(photo.file.size / 1024)} KB</p>
+              <button
+                type="button"
+                onClick={() => changePhoto(null)}
+                disabled={busy}
+                aria-label="Remove photo"
+                className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-slate-300 text-slate-700 active:bg-slate-100 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              disabled={preparing || busy}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-medium text-slate-700 active:bg-slate-100 disabled:opacity-50"
+            >
+              <Camera className="h-5 w-5" aria-hidden="true" />
+              {preparing ? 'Preparing photo…' : 'Add photo'}
+            </button>
+          )}
         </div>
 
         <div className="border-t border-slate-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -125,7 +215,7 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
             disabled={!canSubmit}
             className="h-14 w-full rounded-xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
           >
-            {sending ? 'Sending...' : 'Submit report'}
+            {stage === 'uploading' ? 'Uploading photo…' : stage === 'sending' ? 'Sending…' : 'Submit report'}
           </button>
         </div>
       </div>
