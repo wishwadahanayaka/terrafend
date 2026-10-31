@@ -392,6 +392,11 @@ deno_version = 2
 [functions.cleanup-expired]
 verify_jwt = false
 
+# This project uses the new API keys, which the platform's JWT check doesn't
+# cover well. The function verifies the user's token itself instead.
+[functions.routing]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

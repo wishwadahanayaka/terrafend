@@ -1,0 +1,6 @@
+{
+  "nodeModulesDir": "none",
+  "imports": {
+    "@supabase/server": "npm:@supabase/server@1"
+  }
+}

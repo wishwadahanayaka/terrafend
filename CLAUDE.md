@@ -30,6 +30,17 @@ Only the packages needed for the current step are installed. Add the rest when t
 - Insert a point as the text `SRID=4326;POINT(lng lat)`, longitude first.
 - Schema changes live in `supabase/migrations/` as numbered SQL files, run by hand in the SQL Editor.
 
+## Current status
+
+- Steps 1 and 2 are complete: map, location, report form, markers, voting, photos, and hourly cleanup.
+- Migrations 0001, 0002 and 0003 have all been run in Supabase. New database changes go in new migration files.
+- Supabase CLI is logged in and linked to project `ktwdmwiaodtirrcitlgb`. Deploy functions with `npx supabase functions deploy <name>`. Docker isn't needed.
+- Edge Function `cleanup-expired` is deployed and tested. Supabase Cron runs it hourly, using the Vault secrets `cleanup_secret` and `project_url`.
+- Supabase secrets set: `CLEANUP_SECRET` and `ORS_API_KEY`. Their values must never appear in code, files or chat.
+- Vercel has `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and auto-deploys on push to main.
+- Deno is installed locally, with editor support set up for `supabase/functions`.
+- Current work: step 3, the route check.
+
 ## Build plan
 
 1. Map with the user's location (done)
