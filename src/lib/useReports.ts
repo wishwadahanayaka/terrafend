@@ -22,7 +22,7 @@ export type Report = {
 }
 
 // Reports expire after a few hours, so a minute is fresh enough
-const REFRESH_MS = 60_000
+export const REFRESH_MS = 60_000
 
 export const REPORTS_KEY = 'reports'
 

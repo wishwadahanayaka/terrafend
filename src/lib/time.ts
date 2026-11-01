@@ -6,6 +6,15 @@ function describe(ms: number): string {
   return `${Math.round(hours / 24)} d`
 }
 
+// Rounded to whole minutes, since a driving estimate isn't more exact than that
+export function routeDuration(seconds: number): string {
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  if (minutes < 60) return `about ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest ? `about ${hours} h ${rest} min` : `about ${hours} h`
+}
+
 export function timeAgo(iso: string, now = Date.now()): string {
   const ms = now - new Date(iso).getTime()
   if (ms < 60_000) return 'just now'

@@ -12,11 +12,13 @@ type Props = {
   userLatLng: LatLng | null
   mode: ReportMode
   onModeChange: (mode: ReportMode) => void
+  // False while the route panel is up, which takes the bottom of the screen
+  buttonVisible: boolean
 }
 
 const TOAST_MS = 3500
 
-export default function ReportFlow({ map, userLatLng, mode, onModeChange }: Props) {
+export default function ReportFlow({ map, userLatLng, mode, onModeChange, buttonVisible }: Props) {
   const [spot, setSpot] = useState<LatLng | null>(null)
   const [toast, setToast] = useState(false)
   const queryClient = useQueryClient()
@@ -40,7 +42,7 @@ export default function ReportFlow({ map, userLatLng, mode, onModeChange }: Prop
 
   return (
     <>
-      {mode === 'idle' && (
+      {mode === 'idle' && buttonVisible && (
         <button
           type="button"
           onClick={startPicking}

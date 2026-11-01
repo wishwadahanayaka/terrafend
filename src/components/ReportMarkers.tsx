@@ -1,7 +1,7 @@
 import { createElement, useEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
-import { divIcon, type DivIcon, type Map as LeafletMap } from 'leaflet'
+import { divIcon, type DivIcon, type Map as LeafletMap, type Marker as LeafletMarker } from 'leaflet'
 import {
   hazardIcon,
   hazardLabel,
@@ -49,10 +49,19 @@ function markerIcon(type: HazardType, severity: Severity): DivIcon {
   return icon
 }
 
-export default function ReportMarkers({ hidden }: { hidden: boolean }) {
+type Props = {
+  hidden: boolean
+  // Reports along a planned route, shown even if they're outside the loaded area
+  extra: Report[]
+  // Asks for one report's card to open. The number makes a repeat tap count as new.
+  openRequest: { id: string; n: number } | null
+}
+
+export default function ReportMarkers({ hidden, extra, openRequest }: Props) {
   const map = useMap()
   const [bounds, setBounds] = useState(() => readBounds(map))
   const timer = useRef<number | undefined>(undefined)
+  const markers = useRef(new Map<string, LeafletMarker>())
 
   // Wait for the map to stop moving, so dragging doesn't send a request per frame
   useMapEvents({
@@ -65,14 +74,26 @@ export default function ReportMarkers({ hidden }: { hidden: boolean }) {
 
   const { data } = useReportsInView(bounds)
 
+  useEffect(() => {
+    if (openRequest) markers.current.get(openRequest.id)?.openPopup()
+  }, [openRequest])
+
   // The query keeps running while hidden, so markers are fresh when picking ends
-  if (hidden || !data) return null
+  if (hidden) return null
+
+  // Merged by id, so a report in both lists is only drawn once
+  const all = new Map<string, Report>()
+  for (const report of [...(data ?? []), ...extra]) all.set(report.id, report)
 
   return (
     <>
-      {data.map((report) => (
+      {[...all.values()].map((report) => (
         <Marker
           key={report.id}
+          ref={(marker) => {
+            if (marker) markers.current.set(report.id, marker)
+            else markers.current.delete(report.id)
+          }}
           position={[report.lat, report.lng]}
           icon={markerIcon(report.hazard_type, report.severity)}
           alt={hazardLabel(report.hazard_type)}
