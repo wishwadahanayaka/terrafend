@@ -3,6 +3,7 @@ import { MapPin, Plus } from 'lucide-react'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import { useQueryClient } from '@tanstack/react-query'
 import { REPORTS_KEY } from '../lib/queryKeys'
+import { fadeWhenCardOpen } from '../lib/useCardOpen'
 
 // The form and its photo tools aren't needed until someone taps "Use this spot"
 const ReportSheet = lazy(() => import('./ReportSheet'))
@@ -16,11 +17,13 @@ type Props = {
   onModeChange: (mode: ReportMode) => void
   // False while the route panel is up, which takes the bottom of the screen
   buttonVisible: boolean
+  // The button fades out while a map card is open
+  cardOpen: boolean
 }
 
 const TOAST_MS = 3500
 
-export default function ReportFlow({ map, userLatLng, mode, onModeChange, buttonVisible }: Props) {
+export default function ReportFlow({ map, userLatLng, mode, onModeChange, buttonVisible, cardOpen }: Props) {
   const [spot, setSpot] = useState<LatLng | null>(null)
   const [toast, setToast] = useState(false)
   const queryClient = useQueryClient()
@@ -48,7 +51,8 @@ export default function ReportFlow({ map, userLatLng, mode, onModeChange, button
         <button
           type="button"
           onClick={startPicking}
-          className="absolute bottom-24 right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-red-600 px-5 font-semibold text-white shadow-lg active:bg-red-700"
+          inert={cardOpen}
+          className={`absolute bottom-24 right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-red-600 px-5 font-semibold text-white shadow-lg active:bg-red-700 ${fadeWhenCardOpen(cardOpen)}`}
         >
           <Plus className="h-6 w-6" aria-hidden="true" />
           Report

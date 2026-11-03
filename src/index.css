@@ -7,3 +7,10 @@ body,
   height: 100%;
   margin: 0;
 }
+
+/* On a phone the cards are never wider than the screen allows (set by MapLimits).
+   The text wraps instead, and a long word breaks rather than pushing the card out. */
+.leaflet-popup-content {
+  max-width: var(--popup-content-max, 300px);
+  overflow-wrap: anywhere;
+}

@@ -1,7 +1,9 @@
 import { lazy, Suspense, useState } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import { Route as RouteIcon } from 'lucide-react'
-import type { LatLng, LatLngBoundsExpression, Map as LeafletMap } from 'leaflet'
+import type { LatLng, Map as LeafletMap } from 'leaflet'
+import { SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
+import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
 import type { RouteHazard } from '../lib/useRoute'
 import type { RouteResult } from '../lib/routing'
 import LocateButton from './LocateButton'
@@ -35,18 +37,6 @@ function saveShowAllRivers(value: boolean) {
   }
 }
 
-// Fitting to bounds instead of a fixed zoom keeps the island filling the screen on any size
-const SRI_LANKA_BOUNDS: LatLngBoundsExpression = [
-  [5.85, 79.6],
-  [9.9, 81.95],
-]
-
-// The island plus a margin of sea. The map can't be dragged outside this.
-const SRI_LANKA_LIMITS: LatLngBoundsExpression = [
-  [5.55, 79.3],
-  [10.2, 82.25],
-]
-
 export default function HazardMap() {
   // The report and route UI sit outside MapContainer so touches in them don't pan the map
   const [map, setMap] = useState<LeafletMap | null>(null)
@@ -62,6 +52,8 @@ export default function HazardMap() {
   const [showAllRivers, setShowAllRivers] = useState(loadShowAllRivers)
 
   const picking = mode === 'picking'
+  // The buttons down the right fade out while a card is open, so they can't cover it
+  const cardOpen = useCardOpen(map)
 
   function showHazard(hazard: RouteHazard) {
     if (!map) return
@@ -87,7 +79,7 @@ export default function HazardMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapLimits island={SRI_LANKA_BOUNDS} />
+        <MapLimits island={SRI_LANKA_BOUNDS} limits={SRI_LANKA_LIMITS} />
         <Suspense fallback={null}>
           <ReportMarkers hidden={picking} route={route} openRequest={openRequest} />
         </Suspense>
@@ -98,6 +90,7 @@ export default function HazardMap() {
         )}
         <LocateButton
           onLocated={setUserLatLng}
+          hidden={cardOpen}
           bottomClass={picking ? 'bottom-28' : panel === 'collapsed' ? 'bottom-20' : 'bottom-6'}
         />
       </MapContainer>
@@ -121,16 +114,18 @@ export default function HazardMap() {
             mode={mode}
             onModeChange={setMode}
             buttonVisible={panel === 'closed'}
+            cardOpen={cardOpen}
           />
 
           {panel === 'closed' && !picking && (
             <button
               type="button"
+              inert={cardOpen}
               onClick={() => {
                 setPlannerOpened(true)
                 setPanel('open')
               }}
-              className="absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-white px-5 font-semibold text-blue-700 shadow-lg active:bg-slate-100"
+              className={`absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-white px-5 font-semibold text-blue-700 shadow-lg active:bg-slate-100 ${fadeWhenCardOpen(cardOpen)}`}
             >
               <RouteIcon className="h-6 w-6" aria-hidden="true" />
               Route

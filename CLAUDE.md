@@ -40,6 +40,7 @@ Only the packages needed for the current step are installed. Add the rest when t
 - Edge Function `routing` (place search and routes through OpenRouteService) is deployed and tested. It checks the user's token itself (`verify_jwt = false`).
 - Deno is installed locally, with editor support set up for `supabase/functions`.
 - The map is locked to Sri Lanka (`maxBounds`), and the minimum zoom follows the screen size.
+- Map cards stay fully on screen on phones (`usePopupFit.ts`): text width is capped to the screen, `MapLimits` widens the sea margin left, right and north to fit a card, and if a card still can't fit it zooms in one step before opening. The Route, Report and location buttons fade out while a card is open.
 - Data code (Supabase, markers, route planner, report form, photo compression) is lazy-loaded to keep the first download small.
 - Next up: step 4, official data layers.
 

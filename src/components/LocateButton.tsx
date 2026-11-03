@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Circle, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
-import { LatLngBounds, latLngBounds, type LatLng } from 'leaflet'
+import { latLngBounds, type LatLng } from 'leaflet'
+import { SRI_LANKA_LIMITS } from '../lib/mapBounds'
+import { fadeWhenCardOpen } from '../lib/useCardOpen'
 
 type Position = { latlng: LatLng; accuracy: number }
 
@@ -17,9 +19,11 @@ type Props = {
   onLocated: (latlng: LatLng) => void
   // Lifts the button clear of whatever bar is at the bottom (written in full for Tailwind)
   bottomClass: string
+  // Fades out while a map card is open
+  hidden: boolean
 }
 
-export default function LocateButton({ onLocated, bottomClass }: Props) {
+export default function LocateButton({ onLocated, bottomClass, hidden }: Props) {
   const map = useMap()
   const [position, setPosition] = useState<Position | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -36,9 +40,9 @@ export default function LocateButton({ onLocated, bottomClass }: Props) {
       setPosition({ latlng: e.latlng, accuracy: e.accuracy })
       onLocated(e.latlng)
       // The map can't leave Sri Lanka, so say why nothing seems to happen from abroad
-      const limits = map.options.maxBounds
+      // The fixed box, not map.options.maxBounds, which is wider on narrow screens
       setError(
-        limits && !(limits instanceof LatLngBounds ? limits : latLngBounds(limits)).contains(e.latlng)
+        !latLngBounds(SRI_LANKA_LIMITS).contains(e.latlng)
           ? 'You appear to be outside Sri Lanka, so your position can’t be shown on this map.'
           : null,
       )
@@ -75,7 +79,8 @@ export default function LocateButton({ onLocated, bottomClass }: Props) {
 
       {/* Error sits to the left of the button so it doesn't cover the Report button above */}
       <div
-        className={`absolute right-4 z-[1000] flex items-center gap-2 ${bottomClass}`}
+        inert={hidden}
+        className={`absolute right-4 z-[1000] flex items-center gap-2 ${bottomClass} ${fadeWhenCardOpen(hidden)}`}
       >
         {error && (
           <p className="max-w-[65vw] rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow">{error}</p>

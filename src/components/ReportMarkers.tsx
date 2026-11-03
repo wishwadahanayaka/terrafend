@@ -14,6 +14,7 @@ import { iconToSvg } from '../lib/iconHtml'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import type { RouteResult } from '../lib/routing'
 import { expiresIn, timeAgo } from '../lib/time'
+import { usePopupFit } from '../lib/usePopupFit'
 import { useReportsInView, type Bounds, type Report } from '../lib/useReports'
 import { useRouteHazards } from '../lib/useRoute'
 import ReportPhoto from './ReportPhoto'
@@ -65,6 +66,7 @@ type Props = {
 
 export default function ReportMarkers({ hidden, route, openRequest }: Props) {
   const map = useMap()
+  const popupFit = usePopupFit()
   const [bounds, setBounds] = useState(() => readBounds(map))
   const timer = useRef<number | undefined>(undefined)
   const markers = useRef(new Map<string, LeafletMarker>())
@@ -105,6 +107,7 @@ export default function ReportMarkers({ hidden, route, openRequest }: Props) {
           position={[report.lat, report.lng]}
           icon={markerIcon(report.hazard_type, report.severity)}
           alt={hazardLabel(report.hazard_type)}
+          eventHandlers={popupFit}
         >
           <Popup minWidth={220} {...POPUP_PADDING}>
             <ReportCard report={report} />

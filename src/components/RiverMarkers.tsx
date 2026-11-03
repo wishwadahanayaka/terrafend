@@ -15,6 +15,7 @@ import {
   type RiverStep,
 } from '../lib/riverGauges'
 import { sriLankaTime, timeAgo } from '../lib/time'
+import { usePopupFit } from '../lib/usePopupFit'
 import { useRiverGauges } from '../lib/useRiverGauges'
 
 // A small filled drop, so gauges can't be mistaken for the round hazard markers
@@ -38,6 +39,7 @@ for (const step of STEPS) {
 // Gauges at Alert or above always show. The rest only show when the user asks for them.
 export default function RiverMarkers({ showAll }: { showAll: boolean }) {
   const { data, status } = useRiverGauges()
+  const popupFit = usePopupFit()
 
   // After a failed refresh the old readings are hidden too, rather than shown as if current
   if (status !== 'success') return null
@@ -52,6 +54,7 @@ export default function RiverMarkers({ showAll }: { showAll: boolean }) {
           position={[gauge.lat, gauge.lng]}
           icon={dropIcons.get(gauge.step)}
           alt={`${gauge.river} at ${gauge.station}: ${STEP_LABEL[gauge.step]}`}
+          eventHandlers={popupFit}
           // Hazard reports matter more, so they sit on top where the two overlap
           zIndexOffset={-1000}
         >
