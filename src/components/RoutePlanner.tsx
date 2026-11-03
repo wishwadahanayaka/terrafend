@@ -27,7 +27,10 @@ import { gaugesNearRoute } from '../lib/routeGauges'
 import { routeDuration } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
 import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
+import { RAIN_COLOR, worstRain, type RainStretch } from '../lib/rainForecast'
+import { useRouteRain } from '../lib/useRouteRain'
 import PlaceInput from './PlaceInput'
+import RainSection from './RainSection'
 
 export type PanelState = 'closed' | 'open' | 'collapsed'
 
@@ -40,6 +43,9 @@ type Props = {
   route: RouteResult | null
   onRouteChange: (route: RouteResult | null) => void
   onSelectHazard: (hazard: RouteHazard) => void
+  onSelectRain: (stretch: RainStretch) => void
+  // Tells the map when the results are out of date, so the rain on it can fade too
+  onStaleChange: (stale: boolean) => void
 }
 
 // Asks the browser for the position once. The map's own location events also
@@ -87,8 +93,12 @@ export default function RoutePlanner({
   route,
   onRouteChange,
   onSelectHazard,
+  onSelectRain,
+  onStaleChange,
 }: Props) {
   const hazards = useRouteHazards(route)
+  // One request per checked route, so it only runs when a route is checked
+  const rain = useRouteRain(route)
 
   // Official river gauges at Alert or above within 2 km of the route. If the river
   // data can't be loaded this is simply empty, and the rest of the panel carries on.
@@ -109,6 +119,10 @@ export default function RoutePlanner({
   const from = fromField.place
   const to = toField.place
   const outOfDate = route !== null && checked !== null && !sameInputs(checked, { fromMe, from, to })
+
+  useEffect(() => {
+    onStaleChange(outOfDate)
+  }, [outOfDate, onStaleChange])
 
   // Search results are ranked around here, so nearby places come first
   const centre = map.getCenter().wrap()
@@ -185,6 +199,8 @@ export default function RoutePlanner({
   const list = hazards.data ?? []
   const expanded = panel === 'open'
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
+  const rainStretches = rain.data?.stretches ?? []
+  const rainWorst = worstRain(rainStretches.map((s) => s.level))
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex justify-center">
@@ -194,11 +210,11 @@ export default function RoutePlanner({
             type="button"
             onClick={() => onPanelChange(expanded ? 'collapsed' : 'open')}
             aria-expanded={expanded}
-            className="flex h-14 flex-1 items-center gap-2 text-left"
+            className="flex min-h-14 flex-1 items-center gap-2 py-1 text-left"
           >
             <span className="text-base font-semibold text-slate-900">Route</span>
             {route && (
-              <span className="flex min-w-0 items-center gap-1.5 text-sm text-slate-600">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-slate-600">
                 <span className="shrink-0">{formatKm(route.distance_m)}</span>
                 {riverWorst && (
                   <>
@@ -208,6 +224,17 @@ export default function RoutePlanner({
                       style={{ backgroundColor: STEP_COLOR[riverWorst], color: stepTextColor(riverWorst) }}
                     >
                       {riversNear.length} {riversNear.length === 1 ? 'river warning' : 'river warnings'}
+                    </span>
+                  </>
+                )}
+                {rainWorst && (
+                  <>
+                    <span aria-hidden="true">&middot;</span>
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                      style={{ backgroundColor: RAIN_COLOR[rainWorst] }}
+                    >
+                      {rainStretches.length} {rainStretches.length === 1 ? 'rain warning' : 'rain warnings'}
                     </span>
                   </>
                 )}
@@ -355,6 +382,8 @@ export default function RoutePlanner({
                     </ul>
                   </div>
                 )}
+
+                <RainSection rain={rain} onSelect={onSelectRain} />
 
                 <p className="mt-3 text-base text-slate-800">
                   {hazards.isPending

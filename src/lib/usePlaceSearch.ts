@@ -28,13 +28,16 @@ export function usePlaceSearch(text: string, focus: Point, enabled: boolean) {
     queryKey: ['places', debounced.toLowerCase(), round1(focus.lat), round1(focus.lng)],
     queryFn: () => searchPlaces(debounced, focus),
     enabled: ready,
-    staleTime: Infinity,
+    // Backup answers go stale after a minute, so the main search is tried again once it's back
+    staleTime: (q) => (q.state.data?.backup ? 60_000 : Infinity),
     gcTime: 30 * 60_000,
     retry: false,
+    refetchOnWindowFocus: false,
   })
 
   return {
-    places: ready ? (query.data ?? []) : [],
+    places: ready ? (query.data?.places ?? []) : [],
+    backup: ready && (query.data?.backup ?? false),
     searching: enabled && trimmed.length >= MIN_CHARS && (debounced !== trimmed || query.isFetching),
     error: ready && query.isError ? query.error.message : null,
   }

@@ -1,5 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { severityLabel, SEVERITIES, type Severity } from './hazards'
+import { backupSearch } from './backupSearch'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
 
@@ -52,18 +53,53 @@ async function callRouting<T>(body: Record<string, unknown>): Promise<T> {
   return data as T
 }
 
-export function searchPlaces(text: string, focus: Point): Promise<Place[]> {
-  return callRouting<Place[]>({ action: 'search', text, focus })
+// Dev server only, so tests never use the real routing function or its quota (see
+// fakeRouting.ts). ?fakeRouting=1 answers searches and routes from built-in samples.
+// ?fakeRouting=searchdown also makes the main search fail, to try the backup search.
+// In a production build the import.meta.env.DEV checks are false, and this code and
+// the samples are left out.
+function fakeRoutingMode(): string | null {
+  return new URLSearchParams(window.location.search).get('fakeRouting')
+}
+
+const fakeRoutingOn = () => fakeRoutingMode() !== null
+
+export type PlaceSearchResult = {
+  places: Place[]
+  // True when the main search failed and the backup answered
+  backup: boolean
+}
+
+// Any failure of the main search (even a used-up quota) falls back to the backup. An
+// honest empty answer from the main search isn't a failure, so it doesn't.
+export async function searchPlaces(text: string, focus: Point): Promise<PlaceSearchResult> {
+  try {
+    if (import.meta.env.DEV && fakeRoutingMode() === '1') {
+      return { places: await (await import('./fakeRouting')).fakeSearch(text), backup: false }
+    }
+    if (import.meta.env.DEV && fakeRoutingMode() === 'searchdown') throw new Error('Test: main search is down')
+    return { places: await callRouting<Place[]>({ action: 'search', text, focus }), backup: false }
+  } catch (err) {
+    try {
+      return { places: await backupSearch(text), backup: true }
+    } catch {
+      // Both are down, and the first message says more
+      throw err
+    }
+  }
 }
 
 let nextRouteId = 1
 
 export async function fetchRoute(start: Point, end: Point): Promise<RouteResult> {
-  const data = await callRouting<{
-    coordinates: [number, number][]
-    distance_m: number
-    duration_s: number
-  }>({ action: 'route', start, end })
+  const data =
+    import.meta.env.DEV && fakeRoutingOn()
+      ? await (await import('./fakeRouting')).fakeRoute(start, end)
+      : await callRouting<{
+          coordinates: [number, number][]
+          distance_m: number
+          duration_s: number
+        }>({ action: 'route', start, end })
   return { ...data, id: nextRouteId++, start, end }
 }
 

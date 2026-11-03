@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import { Route as RouteIcon } from 'lucide-react'
-import type { LatLng, Map as LeafletMap } from 'leaflet'
+import { latLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet'
 import { SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
 import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
 import type { RouteHazard } from '../lib/useRoute'
+import { rainPath, type RainStretch } from '../lib/rainForecast'
 import type { RouteResult } from '../lib/routing'
 import LocateButton from './LocateButton'
 import MapLimits from './MapLimits'
@@ -17,6 +18,7 @@ import type { PanelState } from './RoutePlanner'
 const ReportMarkers = lazy(() => import('./ReportMarkers'))
 const RoutePlanner = lazy(() => import('./RoutePlanner'))
 const RiverMarkers = lazy(() => import('./RiverMarkers'))
+const RainOverlay = lazy(() => import('./RainOverlay'))
 
 const SHOW_ALL_RIVERS_KEY = 'terrafend:showAllRivers'
 
@@ -48,6 +50,9 @@ export default function HazardMap() {
   // The planner keeps the From and To boxes, so once it has been opened it stays loaded
   const [plannerOpened, setPlannerOpened] = useState(false)
   const [openRequest, setOpenRequest] = useState<{ id: string; n: number } | null>(null)
+  const [rainRequest, setRainRequest] = useState<{ id: string; n: number } | null>(null)
+  // True while the route's results no longer match the From and To boxes
+  const [routeStale, setRouteStale] = useState(false)
   // Gauges at Alert or above always show. This adds all the others.
   const [showAllRivers, setShowAllRivers] = useState(loadShowAllRivers)
 
@@ -62,6 +67,14 @@ export default function HazardMap() {
     setPanel('collapsed')
     map.setView([hazard.lat, hazard.lng], Math.max(map.getZoom(), 16), { animate: false })
     setOpenRequest({ id: hazard.id, n: Date.now() })
+  }
+
+  function showRain(stretch: RainStretch) {
+    if (!map || !route) return
+    setPanel('collapsed')
+    // No animation, so the icon is already in place when its card opens
+    map.fitBounds(latLngBounds(rainPath(route, stretch)), { padding: [40, 40], maxZoom: 13, animate: false })
+    setRainRequest({ id: stretch.id, n: Date.now() })
   }
 
   return (
@@ -83,6 +96,11 @@ export default function HazardMap() {
         <Suspense fallback={null}>
           <ReportMarkers hidden={picking} route={route} openRequest={openRequest} />
         </Suspense>
+        {route && (
+          <Suspense fallback={null}>
+            <RainOverlay route={route} hidden={picking} outOfDate={routeStale} openRequest={rainRequest} />
+          </Suspense>
+        )}
         {!picking && (
           <Suspense fallback={null}>
             <RiverMarkers showAll={showAllRivers} />
@@ -144,6 +162,8 @@ export default function HazardMap() {
                 route={route}
                 onRouteChange={setRoute}
                 onSelectHazard={showHazard}
+                onSelectRain={showRain}
+                onStaleChange={setRouteStale}
               />
             </Suspense>
           )}

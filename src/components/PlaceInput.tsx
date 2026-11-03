@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { MapPin, X } from 'lucide-react'
+import { OPEN_METEO_URL } from '../lib/backupSearch'
 import { EMPTY_FIELD, type PlaceField, type Point } from '../lib/routing'
 import { usePlaceSearch } from '../lib/usePlaceSearch'
 
@@ -84,6 +85,15 @@ export default function PlaceInput({ label, placeholder, value, onChange, focus 
             </li>
           )}
         </ul>
+      )}
+      {showList && search.backup && (
+        // mousedown is blocked for the same reason as the list above, so the link can be tapped
+        <p onMouseDown={(e) => e.preventDefault()} className="mt-1 px-1 text-xs text-slate-600">
+          Using backup search, which finds towns and cities only. Search by{' '}
+          <a href={OPEN_METEO_URL} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline">
+            Open-Meteo.com
+          </a>
+        </p>
       )}
     </div>
   )

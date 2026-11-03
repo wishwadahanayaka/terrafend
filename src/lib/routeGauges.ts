@@ -9,7 +9,7 @@ export type GaugeNearRoute = {
 const EARTH_RADIUS_M = 6_371_000
 const RAD = Math.PI / 180
 
-function metresBetween(a: [number, number], b: [number, number]): number {
+export function metresBetween(a: [number, number], b: [number, number]): number {
   const dLat = (b[1] - a[1]) * RAD
   const dLng = (b[0] - a[0]) * RAD
   const h =

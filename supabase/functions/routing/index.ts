@@ -18,6 +18,7 @@ class ApiError extends Error {
 
 const MESSAGES = {
   dailyLimit: 'The daily limit for searches and routes has been reached. Please try again tomorrow.',
+  unavailable: 'Search and routes aren’t available right now. Please try again later.',
   tooMany: 'Too many requests right now. Please wait a moment and try again.',
   noRoute: 'No driving route found between those points. Try moving them closer to a road.',
   general: 'Something went wrong. Please try again.',
@@ -39,9 +40,26 @@ function readPoint(v: unknown, name: string, box: boolean): Point {
   return { lat: p.lat, lng: p.lng }
 }
 
+// ORS says when its quota resets in x-ratelimit-reset. Their forum says it's a Unix time
+// in seconds, but other APIs send "seconds from now", so both are understood. Anything
+// that doesn't come out as a time within the next two days is ignored.
+function resetTime(header: string | null): string | null {
+  const n = Number(header)
+  if (!header || !Number.isFinite(n)) return null
+  const ms = n > 1e12 ? n : n > 1e9 ? n * 1000 : Date.now() + n * 1000
+  if (ms <= Date.now() || ms > Date.now() + 48 * 3_600_000) return null
+  const time = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Colombo',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date(ms))
+  return `${time} (Sri Lanka time)`
+}
+
 // Sends the request to OpenRouteService. The key goes in a header, so it never
-// shows up in a URL or a log line.
-async function callOrs(path: string, init: RequestInit = {}): Promise<unknown> {
+// shows up in a URL or a log line. `endpoint` is only there for the log.
+async function callOrs(endpoint: 'search' | 'route', path: string, init: RequestInit = {}): Promise<unknown> {
   const key = Deno.env.get('ORS_API_KEY')
   if (!key) {
     console.error('ORS_API_KEY is not set')
@@ -62,17 +80,32 @@ async function callOrs(path: string, init: RequestInit = {}): Promise<unknown> {
 
   if (res.ok) return await res.json()
 
-  // ORS errors look like { error: { code, message } }. Only the status and code are logged.
+  // ORS errors look like { error: { code, message } }. The text and rate limit headers
+  // are logged to tell a used-up quota from other refusals. None of it contains our key.
+  const text = await res.text().catch(() => '')
   let code: number | undefined
   try {
-    const body = await res.json()
+    const body = JSON.parse(text)
     code = typeof body?.error === 'number' ? body.error : body?.error?.code
   } catch {
-    // the body wasn't JSON, the status is enough
+    // the body wasn't JSON, the status and text are enough
   }
-  console.error(`ORS error: status ${res.status}, code ${code ?? 'none'}`)
+  const remaining = res.headers.get('x-ratelimit-remaining')
+  const reset = res.headers.get('x-ratelimit-reset')
+  console.error(
+    `ORS error: endpoint ${endpoint}, status ${res.status}, code ${code ?? 'none'}, ` +
+      `remaining ${remaining ?? 'none'}, reset ${reset ?? 'none'}, text: ${text.replace(/\s+/g, ' ').slice(0, 200)}`,
+  )
 
-  if (res.status === 403) throw new ApiError(MESSAGES.dailyLimit, 503)
+  // Only say the quota is used up when ORS says so: nothing remaining, or its text mentions the quota
+  if ((res.status === 403 || res.status === 429) && (remaining?.trim() === '0' || /quota/i.test(text))) {
+    const when = resetTime(reset)
+    throw new ApiError(
+      when ? `The daily limit for searches and routes has been reached. It resets around ${when}.` : MESSAGES.dailyLimit,
+      503,
+    )
+  }
+  if (res.status === 403) throw new ApiError(MESSAGES.unavailable, 503)
   if (res.status === 429) throw new ApiError(MESSAGES.tooMany, 429)
   // 2009, 2010 and 2016 are "route not found", "point not found", "no route between entry and exit"
   if (res.status === 404 || (code !== undefined && [2009, 2010, 2016].includes(code))) {
@@ -94,7 +127,7 @@ async function search(input: Record<string, unknown>) {
     params.set('focus.point.lon', String(focus.lng))
   }
 
-  const data = (await callOrs(`/geocode/autocomplete?${params}`)) as {
+  const data = (await callOrs('search', `/geocode/autocomplete?${params}`)) as {
     features?: { properties?: { label?: unknown }; geometry?: { coordinates?: unknown[] } }[]
   }
 
@@ -112,7 +145,7 @@ async function route(input: Record<string, unknown>) {
   const start = readPoint(input.start, 'start', true)
   const end = readPoint(input.end, 'end', true)
 
-  const data = (await callOrs('/v2/directions/driving-car/geojson', {
+  const data = (await callOrs('route', '/v2/directions/driving-car/geojson', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

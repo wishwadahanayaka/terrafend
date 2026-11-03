@@ -30,6 +30,18 @@ export function sriLankaTime(iso: string): string {
   return `${colombo.format(new Date(iso))} (Sri Lanka time)`
 }
 
+const colomboClock = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Colombo',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+})
+
+// Just the time of day, like "2:10 pm", in Sri Lanka time
+export function sriLankaClock(ms: number): string {
+  return colomboClock.format(new Date(ms))
+}
+
 export function timeAgo(iso: string, now = Date.now()): string {
   const ms = now - new Date(iso).getTime()
   if (ms < 60_000) return 'just now'

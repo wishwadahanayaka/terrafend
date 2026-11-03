@@ -21,6 +21,7 @@ Working now:
 - Reports expire after 6 hours unless people confirm them, and old reports and photos are cleaned up automatically every hour
 - Route check: search for a destination, see the driving route, distance and time, and the hazards along it in order, with one tap to jump to each. There's a button to open the same trip in Google Maps
 - River gauges: official water levels from the Department of Irrigation's gauges as small drop markers, coloured by Normal, Alert, Minor flood and Major flood. Tap one for the level, the flood marks, when it was read (in Sri Lanka time) and a short next-hour forecast. The layer can be switched off, and it hides itself if the data isn't available. Gauges at Alert or above near a checked route are listed above the hazards
+- Rain along the route: a forecast for about every 10 km of a checked route, timed to when you'd be there, with heavy rain, very heavy rain and thunderstorms called out in the route panel and on the map itself (a forecast, not an official warning)
 - Banner reminding users this is not an official warning service
 
 Roadmap:
@@ -56,6 +57,7 @@ Backend, all on Supabase's free tier:
 Other:
 
 - OpenRouteService for place search and driving routes
+- Open-Meteo for the rain forecast, called straight from the browser (no key needed)
 - Vercel for hosting
 
 Planned:
@@ -64,7 +66,6 @@ Planned:
 
 ### Planned data sources
 
-- Open-Meteo weather data
 - GDACS disaster alerts
 - NBRO landslide warnings
 - Department of Meteorology warnings
@@ -72,6 +73,8 @@ Planned:
 ## Data credits
 
 River levels: Data: Sri Lanka Water Levels (Shakeeb Sadikeen), from the Department of Irrigation. See [waterlevels.lk](https://waterlevels.lk).
+
+Rain forecast, and the backup place search: Weather data and geocoding by [Open-Meteo.com](https://open-meteo.com/).
 
 ## Running it locally
 
