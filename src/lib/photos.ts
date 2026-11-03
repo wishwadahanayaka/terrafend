@@ -1,4 +1,3 @@
-import imageCompression from 'browser-image-compression'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
 
@@ -8,7 +7,9 @@ const PHOTO_BUCKET = 'report-photos'
 // drops the original's hidden metadata (GPS location, camera, time). We never
 // pass preserveExif, so none of it is copied back. The web worker is off
 // because by default it loads a helper script from a CDN.
-export function shrinkPhoto(file: File): Promise<File> {
+export async function shrinkPhoto(file: File): Promise<File> {
+  // Only downloaded when someone actually picks a photo
+  const { default: imageCompression } = await import('browser-image-compression')
   return imageCompression(file, {
     maxWidthOrHeight: 1280,
     maxSizeMB: 0.5,

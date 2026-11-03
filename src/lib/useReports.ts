@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { HazardType, Severity } from './hazards'
+import { REPORTS_KEY } from './queryKeys'
 import { supabase } from './supabase'
 
 export type Bounds = {
@@ -23,8 +24,6 @@ export type Report = {
 
 // Reports expire after a few hours, so a minute is fresh enough
 export const REFRESH_MS = 60_000
-
-export const REPORTS_KEY = 'reports'
 
 export function useReportsInView(bounds: Bounds) {
   return useQuery({

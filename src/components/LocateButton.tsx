@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Circle, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
-import type { LatLng } from 'leaflet'
+import { LatLngBounds, latLngBounds, type LatLng } from 'leaflet'
 
 type Position = { latlng: LatLng; accuracy: number }
 
@@ -35,7 +35,13 @@ export default function LocateButton({ onLocated, bottomClass }: Props) {
     locationfound(e) {
       setPosition({ latlng: e.latlng, accuracy: e.accuracy })
       onLocated(e.latlng)
-      setError(null)
+      // The map can't leave Sri Lanka, so say why nothing seems to happen from abroad
+      const limits = map.options.maxBounds
+      setError(
+        limits && !(limits instanceof LatLngBounds ? limits : latLngBounds(limits)).contains(e.latlng)
+          ? 'You appear to be outside Sri Lanka, so your position can’t be shown on this map.'
+          : null,
+      )
       setLoading(false)
     },
     locationerror(e) {

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { MapPin, Plus } from 'lucide-react'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import { useQueryClient } from '@tanstack/react-query'
-import { REPORTS_KEY } from '../lib/useReports'
-import ReportSheet from './ReportSheet'
+import { REPORTS_KEY } from '../lib/queryKeys'
+
+// The form and its photo tools aren't needed until someone taps "Use this spot"
+const ReportSheet = lazy(() => import('./ReportSheet'))
 
 export type ReportMode = 'idle' | 'picking' | 'form'
 
@@ -87,16 +89,18 @@ export default function ReportFlow({ map, userLatLng, mode, onModeChange, button
       )}
 
       {mode === 'form' && spot && (
-        <ReportSheet
-          lat={spot.lat}
-          lng={spot.lng}
-          onClose={() => onModeChange('idle')}
-          onSent={() => {
-            queryClient.invalidateQueries({ queryKey: [REPORTS_KEY] })
-            onModeChange('idle')
-            setToast(true)
-          }}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-[1100] bg-black/40" />}>
+          <ReportSheet
+            lat={spot.lat}
+            lng={spot.lng}
+            onClose={() => onModeChange('idle')}
+            onSent={() => {
+              queryClient.invalidateQueries({ queryKey: [REPORTS_KEY] })
+              onModeChange('idle')
+              setToast(true)
+            }}
+          />
+        </Suspense>
       )}
 
       {toast && (

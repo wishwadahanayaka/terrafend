@@ -1,8 +1,10 @@
 import { createElement, useEffect, useRef, useState } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, type DivIcon, type Map as LeafletMap, type Marker as LeafletMarker } from 'leaflet'
 import {
+  HAZARD_TYPES,
   hazardIcon,
   hazardLabel,
   severityBg,
@@ -10,8 +12,10 @@ import {
   type HazardType,
   type Severity,
 } from '../lib/hazards'
+import type { RouteResult } from '../lib/routing'
 import { expiresIn, timeAgo } from '../lib/time'
 import { useReportsInView, type Bounds, type Report } from '../lib/useReports'
+import { useRouteHazards } from '../lib/useRoute'
 import ReportPhoto from './ReportPhoto'
 import VoteSection from './VoteSection'
 
@@ -32,17 +36,26 @@ function readBounds(map: LeafletMap): Bounds {
   }
 }
 
+// Leaflet markers are plain HTML, so each icon is drawn once into text. This
+// avoids react-dom/server, which would add a lot to the download. It runs when
+// this file loads, not during a render, because flushSync can't run in one.
+const iconSvg = new Map<HazardType, string>()
+for (const { value, icon } of HAZARD_TYPES) {
+  const host = document.createElement('div')
+  const root = createRoot(host)
+  flushSync(() => root.render(createElement(icon, { size: 24, strokeWidth: 2.25, 'aria-hidden': true })))
+  iconSvg.set(value, host.innerHTML)
+  root.unmount()
+}
+
 const iconCache = new Map<string, DivIcon>()
 
 function markerIcon(type: HazardType, severity: Severity): DivIcon {
   const key = `${type}:${severity}`
   let icon = iconCache.get(key)
   if (!icon) {
-    const Icon = hazardIcon(type)
     // 44px is the usual minimum size for a comfortable tap
-    const html = `<div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white text-white shadow-lg ${severityBg(severity)}">${renderToStaticMarkup(
-      <Icon size={24} strokeWidth={2.25} aria-hidden="true" />,
-    )}</div>`
+    const html = `<div class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white text-white shadow-lg ${severityBg(severity)}">${iconSvg.get(type) ?? ''}</div>`
     icon = divIcon({ html, className: '', iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -24] })
     iconCache.set(key, icon)
   }
@@ -51,13 +64,13 @@ function markerIcon(type: HazardType, severity: Severity): DivIcon {
 
 type Props = {
   hidden: boolean
-  // Reports along a planned route, shown even if they're outside the loaded area
-  extra: Report[]
+  // The planned route, if any. Its hazards are shown even outside the loaded area.
+  route: RouteResult | null
   // Asks for one report's card to open. The number makes a repeat tap count as new.
   openRequest: { id: string; n: number } | null
 }
 
-export default function ReportMarkers({ hidden, extra, openRequest }: Props) {
+export default function ReportMarkers({ hidden, route, openRequest }: Props) {
   const map = useMap()
   const [bounds, setBounds] = useState(() => readBounds(map))
   const timer = useRef<number | undefined>(undefined)
@@ -73,6 +86,8 @@ export default function ReportMarkers({ hidden, extra, openRequest }: Props) {
   useEffect(() => () => window.clearTimeout(timer.current), [])
 
   const { data } = useReportsInView(bounds)
+  // Same query as the route panel uses, so this shares its result instead of asking again
+  const { data: routeHazards } = useRouteHazards(route)
 
   useEffect(() => {
     if (openRequest) markers.current.get(openRequest.id)?.openPopup()
@@ -83,7 +98,7 @@ export default function ReportMarkers({ hidden, extra, openRequest }: Props) {
 
   // Merged by id, so a report in both lists is only drawn once
   const all = new Map<string, Report>()
-  for (const report of [...(data ?? []), ...extra]) all.set(report.id, report)
+  for (const report of [...(data ?? []), ...(routeHazards ?? [])]) all.set(report.id, report)
 
   return (
     <>

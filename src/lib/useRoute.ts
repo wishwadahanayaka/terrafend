@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { forDatabase, type RouteResult } from './routing'
 import { supabase } from './supabase'
-import { REFRESH_MS, REPORTS_KEY, type Report } from './useReports'
+import { REPORTS_KEY } from './queryKeys'
+import { REFRESH_MS, type Report } from './useReports'
 
 export type RouteHazard = Report & {
   distance_along_m: number

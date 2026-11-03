@@ -1,17 +1,29 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
+import { Route as RouteIcon } from 'lucide-react'
 import type { LatLng, LatLngBoundsExpression, Map as LeafletMap } from 'leaflet'
-import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
+import type { RouteHazard } from '../lib/useRoute'
 import type { RouteResult } from '../lib/routing'
 import LocateButton from './LocateButton'
-import ReportMarkers from './ReportMarkers'
+import MapLimits from './MapLimits'
 import ReportFlow, { type ReportMode } from './ReportFlow'
-import RoutePlanner, { type PanelState } from './RoutePlanner'
+import type { PanelState } from './RoutePlanner'
+
+// The data code (Supabase, hazards, the route planner) loads after the map
+// has appeared, so the first screen shows up sooner
+const ReportMarkers = lazy(() => import('./ReportMarkers'))
+const RoutePlanner = lazy(() => import('./RoutePlanner'))
 
 // Fitting to bounds instead of a fixed zoom keeps the island filling the screen on any size
 const SRI_LANKA_BOUNDS: LatLngBoundsExpression = [
   [5.85, 79.6],
   [9.9, 81.95],
+]
+
+// The island plus a margin of sea. The map can't be dragged outside this.
+const SRI_LANKA_LIMITS: LatLngBoundsExpression = [
+  [5.55, 79.3],
+  [10.2, 82.25],
 ]
 
 export default function HazardMap() {
@@ -23,7 +35,6 @@ export default function HazardMap() {
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
   const [openRequest, setOpenRequest] = useState<{ id: string; n: number } | null>(null)
-  const hazards = useRouteHazards(route)
 
   const picking = mode === 'picking'
 
@@ -41,6 +52,8 @@ export default function HazardMap() {
       <MapContainer
         ref={setMap}
         bounds={SRI_LANKA_BOUNDS}
+        maxBounds={SRI_LANKA_LIMITS}
+        maxBoundsViscosity={1}
         zoomSnap={0.25}
         zoomControl={false}
         className="h-full w-full"
@@ -49,7 +62,10 @@ export default function HazardMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <ReportMarkers hidden={picking} extra={hazards.data ?? []} openRequest={openRequest} />
+        <MapLimits island={SRI_LANKA_BOUNDS} />
+        <Suspense fallback={null}>
+          <ReportMarkers hidden={picking} route={route} openRequest={openRequest} />
+        </Suspense>
         <LocateButton
           onLocated={setUserLatLng}
           bottomClass={picking ? 'bottom-28' : panel === 'collapsed' ? 'bottom-20' : 'bottom-6'}
@@ -65,17 +81,33 @@ export default function HazardMap() {
             onModeChange={setMode}
             buttonVisible={panel === 'closed'}
           />
-          <RoutePlanner
-            map={map}
-            userLatLng={userLatLng}
-            hidden={picking}
-            panel={panel}
-            onPanelChange={setPanel}
-            route={route}
-            onRouteChange={setRoute}
-            hazards={hazards}
-            onSelectHazard={showHazard}
-          />
+
+          {panel === 'closed' && !picking && (
+            <button
+              type="button"
+              onClick={() => setPanel('open')}
+              className="absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-white px-5 font-semibold text-blue-700 shadow-lg active:bg-slate-100"
+            >
+              <RouteIcon className="h-6 w-6" aria-hidden="true" />
+              Route
+            </button>
+          )}
+
+          {/* Stays loaded while a route exists, since it draws the route line */}
+          {(panel !== 'closed' || route) && (
+            <Suspense fallback={null}>
+              <RoutePlanner
+                map={map}
+                userLatLng={userLatLng}
+                hidden={picking}
+                panel={panel}
+                onPanelChange={setPanel}
+                route={route}
+                onRouteChange={setRoute}
+                onSelectHazard={showHazard}
+              />
+            </Suspense>
+          )}
         </>
       )}
     </div>

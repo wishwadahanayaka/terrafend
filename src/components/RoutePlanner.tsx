@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, LocateFixed, Route as RouteIcon, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, ExternalLink, LocateFixed, X } from 'lucide-react'
 import {
   circleMarker,
   latLngBounds,
@@ -10,7 +10,6 @@ import {
   type LocationEvent,
   type Map as LeafletMap,
 } from 'leaflet'
-import type { UseQueryResult } from '@tanstack/react-query'
 import { hazardIcon, hazardLabel, severityBg, severityLabel } from '../lib/hazards'
 import {
   fetchRoute,
@@ -22,7 +21,7 @@ import {
   type RouteResult,
 } from '../lib/routing'
 import { routeDuration } from '../lib/time'
-import type { RouteHazard } from '../lib/useRoute'
+import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
 import PlaceInput from './PlaceInput'
 
 export type PanelState = 'closed' | 'open' | 'collapsed'
@@ -35,7 +34,6 @@ type Props = {
   onPanelChange: (panel: PanelState) => void
   route: RouteResult | null
   onRouteChange: (route: RouteResult | null) => void
-  hazards: UseQueryResult<RouteHazard[]>
   onSelectHazard: (hazard: RouteHazard) => void
 }
 
@@ -71,9 +69,9 @@ export default function RoutePlanner({
   onPanelChange,
   route,
   onRouteChange,
-  hazards,
   onSelectHazard,
 }: Props) {
+  const hazards = useRouteHazards(route)
   const [fromMe, setFromMe] = useState(true)
   const [from, setFrom] = useState<Place | null>(null)
   const [to, setTo] = useState<Place | null>(null)
@@ -150,20 +148,8 @@ export default function RoutePlanner({
     setResetCount((n) => n + 1)
   }
 
-  if (hidden) return null
-
-  if (panel === 'closed') {
-    return (
-      <button
-        type="button"
-        onClick={() => onPanelChange('open')}
-        className="absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-white px-5 font-semibold text-blue-700 shadow-lg active:bg-slate-100"
-      >
-        <RouteIcon className="h-6 w-6" aria-hidden="true" />
-        Route
-      </button>
-    )
-  }
+  // With the panel closed this still stays mounted, to keep the route line on the map
+  if (hidden || panel === 'closed') return null
 
   const list = hazards.data ?? []
   const expanded = panel === 'open'
@@ -272,7 +258,10 @@ export default function RoutePlanner({
                 <p className="text-lg font-semibold text-slate-900">
                   {formatKm(route.distance_m)} &middot; {routeDuration(route.duration_s)} (without traffic)
                 </p>
-                <p className="mt-1 text-base text-slate-800">
+                <p className="mt-1 text-xs text-slate-500">
+                  Real travel times are often longer. Check Google Maps for live traffic.
+                </p>
+                <p className="mt-3 text-base text-slate-800">
                   {hazards.isPending
                     ? 'Checking for hazards…'
                     : hazards.isError

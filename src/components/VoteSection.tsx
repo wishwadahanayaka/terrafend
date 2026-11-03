@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { submitVote, VOTE_ERRORS, type Vote } from '../lib/reports'
-import { REPORTS_KEY } from '../lib/useReports'
+import { REPORTS_KEY } from '../lib/queryKeys'
 import { MY_VOTE_KEY, useMyVote } from '../lib/useVotes'
 
 const VOTE_LABELS: Record<Vote, string> = {

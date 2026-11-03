@@ -1,6 +1,6 @@
 # TerraFend
 
-A mobile-first web app that shows floods, landslides and road blockages across Sri Lanka on a map, and will check your route for hazards along the way.
+A mobile-first web app that shows floods, landslides and road blockages across Sri Lanka on a map, and checks your driving route for hazards along the way.
 
 **Live demo:** https://terrafend.vercel.app
 
@@ -12,16 +12,21 @@ Floods, landslides and blocked roads are a regular problem in Sri Lanka during t
 
 Working now:
 
-- Full-screen map of Sri Lanka
+- Full-screen map of Sri Lanka, locked to the island so it can't be dragged away
 - "My location" button that shows your position as a blue dot, with an accuracy circle
-- Clear messages when location is denied, unavailable or slow
+- Hazard reports: pick a spot on the map, choose a type (flood, landslide, fallen tree, fallen power line, road closed, accident, road works, damaged road or bridge, wild elephant, protest or road block, other), say whether vehicles can get through, and add a note and an optional photo
+- Photos are shrunk on your phone before upload, and their hidden metadata (like GPS location) is removed in the process
+- Reports show as coloured markers on the map. Tap one to see its details and photo
+- Voting: anyone can say a hazard is "still there" (which keeps it alive for another 6 hours) or "it's gone" (three of those clear it)
+- Reports expire after 6 hours unless people confirm them, and old reports and photos are cleaned up automatically every hour
+- Route check: search for a destination, see the driving route, distance and time, and the hazards along it in order, with one tap to jump to each. There's a button to open the same trip in Google Maps
 - Banner reminding users this is not an official warning service
 
 Roadmap:
 
 - [x] Map with the user's location
-- [ ] Crowd hazard reports (floods, landslides, fallen trees, road closures, wild elephants and more)
-- [ ] Route check: find hazards along a travel route
+- [x] Crowd hazard reports (with photos and voting)
+- [x] Route check: find hazards along a travel route
 - [ ] Official data layers
 - [ ] Sinhala and Tamil alongside English
 - [ ] Phone alerts
@@ -29,20 +34,32 @@ Roadmap:
 
 ## Tech stack
 
-Used now:
+Frontend:
 
 - React, Vite and TypeScript
 - Tailwind CSS
 - Leaflet with react-leaflet, and OpenStreetMap tiles
+- TanStack Query for loading and caching data
+- lucide-react for icons
+- browser-image-compression for shrinking photos
+
+Backend, all on Supabase's free tier:
+
+- PostgreSQL with PostGIS for locations and "near the route" searches
+- Row level security, so the database itself decides who can read and write what
+- Anonymous sign-in, so people can report without making an account
+- Storage for report photos, with size and file type limits
+- Edge Functions (Deno): one calls OpenRouteService for place search and routes, keeping its API key off the phone; another cleans up expired data
+- Cron and Vault: Supabase Cron runs the cleanup every hour, with its secret kept in Vault
+
+Other:
+
+- OpenRouteService for place search and driving routes
 - Vercel for hosting
 
 Planned:
 
-- Turf.js for route and hazard geometry
-- TanStack Query for data fetching
 - vite-plugin-pwa for installing the app and working offline
-- Supabase (PostgreSQL with PostGIS, anonymous auth, storage, realtime, Edge Functions)
-- OpenRouteService for routing, called through a Supabase Edge Function
 
 ### Planned data sources
 
@@ -67,12 +84,17 @@ Then open http://localhost:5173.
 
 The location button only works on `localhost` or `https`, because browsers block location on plain `http` pages.
 
+The app talks to a Supabase project. To run your own copy:
+
+1. Create a free Supabase project and turn on anonymous sign-ins.
+2. Run the files in `supabase/migrations/` in order (0001 to 0004) in the SQL Editor.
+3. Copy `.env.example` to `.env` and fill in your project URL and publishable key. The `.env` file isn't committed.
+4. For routes and place search, deploy the `routing` function from `supabase/functions/` and set your OpenRouteService key as the `ORS_API_KEY` secret. For the hourly cleanup, deploy `cleanup-expired` and follow the notes in migration 0003.
+
 Other commands:
 
 - `npm run build` type-checks and builds for production
 - `npm run lint` runs the linter
-
-API keys go in a `.env` file that isn't committed. Copy `.env.example` to `.env` and fill in the values.
 
 ## Disclaimer
 

@@ -9,7 +9,6 @@ It is a portfolio project by a beginner software engineering student.
 - React + Vite + TypeScript
 - Tailwind CSS
 - Leaflet with react-leaflet, OpenStreetMap tiles
-- Turf.js (geometry, route-vs-hazard checks)
 - TanStack Query
 - vite-plugin-pwa
 - Later: Supabase (PostgreSQL + PostGIS, anonymous auth, storage, realtime, Edge Functions)
@@ -32,20 +31,23 @@ Only the packages needed for the current step are installed. Add the rest when t
 
 ## Current status
 
-- Steps 1 and 2 are complete: map, location, report form, markers, voting, photos, and hourly cleanup.
-- Migrations 0001, 0002 and 0003 have all been run in Supabase. New database changes go in new migration files.
+- Steps 1, 2 and 3 are complete: map, location, report form, markers, voting, photos, hourly cleanup, and the route check (place search, route line, hazards along the route).
+- Migrations 0001, 0002, 0003 and 0004 (`reports_along_route`) have all been run in Supabase. New database changes go in new migration files.
 - Supabase CLI is logged in and linked to project `ktwdmwiaodtirrcitlgb`. Deploy functions with `npx supabase functions deploy <name>`. Docker isn't needed.
 - Edge Function `cleanup-expired` is deployed and tested. Supabase Cron runs it hourly, using the Vault secrets `cleanup_secret` and `project_url`.
 - Supabase secrets set: `CLEANUP_SECRET` and `ORS_API_KEY`. Their values must never appear in code, files or chat.
 - Vercel has `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and auto-deploys on push to main.
+- Edge Function `routing` (place search and routes through OpenRouteService) is deployed and tested. It checks the user's token itself (`verify_jwt = false`).
 - Deno is installed locally, with editor support set up for `supabase/functions`.
-- Current work: step 3, the route check.
+- The map is locked to Sri Lanka (`maxBounds`), and the minimum zoom follows the screen size.
+- Data code (Supabase, markers, route planner, report form, photo compression) is lazy-loaded to keep the first download small.
+- Next up: step 4, official data layers.
 
 ## Build plan
 
 1. Map with the user's location (done)
-2. Crowd hazard reports
-3. Route check
+2. Crowd hazard reports (done)
+3. Route check (done)
 4. Official data layers
 5. Sinhala and Tamil alongside English, phone alerts, offline support (the app still opens and shows the last loaded reports when the signal is weak or gone, which often happens during disasters)
 
