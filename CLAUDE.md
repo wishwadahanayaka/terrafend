@@ -39,10 +39,13 @@ Only the packages needed for the current step are installed. Add the rest when t
 - Vercel has `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and auto-deploys on push to main.
 - Edge Function `routing` (place search and routes through OpenRouteService) is deployed and tested. It checks the user's token itself (`verify_jwt = false`).
 - Deno is installed locally, with editor support set up for `supabase/functions`.
+- Step 4, part 1 is complete: river gauges from the waterlevels.lk API (no key needed), shown as drop markers. Alert, Minor and Major gauges always show; the Rivers button adds the rest (remembered in localStorage). There's a status chip, a colour legend, and a card per gauge. Cards and the README carry the credit line "Data: Sri Lanka Water Levels (Shakeeb Sadikeen), from the Department of Irrigation". Readings refresh every 10 minutes, and a failed load shows a quiet note.
+- To test alert colours, run the dev server and open `?fakeRiver=<gauge id>:<alert|minor|major>` (dev only, see `useRiverGauges.ts`).
+- Route panel: the From and To boxes (including "My location") are kept when the panel is closed and reopened, and only "Clear route" empties them. Changing them after a check marks the old results "out of date" (dimmed, and "Open in Google Maps" is disabled) until "Check route" is tapped again. The header and list also show river gauges at Alert or above within 2 km of the route, listed before user reports.
 - The map is locked to Sri Lanka (`maxBounds`), and the minimum zoom follows the screen size.
-- Map cards stay fully on screen on phones (`usePopupFit.ts`): text width is capped to the screen, `MapLimits` widens the sea margin left, right and north to fit a card, and if a card still can't fit it zooms in one step before opening. The Route, Report and location buttons fade out while a card is open.
+- Cards open with auto-pan padding (`popupPadding.ts`) so they clear the banner, the river controls and the buttons. They stay fully on screen on phones (`usePopupFit.ts`): text width is capped to the screen, `MapLimits` widens the sea margin left, right and north to fit a card, and if a card still can't fit it zooms in one step before opening. The Route, Report and location buttons fade out while a card is open.
 - Data code (Supabase, markers, route planner, report form, photo compression) is lazy-loaded to keep the first download small.
-- Next up: step 4, official data layers.
+- Next: step 4, part 2: rain forecast along the route.
 
 ## Build plan
 
