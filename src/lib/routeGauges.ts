@@ -17,14 +17,33 @@ export function metresBetween(a: [number, number], b: [number, number]): number 
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h))
 }
 
-// Gauges at Alert or above that are within maxM of the route, in route order.
-// The route is [lng, lat] pairs. Over a couple of kilometres the ground is flat
-// enough to measure on a plain grid around each gauge, which keeps this simple.
+export type NearRoute<T> = {
+  item: T
+  distanceAlongM: number
+  distanceFromRouteM: number
+}
+
+// River gauges at Alert or above that are within maxM of the route, in route order
 export function gaugesNearRoute(
   route: [number, number][],
   gauges: RiverGauge[],
   maxM = 2000,
 ): GaugeNearRoute[] {
+  return nearRoute(
+    route,
+    gauges.filter((g) => isAlertOrAbove(g.step)),
+    maxM,
+  ).map(({ item, ...rest }) => ({ gauge: item, ...rest }))
+}
+
+// Anything with a position that is within maxM of the route, in route order.
+// The route is [lng, lat] pairs. Over a few kilometres the ground is flat
+// enough to measure on a plain grid around each item, which keeps this simple.
+export function nearRoute<T extends { lat: number; lng: number }>(
+  route: [number, number][],
+  items: T[],
+  maxM: number,
+): NearRoute<T>[] {
   if (route.length < 2) return []
 
   // Distance from the start to each point, so "how far along" is a lookup
@@ -33,10 +52,8 @@ export function gaugesNearRoute(
     along.push(along[i - 1] + metresBetween(route[i - 1], route[i]))
   }
 
-  const found: GaugeNearRoute[] = []
-  for (const gauge of gauges) {
-    if (!isAlertOrAbove(gauge.step)) continue
-
+  const found: NearRoute<T>[] = []
+  for (const gauge of items) {
     const mPerDegLng = 111_320 * Math.cos(gauge.lat * RAD)
     const mPerDegLat = 110_574
     // Position of a route point in metres east and north of the gauge
@@ -62,7 +79,7 @@ export function gaugesNearRoute(
       }
     }
 
-    if (best <= maxM) found.push({ gauge, distanceAlongM: bestAlong, distanceFromRouteM: best })
+    if (best <= maxM) found.push({ item: gauge, distanceAlongM: bestAlong, distanceFromRouteM: best })
   }
 
   return found.sort((a, b) => a.distanceAlongM - b.distanceAlongM)

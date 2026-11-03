@@ -10,11 +10,14 @@ import {
   RAIN_LABEL,
 } from '../lib/rainForecast'
 import { RIVER_CREDIT, STEP_COLOR, type RiverStep } from '../lib/riverGauges'
+import { GAUGE_RAIN_CREDIT, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
+import { useMeasuredRain } from '../lib/useMeasuredRain'
 import { useRainMap } from '../lib/useRainMap'
 import { useRiverGauges } from '../lib/useRiverGauges'
 
 // Counts reports from Supabase, so it loads after the map like the other data code
 const ThreatChip = lazy(() => import('./ThreatChip'))
+const ThreatList = lazy(() => import('./ThreatList'))
 
 type Props = {
   map: LeafletMap | null
@@ -45,6 +48,7 @@ type Open = 'none' | 'layers' | 'legend'
 export default function LayerControls({ map, settings, onChange }: Props) {
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
+  const measured = useMeasuredRain()
   const [open, setOpen] = useState<Open>('none')
 
   // A map card opening, or a tap on the map, closes the panel so it can't cover anything
@@ -93,11 +97,14 @@ export default function LayerControls({ map, settings, onChange }: Props) {
       )}
 
       <Suspense fallback={null}>
-        <ThreatChip map={map} />
+        <ThreatChip map={map} onMore={() => setOpen('layers')} />
       </Suspense>
 
       {open === 'layers' && (
-        <div className="w-72 rounded-xl bg-white p-2 text-slate-800 shadow-lg">
+        <div className="max-h-[max(12rem,calc(100dvh-26.5rem))] w-72 overflow-y-auto rounded-xl bg-white p-2 text-slate-800 shadow-lg">
+          <Suspense fallback={null}>
+            <ThreatList />
+          </Suspense>
           <Toggle
             icon={<TriangleAlert className="h-5 w-5" aria-hidden="true" />}
             label="Reports"
@@ -122,6 +129,12 @@ export default function LayerControls({ map, settings, onChange }: Props) {
           {rain.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
               Rain forecast unavailable right now
+            </p>
+          )}
+          {/* The map carries on with the forecast alone, so this is only a quiet note */}
+          {measured.status === 'error' && (
+            <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
+              Measured rain unavailable right now
             </p>
           )}
 
@@ -171,12 +184,15 @@ export default function LayerControls({ map, settings, onChange }: Props) {
             ))}
           </ul>
           <p className="mt-3 text-xs text-slate-600">
-            The worst rain expected in each area over the next 3 hours. Heavy rain, very heavy rain and thunderstorms
-            always show. Moderate and light rain show when Rain is switched on in the Layers menu. A forecast, not an
-            official warning.
+            Each square shows the worse of two things: the rain the satellite estimated over the past 3 hours, and
+            the forecast for the next 3 hours. Tap a square to see which. The small rain badges beside river gauges
+            show rain the gauge measured. Heavy rain, very heavy rain and thunderstorms always show. Moderate and light
+            rain show when Rain is switched on in the Layers menu. Estimates and forecasts, not official warnings.
           </p>
-          <p className="mt-2 text-[11px] leading-tight text-slate-500">
-            Weather data by{' '}
+          <p className="mt-2 text-[11px] leading-tight text-slate-500">{GAUGE_RAIN_CREDIT}</p>
+          <p className="mt-1 text-[11px] leading-tight text-slate-500">{SATELLITE_RAIN_CREDIT}</p>
+          <p className="mt-1 text-[11px] leading-tight text-slate-500">
+            Forecast: weather data by{' '}
             <a href={RAIN_CREDIT_URL} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline">
               Open-Meteo.com
             </a>

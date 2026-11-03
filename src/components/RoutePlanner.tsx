@@ -24,6 +24,7 @@ import {
 } from '../lib/routing'
 import { STEP_COLOR, STEP_LABEL, stepTextColor, worstStep } from '../lib/riverGauges'
 import { gaugesNearRoute } from '../lib/routeGauges'
+import { useRouteRecentRain } from '../lib/useRouteRecentRain'
 import { routeDuration } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
 import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
@@ -107,6 +108,8 @@ export default function RoutePlanner({
     () => (route && rivers.status === 'success' ? gaugesNearRoute(route.coordinates, rivers.data) : []),
     [route, rivers.status, rivers.data],
   )
+  // What the satellite and the gauges near the road say about rain that has already fallen
+  const recent = useRouteRecentRain(route)
   // The inputs live here, not in the panel, so they're still there after it's closed and reopened
   const [fromMe, setFromMe] = useState(true)
   const [fromField, setFromField] = useState<PlaceField>(EMPTY_FIELD)
@@ -200,7 +203,14 @@ export default function RoutePlanner({
   const expanded = panel === 'open'
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
   const rainStretches = rain.data?.stretches ?? []
-  const rainWorst = worstRain(rainStretches.map((s) => s.level))
+  // Every rain warning counts, whatever it came from: the forecast ahead, the satellite's
+  // recent rain, or a gauge near the road
+  const rainWarnings = rainStretches.length + recent.satellite.length + recent.gauges.length
+  const rainWorst = worstRain([
+    ...rainStretches.map((s) => s.level),
+    ...recent.satellite.map((s) => s.level),
+    ...recent.gauges.flatMap((g) => (g.item.level ? [g.item.level] : [])),
+  ])
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex justify-center">
@@ -234,7 +244,7 @@ export default function RoutePlanner({
                       className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
                       style={{ backgroundColor: RAIN_COLOR[rainWorst] }}
                     >
-                      {rainStretches.length} {rainStretches.length === 1 ? 'rain warning' : 'rain warnings'}
+                      {rainWarnings} {rainWarnings === 1 ? 'rain warning' : 'rain warnings'}
                     </span>
                   </>
                 )}
@@ -383,7 +393,7 @@ export default function RoutePlanner({
                   </div>
                 )}
 
-                <RainSection rain={rain} onSelect={onSelectRain} />
+                <RainSection rain={rain} onSelect={onSelectRain} recent={recent} />
 
                 <p className="mt-3 text-base text-slate-800">
                   {hazards.isPending

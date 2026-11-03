@@ -56,6 +56,12 @@ export const MILD_COLOR: Record<MildLevel, string> = {
   moderate: '#3b82f6',
 }
 
+// A slightly darker edge, so the quiet squares can still be seen on the map
+export const MILD_BORDER: Record<MildLevel, string> = {
+  light: '#3b82f6',
+  moderate: '#1d4ed8',
+}
+
 const LIGHT_MM = 0.5
 const MODERATE_MM = 2.5
 
@@ -209,6 +215,16 @@ function placeText(fromKm: number, toKm: number, routeKm: number): string {
 
 export function rainPlace(s: RainStretch): string {
   return placeText(s.fromKm, s.toKm, s.routeKm)
+}
+
+// The same wording for a single spot, such as a rain gauge near the route
+export function rainPlaceAt(km: number, routeKm: number): string {
+  return placeText(km, km, routeKm)
+}
+
+// ...and for a range of the route
+export function rainPlaceBetween(fromKm: number, toKm: number, routeKm: number): string {
+  return placeText(fromKm, toKm, routeKm)
 }
 
 // One line for the quieter rain. It talks about the heaviest of it (moderate over

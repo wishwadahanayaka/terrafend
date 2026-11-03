@@ -21,6 +21,7 @@ const RoutePlanner = lazy(() => import('./RoutePlanner'))
 const RiverMarkers = lazy(() => import('./RiverMarkers'))
 const RainOverlay = lazy(() => import('./RainOverlay'))
 const RainMapOverlay = lazy(() => import('./RainMapOverlay'))
+const MeasuredRainMarkers = lazy(() => import('./MeasuredRainMarkers'))
 
 export default function HazardMap() {
   // The report and route UI sit outside MapContainer so touches in them don't pan the map
@@ -95,6 +96,11 @@ export default function HazardMap() {
         {!picking && (
           <Suspense fallback={null}>
             <RiverMarkers showAll={layers.normalRivers} />
+          </Suspense>
+        )}
+        {!picking && (
+          <Suspense fallback={null}>
+            <MeasuredRainMarkers showMild={layers.mildRain} />
           </Suspense>
         )}
         <LocateButton

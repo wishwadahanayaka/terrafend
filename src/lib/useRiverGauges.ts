@@ -1,11 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { parseGauges, RIVER_API_URL, type FloodMark, type RiverGauge } from './riverGauges'
-
-const REFRESH_MS = 10 * 60_000
-const FETCH_TIMEOUT_MS = 10_000
+import { WATER_LEVELS_QUERY, WATER_LEVELS_TIMEOUT_MS } from './waterLevelsQuery'
 
 async function fetchGauges(): Promise<RiverGauge[]> {
-  const res = await fetch(RIVER_API_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+  const res = await fetch(RIVER_API_URL, { signal: AbortSignal.timeout(WATER_LEVELS_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`River levels: HTTP ${res.status}`)
   const gauges = parseGauges(await res.json())
   return import.meta.env.DEV ? withTestLevels(gauges) : gauges
@@ -26,17 +24,11 @@ function withTestLevels(gauges: RiverGauge[]): RiverGauge[] {
   })
 }
 
-// Their server is a volunteer project, so: one request every 10 minutes at most,
-// none when the tab comes back into focus, and one retry after a pause.
 export function useRiverGauges(enabled = true) {
   return useQuery({
     queryKey: ['river-gauges'],
     queryFn: fetchGauges,
     enabled,
-    refetchInterval: REFRESH_MS,
-    staleTime: REFRESH_MS / 2,
-    refetchOnWindowFocus: false,
-    retry: 1,
-    retryDelay: 30_000,
+    ...WATER_LEVELS_QUERY,
   })
 }
