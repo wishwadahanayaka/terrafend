@@ -15,6 +15,21 @@ export function routeDuration(seconds: number): string {
   return rest ? `about ${hours} h ${rest} min` : `about ${hours} h`
 }
 
+const colombo = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Colombo',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+})
+
+// The API sends UTC; people here think in Sri Lanka time wherever their phone is set
+export function sriLankaTime(iso: string): string {
+  return `${colombo.format(new Date(iso))} (Sri Lanka time)`
+}
+
 export function timeAgo(iso: string, now = Date.now()): string {
   const ms = now - new Date(iso).getTime()
   if (ms < 60_000) return 'just now'

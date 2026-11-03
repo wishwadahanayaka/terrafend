@@ -1,5 +1,5 @@
-import { createElement, useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, LocateFixed, X } from 'lucide-react'
+import { createElement, useEffect, useMemo, useState } from 'react'
+import { ChevronDown, ChevronUp, Droplet, ExternalLink, LocateFixed, X } from 'lucide-react'
 import {
   circleMarker,
   latLngBounds,
@@ -12,15 +12,20 @@ import {
 } from 'leaflet'
 import { hazardIcon, hazardLabel, severityBg, severityLabel } from '../lib/hazards'
 import {
+  EMPTY_FIELD,
   fetchRoute,
   formatKm,
   googleMapsUrl,
   hazardSummary,
   type Place,
+  type PlaceField,
   type Point,
   type RouteResult,
 } from '../lib/routing'
+import { STEP_COLOR, STEP_LABEL, stepTextColor, worstStep } from '../lib/riverGauges'
+import { gaugesNearRoute } from '../lib/routeGauges'
 import { routeDuration } from '../lib/time'
+import { useRiverGauges } from '../lib/useRiverGauges'
 import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
 import PlaceInput from './PlaceInput'
 
@@ -61,6 +66,18 @@ function findMe(map: LeafletMap): Promise<Point> {
   })
 }
 
+type Inputs = { fromMe: boolean; from: Place | null; to: Place | null }
+
+const samePlace = (a: Place | null, b: Place | null) =>
+  a === b || (a !== null && b !== null && a.lat === b.lat && a.lng === b.lng)
+
+// "My location" counts as the same start every time, wherever you happen to be
+function sameInputs(a: Inputs, b: Inputs): boolean {
+  if (a.fromMe !== b.fromMe) return false
+  if (!a.fromMe && !samePlace(a.from, b.from)) return false
+  return samePlace(a.to, b.to)
+}
+
 export default function RoutePlanner({
   map,
   userLatLng,
@@ -72,13 +89,26 @@ export default function RoutePlanner({
   onSelectHazard,
 }: Props) {
   const hazards = useRouteHazards(route)
+
+  // Official river gauges at Alert or above within 2 km of the route. If the river
+  // data can't be loaded this is simply empty, and the rest of the panel carries on.
+  const rivers = useRiverGauges(route !== null)
+  const riversNear = useMemo(
+    () => (route && rivers.status === 'success' ? gaugesNearRoute(route.coordinates, rivers.data) : []),
+    [route, rivers.status, rivers.data],
+  )
+  // The inputs live here, not in the panel, so they're still there after it's closed and reopened
   const [fromMe, setFromMe] = useState(true)
-  const [from, setFrom] = useState<Place | null>(null)
-  const [to, setTo] = useState<Place | null>(null)
+  const [fromField, setFromField] = useState<PlaceField>(EMPTY_FIELD)
+  const [toField, setToField] = useState<PlaceField>(EMPTY_FIELD)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Changing this remounts the search boxes, which empties them
-  const [resetCount, setResetCount] = useState(0)
+  // What the route on the map was checked with, to tell when the inputs have moved on from it
+  const [checked, setChecked] = useState<Inputs | null>(null)
+
+  const from = fromField.place
+  const to = toField.place
+  const outOfDate = route !== null && checked !== null && !sameInputs(checked, { fromMe, from, to })
 
   // Search results are ranked around here, so nearby places come first
   const centre = map.getCenter().wrap()
@@ -125,6 +155,7 @@ export default function RoutePlanner({
 
       const result = await fetchRoute(start, { lat: to.lat, lng: to.lng })
       onRouteChange(result)
+      setChecked({ fromMe, from, to })
 
       // The panel covers the lower part of the screen, so leave room for it
       const bottom = Math.min(window.innerHeight * 0.5, 420)
@@ -141,11 +172,11 @@ export default function RoutePlanner({
 
   function clear() {
     onRouteChange(null)
+    setChecked(null)
     setFromMe(true)
-    setFrom(null)
-    setTo(null)
+    setFromField(EMPTY_FIELD)
+    setToField(EMPTY_FIELD)
     setError(null)
-    setResetCount((n) => n + 1)
   }
 
   // With the panel closed this still stays mounted, to keep the route line on the map
@@ -153,6 +184,7 @@ export default function RoutePlanner({
 
   const list = hazards.data ?? []
   const expanded = panel === 'open'
+  const riverWorst = worstStep(riversNear.map((r) => r.gauge))
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex justify-center">
@@ -166,9 +198,32 @@ export default function RoutePlanner({
           >
             <span className="text-base font-semibold text-slate-900">Route</span>
             {route && (
-              <span className="truncate text-sm text-slate-600">
-                {formatKm(route.distance_m)}
-                {hazards.data && ` · ${list.length} ${list.length === 1 ? 'hazard' : 'hazards'}`}
+              <span className="flex min-w-0 items-center gap-1.5 text-sm text-slate-600">
+                <span className="shrink-0">{formatKm(route.distance_m)}</span>
+                {riverWorst && (
+                  <>
+                    <span aria-hidden="true">&middot;</span>
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{ backgroundColor: STEP_COLOR[riverWorst], color: stepTextColor(riverWorst) }}
+                    >
+                      {riversNear.length} {riversNear.length === 1 ? 'river warning' : 'river warnings'}
+                    </span>
+                  </>
+                )}
+                {hazards.data && (
+                  <>
+                    <span aria-hidden="true">&middot;</span>
+                    <span className="truncate">
+                      {list.length} {list.length === 1 ? 'hazard' : 'hazards'}
+                    </span>
+                  </>
+                )}
+                {outOfDate && (
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                    out of date
+                  </span>
+                )}
               </span>
             )}
             {expanded ? (
@@ -210,17 +265,17 @@ export default function RoutePlanner({
               ) : (
                 <div>
                   <PlaceInput
-                    key={`from-${resetCount}`}
                     label="From"
                     placeholder="Search for a starting place"
-                    onChange={setFrom}
+                    value={fromField}
+                    onChange={setFromField}
                     focus={focus}
                   />
                   <button
                     type="button"
                     onClick={() => {
                       setFromMe(true)
-                      setFrom(null)
+                      setFromField(EMPTY_FIELD)
                     }}
                     className="mt-1 h-11 text-sm font-medium text-blue-700"
                   >
@@ -230,10 +285,10 @@ export default function RoutePlanner({
               )}
 
               <PlaceInput
-                key={`to-${resetCount}`}
                 label="To"
                 placeholder="Search for a destination"
-                onChange={setTo}
+                value={toField}
+                onChange={setToField}
                 focus={focus}
               />
 
@@ -253,20 +308,60 @@ export default function RoutePlanner({
               </button>
             </div>
 
+            {route && outOfDate && (
+              <p role="status" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                You changed the From or To. The results below are for the earlier route. Tap Check route to
+                update them.
+              </p>
+            )}
+
             {route && (
               <div className="mt-5 border-t border-slate-200 pt-4">
+                {/* Only the results fade, the buttons below stay at full strength */}
+                <div className={outOfDate ? 'opacity-60' : ''}>
                 <p className="text-lg font-semibold text-slate-900">
                   {formatKm(route.distance_m)} &middot; {routeDuration(route.duration_s)} (without traffic)
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   Real travel times are often longer. Check Google Maps for live traffic.
                 </p>
+
+                {/* Official warnings come first, before anything crowd-sourced */}
+                {riversNear.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-slate-900">River gauges near the route</p>
+                    <ul className="mt-2 space-y-2">
+                      {riversNear.map(({ gauge, distanceAlongM }) => (
+                        <li
+                          key={gauge.id}
+                          className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-slate-200 px-2 py-1"
+                        >
+                          <Droplet
+                            className="h-6 w-6 shrink-0"
+                            fill={STEP_COLOR[gauge.step]}
+                            stroke="#ffffff"
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                          <span className="text-sm text-slate-900">
+                            {gauge.river} at {gauge.station} &middot; {STEP_LABEL[gauge.step]} &middot; near{' '}
+                            {distanceAlongM < 10_000
+                              ? (distanceAlongM / 1000).toFixed(1)
+                              : Math.round(distanceAlongM / 1000)}{' '}
+                            km
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <p className="mt-3 text-base text-slate-800">
                   {hazards.isPending
                     ? 'Checking for hazards…'
                     : hazards.isError
                       ? 'Couldn’t check this route for hazards.'
-                      : hazardSummary(list) + (list.length >= 200 ? ' (first 200 shown)' : '')}
+                      : hazardSummary(list, riversNear.length > 0) + (list.length >= 200 ? ' (first 200 shown)' : '')}
                 </p>
                 {hazards.isError && (
                   <button
@@ -304,17 +399,30 @@ export default function RoutePlanner({
                     ))}
                   </ul>
                 )}
+                </div>
 
                 <div className="mt-4 grid gap-2">
-                  <a
-                    href={googleMapsUrl(route.start, route.end)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-blue-600 text-base font-semibold text-blue-700 active:bg-blue-50"
-                  >
-                    <ExternalLink className="h-5 w-5" aria-hidden="true" />
-                    Open in Google Maps
-                  </a>
+                  {outOfDate ? (
+                    // The link would open the old route, so it's switched off until the next check
+                    <span
+                      role="link"
+                      aria-disabled="true"
+                      className="flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-100 text-base font-semibold text-slate-400"
+                    >
+                      <ExternalLink className="h-5 w-5" aria-hidden="true" />
+                      Open in Google Maps
+                    </span>
+                  ) : (
+                    <a
+                      href={googleMapsUrl(route.start, route.end)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-blue-600 text-base font-semibold text-blue-700 active:bg-blue-50"
+                    >
+                      <ExternalLink className="h-5 w-5" aria-hidden="true" />
+                      Open in Google Maps
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={clear}

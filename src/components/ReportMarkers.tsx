@@ -1,6 +1,4 @@
 import { createElement, useEffect, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
-import { createRoot } from 'react-dom/client'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, type DivIcon, type Map as LeafletMap, type Marker as LeafletMarker } from 'leaflet'
 import {
@@ -12,6 +10,8 @@ import {
   type HazardType,
   type Severity,
 } from '../lib/hazards'
+import { iconToSvg } from '../lib/iconHtml'
+import { POPUP_PADDING } from '../lib/popupPadding'
 import type { RouteResult } from '../lib/routing'
 import { expiresIn, timeAgo } from '../lib/time'
 import { useReportsInView, type Bounds, type Report } from '../lib/useReports'
@@ -36,16 +36,9 @@ function readBounds(map: LeafletMap): Bounds {
   }
 }
 
-// Leaflet markers are plain HTML, so each icon is drawn once into text. This
-// avoids react-dom/server, which would add a lot to the download. It runs when
-// this file loads, not during a render, because flushSync can't run in one.
 const iconSvg = new Map<HazardType, string>()
 for (const { value, icon } of HAZARD_TYPES) {
-  const host = document.createElement('div')
-  const root = createRoot(host)
-  flushSync(() => root.render(createElement(icon, { size: 24, strokeWidth: 2.25, 'aria-hidden': true })))
-  iconSvg.set(value, host.innerHTML)
-  root.unmount()
+  iconSvg.set(value, iconToSvg(icon, { size: 24, strokeWidth: 2.25 }))
 }
 
 const iconCache = new Map<string, DivIcon>()
@@ -113,7 +106,7 @@ export default function ReportMarkers({ hidden, route, openRequest }: Props) {
           icon={markerIcon(report.hazard_type, report.severity)}
           alt={hazardLabel(report.hazard_type)}
         >
-          <Popup minWidth={220}>
+          <Popup minWidth={220} {...POPUP_PADDING}>
             <ReportCard report={report} />
           </Popup>
         </Marker>

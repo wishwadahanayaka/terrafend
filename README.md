@@ -20,6 +20,7 @@ Working now:
 - Voting: anyone can say a hazard is "still there" (which keeps it alive for another 6 hours) or "it's gone" (three of those clear it)
 - Reports expire after 6 hours unless people confirm them, and old reports and photos are cleaned up automatically every hour
 - Route check: search for a destination, see the driving route, distance and time, and the hazards along it in order, with one tap to jump to each. There's a button to open the same trip in Google Maps
+- River gauges: official water levels from the Department of Irrigation's gauges as small drop markers, coloured by Normal, Alert, Minor flood and Major flood. Tap one for the level, the flood marks, when it was read (in Sri Lanka time) and a short next-hour forecast. The layer can be switched off, and it hides itself if the data isn't available. Gauges at Alert or above near a checked route are listed above the hazards
 - Banner reminding users this is not an official warning service
 
 Roadmap:
@@ -27,7 +28,7 @@ Roadmap:
 - [x] Map with the user's location
 - [x] Crowd hazard reports (with photos and voting)
 - [x] Route check: find hazards along a travel route
-- [ ] Official data layers
+- [ ] Official data layers (river gauges are done)
 - [ ] Sinhala and Tamil alongside English
 - [ ] Phone alerts
 - [ ] Offline support, so the app still opens and shows the last loaded reports when the signal is weak or gone
@@ -63,11 +64,14 @@ Planned:
 
 ### Planned data sources
 
-- Sri Lanka Irrigation Department river gauges (ArcGIS)
 - Open-Meteo weather data
 - GDACS disaster alerts
 - NBRO landslide warnings
 - Department of Meteorology warnings
+
+## Data credits
+
+River levels: Data: Sri Lanka Water Levels (Shakeeb Sadikeen), from the Department of Irrigation. See [waterlevels.lk](https://waterlevels.lk).
 
 ## Running it locally
 

@@ -7,12 +7,33 @@ import type { RouteResult } from '../lib/routing'
 import LocateButton from './LocateButton'
 import MapLimits from './MapLimits'
 import ReportFlow, { type ReportMode } from './ReportFlow'
+import RiverControls from './RiverControls'
 import type { PanelState } from './RoutePlanner'
 
 // The data code (Supabase, hazards, the route planner) loads after the map
 // has appeared, so the first screen shows up sooner
 const ReportMarkers = lazy(() => import('./ReportMarkers'))
 const RoutePlanner = lazy(() => import('./RoutePlanner'))
+const RiverMarkers = lazy(() => import('./RiverMarkers'))
+
+const SHOW_ALL_RIVERS_KEY = 'terrafend:showAllRivers'
+
+// Storage can be missing or blocked (private windows, strict settings), so it's only ever a bonus
+function loadShowAllRivers(): boolean {
+  try {
+    return localStorage.getItem(SHOW_ALL_RIVERS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function saveShowAllRivers(value: boolean) {
+  try {
+    localStorage.setItem(SHOW_ALL_RIVERS_KEY, value ? '1' : '0')
+  } catch {
+    // not saved, the choice still works until the page is closed
+  }
+}
 
 // Fitting to bounds instead of a fixed zoom keeps the island filling the screen on any size
 const SRI_LANKA_BOUNDS: LatLngBoundsExpression = [
@@ -34,7 +55,11 @@ export default function HazardMap() {
 
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
+  // The planner keeps the From and To boxes, so once it has been opened it stays loaded
+  const [plannerOpened, setPlannerOpened] = useState(false)
   const [openRequest, setOpenRequest] = useState<{ id: string; n: number } | null>(null)
+  // Gauges at Alert or above always show. This adds all the others.
+  const [showAllRivers, setShowAllRivers] = useState(loadShowAllRivers)
 
   const picking = mode === 'picking'
 
@@ -66,11 +91,27 @@ export default function HazardMap() {
         <Suspense fallback={null}>
           <ReportMarkers hidden={picking} route={route} openRequest={openRequest} />
         </Suspense>
+        {!picking && (
+          <Suspense fallback={null}>
+            <RiverMarkers showAll={showAllRivers} />
+          </Suspense>
+        )}
         <LocateButton
           onLocated={setUserLatLng}
           bottomClass={picking ? 'bottom-28' : panel === 'collapsed' ? 'bottom-20' : 'bottom-6'}
         />
       </MapContainer>
+
+      {!picking && (
+        <RiverControls
+          map={map}
+          showAll={showAllRivers}
+          onShowAllChange={(value) => {
+            setShowAllRivers(value)
+            saveShowAllRivers(value)
+          }}
+        />
+      )}
 
       {map && (
         <>
@@ -85,7 +126,10 @@ export default function HazardMap() {
           {panel === 'closed' && !picking && (
             <button
               type="button"
-              onClick={() => setPanel('open')}
+              onClick={() => {
+                setPlannerOpened(true)
+                setPanel('open')
+              }}
               className="absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-white px-5 font-semibold text-blue-700 shadow-lg active:bg-slate-100"
             >
               <RouteIcon className="h-6 w-6" aria-hidden="true" />
@@ -93,8 +137,8 @@ export default function HazardMap() {
             </button>
           )}
 
-          {/* Stays loaded while a route exists, since it draws the route line */}
-          {(panel !== 'closed' || route) && (
+          {/* Stays loaded once opened: it draws the route line and remembers the inputs */}
+          {plannerOpened && (
             <Suspense fallback={null}>
               <RoutePlanner
                 map={map}

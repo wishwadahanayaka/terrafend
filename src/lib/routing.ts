@@ -7,6 +7,12 @@ export type Point = { lat: number; lng: number }
 
 export type Place = Point & { label: string }
 
+// What is typed in a From or To box, and the place picked from the suggestions
+// (null while typing). The route panel owns these, so they survive it being closed.
+export type PlaceField = { text: string; place: Place | null }
+
+export const EMPTY_FIELD: PlaceField = { text: '', place: null }
+
 export type RouteResult = {
   // Changes with every checked route, so queries can key on it without hashing the whole line
   id: number
@@ -82,8 +88,11 @@ export function googleMapsUrl(start: Point, end: Point): string {
 }
 
 // Worst first, like "2 hazards: 1 blocked, 1 large vehicles only"
-export function hazardSummary(hazards: { severity: Severity }[]): string {
-  if (hazards.length === 0) return 'No reported hazards on this route'
+export function hazardSummary(hazards: { severity: Severity }[], hasRiverWarnings = false): string {
+  // With a river warning nearby, "nothing reported" must not read as "the route is safe"
+  if (hazards.length === 0) {
+    return hasRiverWarnings ? 'No hazards reported by users on this route' : 'No reported hazards on this route'
+  }
   const parts = [...SEVERITIES]
     .reverse()
     .map((s) => ({ s: s.value, n: hazards.filter((h) => h.severity === s.value).length }))
