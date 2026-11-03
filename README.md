@@ -22,6 +22,8 @@ Working now:
 - Route check: search for a destination, see the driving route, distance and time, and the hazards along it in order, with one tap to jump to each. There's a button to open the same trip in Google Maps
 - River gauges: official water levels from the Department of Irrigation's gauges as small drop markers, coloured by Normal, Alert, Minor flood and Major flood. Tap one for the level, the flood marks, when it was read (in Sri Lanka time) and a short next-hour forecast. The layer can be switched off, and it hides itself if the data isn't available. Gauges at Alert or above near a checked route are listed above the hazards
 - Rain along the route: a forecast for about every 10 km of a checked route, timed to when you'd be there, with heavy rain, very heavy rain and thunderstorms called out in the route panel and on the map itself (a forecast, not an official warning)
+- Rain across the island: the worst rain expected in each part of Sri Lanka over the next 3 hours, drawn as soft coloured squares under the markers. Tap one for the level and the hour
+- A Layers menu with a switch each for Reports, Rivers and Rain. Serious items (blocked or restricted road reports, rivers at Alert or above, heavy rain and thunderstorms) always show, and the switches only add the less serious ones. One chip counts everything serious right now, and tapping it zooms out to show it all
 - Banner reminding users this is not an official warning service
 
 Roadmap:
@@ -75,6 +77,8 @@ Planned:
 River levels: Data: Sri Lanka Water Levels (Shakeeb Sadikeen), from the Department of Irrigation. See [waterlevels.lk](https://waterlevels.lk).
 
 Rain forecast, and the backup place search: Weather data and geocoding by [Open-Meteo.com](https://open-meteo.com/).
+
+The rain map uses a simplified Sri Lanka coastline, derived from [geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0), only to leave sea out of its grid.
 
 ## Running it locally
 

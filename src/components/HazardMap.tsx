@@ -4,13 +4,14 @@ import { Route as RouteIcon } from 'lucide-react'
 import { latLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet'
 import { SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
 import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
+import { loadLayerSettings, saveLayerSetting, type LayerSettings } from '../lib/layerSettings'
 import type { RouteHazard } from '../lib/useRoute'
 import { rainPath, type RainStretch } from '../lib/rainForecast'
 import type { RouteResult } from '../lib/routing'
 import LocateButton from './LocateButton'
 import MapLimits from './MapLimits'
 import ReportFlow, { type ReportMode } from './ReportFlow'
-import RiverControls from './RiverControls'
+import LayerControls from './LayerControls'
 import type { PanelState } from './RoutePlanner'
 
 // The data code (Supabase, hazards, the route planner) loads after the map
@@ -19,25 +20,7 @@ const ReportMarkers = lazy(() => import('./ReportMarkers'))
 const RoutePlanner = lazy(() => import('./RoutePlanner'))
 const RiverMarkers = lazy(() => import('./RiverMarkers'))
 const RainOverlay = lazy(() => import('./RainOverlay'))
-
-const SHOW_ALL_RIVERS_KEY = 'terrafend:showAllRivers'
-
-// Storage can be missing or blocked (private windows, strict settings), so it's only ever a bonus
-function loadShowAllRivers(): boolean {
-  try {
-    return localStorage.getItem(SHOW_ALL_RIVERS_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-function saveShowAllRivers(value: boolean) {
-  try {
-    localStorage.setItem(SHOW_ALL_RIVERS_KEY, value ? '1' : '0')
-  } catch {
-    // not saved, the choice still works until the page is closed
-  }
-}
+const RainMapOverlay = lazy(() => import('./RainMapOverlay'))
 
 export default function HazardMap() {
   // The report and route UI sit outside MapContainer so touches in them don't pan the map
@@ -53,8 +36,8 @@ export default function HazardMap() {
   const [rainRequest, setRainRequest] = useState<{ id: string; n: number } | null>(null)
   // True while the route's results no longer match the From and To boxes
   const [routeStale, setRouteStale] = useState(false)
-  // Gauges at Alert or above always show. This adds all the others.
-  const [showAllRivers, setShowAllRivers] = useState(loadShowAllRivers)
+  // Serious items always show. These switches only add the less serious ones.
+  const [layers, setLayers] = useState(loadLayerSettings)
 
   const picking = mode === 'picking'
   // The buttons down the right fade out while a card is open, so they can't cover it
@@ -94,7 +77,15 @@ export default function HazardMap() {
         />
         <MapLimits island={SRI_LANKA_BOUNDS} limits={SRI_LANKA_LIMITS} />
         <Suspense fallback={null}>
-          <ReportMarkers hidden={picking} route={route} openRequest={openRequest} />
+          <RainMapOverlay hidden={picking} showMild={layers.mildRain} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <ReportMarkers
+            hidden={picking}
+            route={route}
+            showPassable={layers.passableReports}
+            openRequest={openRequest}
+          />
         </Suspense>
         {route && (
           <Suspense fallback={null}>
@@ -103,7 +94,7 @@ export default function HazardMap() {
         )}
         {!picking && (
           <Suspense fallback={null}>
-            <RiverMarkers showAll={showAllRivers} />
+            <RiverMarkers showAll={layers.normalRivers} />
           </Suspense>
         )}
         <LocateButton
@@ -114,12 +105,12 @@ export default function HazardMap() {
       </MapContainer>
 
       {!picking && (
-        <RiverControls
+        <LayerControls
           map={map}
-          showAll={showAllRivers}
-          onShowAllChange={(value) => {
-            setShowAllRivers(value)
-            saveShowAllRivers(value)
+          settings={layers}
+          onChange={(name: keyof LayerSettings, value) => {
+            setLayers((current) => ({ ...current, [name]: value }))
+            saveLayerSetting(name, value)
           }}
         />
       )}

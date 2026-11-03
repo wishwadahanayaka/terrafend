@@ -5,6 +5,7 @@ import {
   HAZARD_TYPES,
   hazardIcon,
   hazardLabel,
+  isSerious,
   severityBg,
   severityLabel,
   type HazardType,
@@ -60,11 +61,13 @@ type Props = {
   hidden: boolean
   // The planned route, if any. Its hazards are shown even outside the loaded area.
   route: RouteResult | null
+  // Blocked and large-vehicles-only reports always show. This adds the passable ones.
+  showPassable: boolean
   // Asks for one report's card to open. The number makes a repeat tap count as new.
   openRequest: { id: string; n: number } | null
 }
 
-export default function ReportMarkers({ hidden, route, openRequest }: Props) {
+export default function ReportMarkers({ hidden, route, showPassable, openRequest }: Props) {
   const map = useMap()
   const popupFit = usePopupFit()
   const [bounds, setBounds] = useState(() => readBounds(map))
@@ -91,9 +94,13 @@ export default function ReportMarkers({ hidden, route, openRequest }: Props) {
   // The query keeps running while hidden, so markers are fresh when picking ends
   if (hidden) return null
 
-  // Merged by id, so a report in both lists is only drawn once
+  // Merged by id, so a report in both lists is only drawn once. Reports on the checked
+  // route always show, whatever their severity, because the route panel lists them.
   const all = new Map<string, Report>()
-  for (const report of [...(data ?? []), ...(routeHazards ?? [])]) all.set(report.id, report)
+  for (const report of data ?? []) {
+    if (showPassable || isSerious(report.severity)) all.set(report.id, report)
+  }
+  for (const report of routeHazards ?? []) all.set(report.id, report)
 
   return (
     <>

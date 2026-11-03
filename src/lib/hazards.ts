@@ -50,6 +50,12 @@ export function severityLabel(value: Severity): string {
   return SEVERITIES.find((s) => s.value === value)?.label ?? value
 }
 
+// Roads that are blocked, or open to large vehicles only. These always show on the map;
+// passable reports only show when the Reports layer is switched on.
+export function isSerious(value: Severity): boolean {
+  return value !== 'passable'
+}
+
 export function severityBg(value: Severity): string {
   return SEVERITIES.find((s) => s.value === value)?.bg ?? 'bg-slate-600'
 }
