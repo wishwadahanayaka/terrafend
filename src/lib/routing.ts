@@ -22,6 +22,8 @@ export type RouteResult = {
   duration_s: number
   start: Point
   end: Point
+  // Points along a reroute, so Google Maps follows the same roads instead of its own choice
+  via?: Point[]
 }
 
 const GENERAL_ERROR = 'Something went wrong. Please try again.'
@@ -91,15 +93,24 @@ export async function searchPlaces(text: string, focus: Point): Promise<PlaceSea
 
 let nextRouteId = 1
 
-export async function fetchRoute(start: Point, end: Point): Promise<RouteResult> {
+// The routing function takes at most 20 spots to avoid
+export const MAX_AVOID = 20
+
+// What the routing function says when every way round passes a spot to avoid
+export const NO_REROUTE = 'No other route avoids these blocked roads. Take care, or check Google Maps.'
+
+// `avoid` is a list of spots (blocked roads) the route must not pass through
+export async function fetchRoute(start: Point, end: Point, avoid: Point[] = []): Promise<RouteResult> {
+  const body: Record<string, unknown> = { action: 'route', start, end }
+  if (avoid.length > 0) body.avoid = avoid.slice(0, MAX_AVOID)
   const data =
     import.meta.env.DEV && fakeRoutingOn()
-      ? await (await import('./fakeRouting')).fakeRoute(start, end)
+      ? await (await import('./fakeRouting')).fakeRoute(start, end, avoid)
       : await callRouting<{
           coordinates: [number, number][]
           distance_m: number
           duration_s: number
-        }>({ action: 'route', start, end })
+        }>(body)
   return { ...data, id: nextRouteId++, start, end }
 }
 
@@ -119,8 +130,12 @@ export function formatKm(meters: number): string {
   return `${km >= 100 ? Math.round(km) : km.toFixed(1)} km`
 }
 
-export function googleMapsUrl(start: Point, end: Point): string {
-  return `https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lng}&destination=${end.lat},${end.lng}&travelmode=driving`
+const at = (p: Point) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`
+
+// Waypoints make Google follow a reroute instead of going back to its own fastest road
+export function googleMapsUrl(start: Point, end: Point, via: Point[] = []): string {
+  const waypoints = via.length > 0 ? `&waypoints=${encodeURIComponent(via.map(at).join('|'))}` : ''
+  return `https://www.google.com/maps/dir/?api=1&origin=${at(start)}&destination=${at(end)}${waypoints}&travelmode=driving`
 }
 
 // Worst first, like "2 hazards: 1 blocked, 1 large vehicles only"

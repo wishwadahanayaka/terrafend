@@ -32,6 +32,8 @@ export default function HazardMap() {
 
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
+  // A reroute around blocked roads, on offer until it's used or dismissed
+  const [alternative, setAlternative] = useState<RouteResult | null>(null)
   // The planner keeps the From and To boxes, so once it has been opened it stays loaded
   const [plannerOpened, setPlannerOpened] = useState(false)
   const [openRequest, setOpenRequest] = useState<{ id: string; n: number } | null>(null)
@@ -85,13 +87,20 @@ export default function HazardMap() {
           <ReportMarkers
             hidden={picking}
             route={route}
+            alternative={alternative}
             showPassable={layers.passableReports}
             openRequest={openRequest}
           />
         </Suspense>
         {route && (
           <Suspense fallback={null}>
-            <RainOverlay route={route} hidden={picking} outOfDate={routeStale} openRequest={rainRequest} />
+            {/* Faded while a reroute is on offer, since its colours belong to the grey original */}
+            <RainOverlay
+              route={route}
+              hidden={picking}
+              outOfDate={routeStale || alternative !== null}
+              openRequest={rainRequest}
+            />
           </Suspense>
         )}
         {!picking && (
@@ -164,6 +173,8 @@ export default function HazardMap() {
                 onPanelChange={setPanel}
                 route={route}
                 onRouteChange={setRoute}
+                alternative={alternative}
+                onAlternativeChange={setAlternative}
                 onSelectHazard={showHazard}
                 onSelectRain={showRain}
                 onStaleChange={setRouteStale}

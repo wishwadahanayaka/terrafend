@@ -81,7 +81,9 @@ export default function GdacsMarkers({ showGreen }: Props) {
   )
 }
 
-// The forecast area under the track: past positions solid, forecast ones dashed
+// The forecast area under the track: past positions solid, forecast ones dashed.
+// The area is mostly outline with only a faint tint, because it sits above the rain
+// squares and a stronger fill muddied their colours.
 function Track({ event }: { event: GdacsEvent }) {
   const color = GDACS_LEVEL_COLOR[event.level]
   return (
@@ -91,7 +93,7 @@ function Track({ event }: { event: GdacsEvent }) {
           key={`cone-${i}`}
           positions={ring}
           interactive={false}
-          pathOptions={{ color, weight: 1.5, dashArray: '6 6', fillColor: color, fillOpacity: 0.14 }}
+          pathOptions={{ color, weight: 2, opacity: 0.9, dashArray: '8 6', fillColor: color, fillOpacity: 0.04 }}
         />
       ))}
       {event.track?.lines.map((line, i) => (
@@ -130,11 +132,10 @@ function GdacsCard({ event }: { event: GdacsEvent }) {
           {line}
         </div>
       ))}
-      <div className="mt-2 text-xs text-slate-600">
-        {event.affectsSriLanka
-          ? 'Affects Sri Lanka'
-          : `About ${Math.round(event.distanceKm)} km from Sri Lanka`}
-      </div>
+      {/* When it affects Sri Lanka, the Affected line above already says so */}
+      {!event.affectsSriLanka && (
+        <div className="mt-2 text-xs text-slate-600">About {Math.round(event.distanceKm)} km from Sri Lanka</div>
+      )}
 
       <div className="mt-1 text-xs text-slate-600">
         {happened ? 'Time' : 'Started'}: {sriLankaTime(new Date(event.from).toISOString())}

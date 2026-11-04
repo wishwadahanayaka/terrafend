@@ -24,7 +24,13 @@ export function useRouteHazards(route: RouteResult | null) {
         buffer_m: BUFFER_M,
       })
       if (error) throw error
-      return data as RouteHazard[]
+      const found = data as RouteHazard[]
+      // Dev only: ?fakeReport= adds test reports (see fakeReports.ts)
+      if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('fakeReport')) {
+        const fakes = (await import('./fakeReports')).fakeReportsAlong(route, BUFFER_M) ?? []
+        return [...found, ...fakes].sort((a, b) => a.distance_along_m - b.distance_along_m)
+      }
+      return found
     },
     refetchInterval: REFRESH_MS,
   })

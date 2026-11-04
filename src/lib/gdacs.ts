@@ -326,10 +326,14 @@ export function gdacsDetails(e: GdacsEvent): string[] {
   } else if (e.type === 'WF' && e.severity !== null) {
     lines.push(`${Math.round(e.severity).toLocaleString('en-GB')} ha burned or burning`)
   }
-  if (e.countries.length > 0) {
+  // Sri Lanka goes first, so it's never hidden in "and 12 more". This is the card's
+  // only mention of it, so it's added even when GDACS left it out of the list.
+  const others = e.countries.filter((c) => !/sri lanka/i.test(c))
+  const countries = e.affectsSriLanka ? ['Sri Lanka', ...others] : e.countries
+  if (countries.length > 0) {
     // Droughts can list dozens of countries
-    const shown = e.countries.slice(0, 4).join(', ')
-    lines.push(`Affected: ${shown}${e.countries.length > 4 ? ` and ${e.countries.length - 4} more` : ''}`)
+    const shown = countries.slice(0, 4).join(', ')
+    lines.push(`Affected: ${shown}${countries.length > 4 ? ` and ${countries.length - 4} more` : ''}`)
   }
   return lines
 }

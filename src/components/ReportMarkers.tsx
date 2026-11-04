@@ -61,13 +61,15 @@ type Props = {
   hidden: boolean
   // The planned route, if any. Its hazards are shown even outside the loaded area.
   route: RouteResult | null
+  // A reroute on offer. Its hazards show too, so you can see what it passes.
+  alternative: RouteResult | null
   // Blocked and large-vehicles-only reports always show. This adds the passable ones.
   showPassable: boolean
   // Asks for one report's card to open. The number makes a repeat tap count as new.
   openRequest: { id: string; n: number } | null
 }
 
-export default function ReportMarkers({ hidden, route, showPassable, openRequest }: Props) {
+export default function ReportMarkers({ hidden, route, alternative, showPassable, openRequest }: Props) {
   const map = useMap()
   const popupFit = usePopupFit()
   const [bounds, setBounds] = useState(() => readBounds(map))
@@ -86,6 +88,7 @@ export default function ReportMarkers({ hidden, route, showPassable, openRequest
   const { data } = useReportsInView(bounds)
   // Same query as the route panel uses, so this shares its result instead of asking again
   const { data: routeHazards } = useRouteHazards(route)
+  const { data: altHazards } = useRouteHazards(alternative)
 
   useEffect(() => {
     if (openRequest) markers.current.get(openRequest.id)?.openPopup()
@@ -100,7 +103,7 @@ export default function ReportMarkers({ hidden, route, showPassable, openRequest
   for (const report of data ?? []) {
     if (showPassable || isSerious(report.severity)) all.set(report.id, report)
   }
-  for (const report of routeHazards ?? []) all.set(report.id, report)
+  for (const report of [...(routeHazards ?? []), ...(altHazards ?? [])]) all.set(report.id, report)
 
   return (
     <>
@@ -146,7 +149,8 @@ function ReportCard({ report }: { report: Report }) {
       <div className="mt-2 text-xs text-slate-500">
         {timeAgo(report.created_at)} &middot; {expiresIn(report.expires_at)}
       </div>
-      <VoteSection reportId={report.id} />
+      {/* Test reports from ?fakeReport= aren't in the database, so there's nothing to vote on */}
+      {!report.id.startsWith('fake-') && <VoteSection reportId={report.id} />}
     </div>
   )
 }

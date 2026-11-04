@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from 'react'
+import { createElement, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Droplet, ExternalLink, LocateFixed, X } from 'lucide-react'
 import {
   circleMarker,
@@ -17,6 +17,7 @@ import {
   formatKm,
   googleMapsUrl,
   hazardSummary,
+  MAX_AVOID,
   type Place,
   type PlaceField,
   type Point,
@@ -34,10 +35,16 @@ import { useRiverGauges } from '../lib/useRiverGauges'
 import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
 import { RAIN_COLOR, worstRain, type RainStretch } from '../lib/rainForecast'
 import { useRouteRain } from '../lib/useRouteRain'
+import { avoidSpot, blockedOn, detourWaypoints, type AvoidSpot } from '../lib/reroute'
 import PlaceInput from './PlaceInput'
 import RainSection from './RainSection'
+import RerouteSection from './RerouteSection'
 
 export type PanelState = 'closed' | 'open' | 'collapsed'
+
+const REROUTE_PANE = 'reroute'
+// One reroute, then one more if the new route hits a different blocked road
+const MAX_REROUTES = 2
 
 type Props = {
   map: LeafletMap
@@ -47,6 +54,9 @@ type Props = {
   onPanelChange: (panel: PanelState) => void
   route: RouteResult | null
   onRouteChange: (route: RouteResult | null) => void
+  // A reroute around blocked roads, shown beside the route until it's used or dismissed
+  alternative: RouteResult | null
+  onAlternativeChange: (route: RouteResult | null) => void
   onSelectHazard: (hazard: RouteHazard) => void
   onSelectRain: (stretch: RainStretch) => void
   // Tells the map when the results are out of date, so the rain on it can fade too
@@ -97,11 +107,14 @@ export default function RoutePlanner({
   onPanelChange,
   route,
   onRouteChange,
+  alternative,
+  onAlternativeChange,
   onSelectHazard,
   onSelectRain,
   onStaleChange,
 }: Props) {
   const hazards = useRouteHazards(route)
+  const altHazards = useRouteHazards(alternative)
   // One request per checked route, so it only runs when a route is checked
   const rain = useRouteRain(route)
 
@@ -131,6 +144,18 @@ export default function RoutePlanner({
   // What the route on the map was checked with, to tell when the inputs have moved on from it
   const [checked, setChecked] = useState<Inputs | null>(null)
 
+  // Rerouting around blocked roads. All of it starts again with each Check route.
+  // The spots asked to be avoided so far, so a second reroute avoids the first ones too
+  const [avoid, setAvoid] = useState<AvoidSpot[]>([])
+  const [reroutes, setReroutes] = useState(0)
+  // The route as first checked. Google Maps waypoints go where a reroute leaves it.
+  const [firstRoute, setFirstRoute] = useState<RouteResult | null>(null)
+  const [rerouting, setRerouting] = useState(false)
+  const [rerouteError, setRerouteError] = useState<string | null>(null)
+  // The route "Keep original" was tapped for, so it doesn't ask again
+  const [keptRouteId, setKeptRouteId] = useState<number | null>(null)
+  const trip = useRef(0)
+
   const from = fromField.place
   const to = toField.place
   const outOfDate = route !== null && checked !== null && !sameInputs(checked, { fromMe, from, to })
@@ -146,7 +171,11 @@ export default function RoutePlanner({
   // The route line sits on the map itself, outside the React tree
   useEffect(() => {
     if (!route || hidden) return
-    const points = route.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
+    const latLngs = (r: RouteResult) => r.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
+    // While a reroute is offered it goes above the route's rain colours (450), so the
+    // blue line reads clearly where the two routes share a road
+    if (alternative && !map.getPane(REROUTE_PANE)) map.createPane(REROUTE_PANE).style.zIndex = '455'
+    const pane = alternative ? REROUTE_PANE : 'overlayPane'
     const dot = (p: Point, color: string) =>
       circleMarker([p.lat, p.lng], {
         radius: 8,
@@ -155,18 +184,87 @@ export default function RoutePlanner({
         fillColor: color,
         fillOpacity: 1,
         interactive: false,
+        pane,
       })
-    const group = layerGroup([
+    const main = alternative ?? route
+    const layers = [
       // The white line underneath keeps the blue one readable on busy map areas
-      polyline(points, { color: '#ffffff', weight: 10, opacity: 0.9, interactive: false }),
-      polyline(points, { color: '#1d4ed8', weight: 6, interactive: false }),
+      polyline(latLngs(main), { color: '#ffffff', weight: 10, opacity: 0.9, interactive: false, pane }),
+      polyline(latLngs(main), { color: '#1d4ed8', weight: 6, interactive: false, pane }),
       dot(route.start, '#16a34a'),
       dot(route.end, '#dc2626'),
-    ]).addTo(map)
+    ]
+    // The original, greyed and dashed underneath the reroute
+    if (alternative) {
+      layers.unshift(
+        polyline(latLngs(route), { color: '#64748b', weight: 5, opacity: 0.85, dashArray: '8 10', interactive: false }),
+      )
+    }
+    const group = layerGroup(layers).addTo(map)
     return () => {
       group.remove()
     }
-  }, [map, route, hidden])
+  }, [map, route, alternative, hidden])
+
+  function resetReroute() {
+    // A reroute still on its way belongs to the old trip, and is dropped when it arrives
+    trip.current++
+    onAlternativeChange(null)
+    setAvoid([])
+    setReroutes(0)
+    setRerouteError(null)
+    setKeptRouteId(null)
+    setRerouting(false)
+  }
+
+  // Asks for a route that misses every blocked road so far plus `blocked`, which were
+  // found on `foundOn` (the route, or the reroute already on offer)
+  async function findAnother(foundOn: RouteResult, blocked: RouteHazard[]) {
+    if (!route) return
+    const spots = [...avoid]
+    for (const h of blocked) {
+      if (!spots.some((s) => s.id === h.id)) spots.push(avoidSpot(foundOn, h))
+    }
+    const thisTrip = trip.current
+    setAvoid(spots)
+    setRerouting(true)
+    setRerouteError(null)
+    try {
+      const next = await fetchRoute(
+        route.start,
+        route.end,
+        spots.slice(0, MAX_AVOID).map((s) => s.point),
+      )
+      if (thisTrip !== trip.current) return
+      next.via = detourWaypoints(next, firstRoute ?? route)
+      setReroutes((n) => n + 1)
+      onAlternativeChange(next)
+      const bottom = Math.min(window.innerHeight * 0.5, 420)
+      map.fitBounds(
+        latLngBounds([...route.coordinates, ...next.coordinates].map(([lng, lat]) => [lat, lng])),
+        { paddingTopLeft: [24, 80], paddingBottomRight: [24, bottom] },
+      )
+    } catch (err) {
+      if (thisTrip !== trip.current) return
+      setRerouteError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      if (thisTrip === trip.current) setRerouting(false)
+    }
+  }
+
+  function adoptAlternative() {
+    if (!alternative) return
+    // Everything keyed on the route (hazards, rivers, rain, global alerts) checks it afresh
+    onRouteChange(alternative)
+    onAlternativeChange(null)
+    setRerouteError(null)
+  }
+
+  function keepOriginal() {
+    if (route) setKeptRouteId(route.id)
+    onAlternativeChange(null)
+    setRerouteError(null)
+  }
 
   async function check() {
     if (!to) return
@@ -183,6 +281,8 @@ export default function RoutePlanner({
       }
 
       const result = await fetchRoute(start, { lat: to.lat, lng: to.lng })
+      resetReroute()
+      setFirstRoute(result)
       onRouteChange(result)
       setChecked({ fromMe, from, to })
 
@@ -200,6 +300,8 @@ export default function RoutePlanner({
   }
 
   function clear() {
+    resetReroute()
+    setFirstRoute(null)
     onRouteChange(null)
     setChecked(null)
     setFromMe(true)
@@ -213,6 +315,13 @@ export default function RoutePlanner({
 
   const list = hazards.data ?? []
   const expanded = panel === 'open'
+
+  // Only fully blocked roads lead to a reroute offer. Everything else stays a warning.
+  const blocked = blockedOn(list)
+  const altList = altHazards.data ?? []
+  const altBlocked = blockedOn(altList)
+  const altIds = new Set(altList.map((h) => h.id))
+  const avoidIds = new Set([...avoid.map((s) => s.id), ...altBlocked.map((h) => h.id)])
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
   const alertWorst = globalAlerts.some((a) => a.event.level === 'Red') ? 'Red' : globalAlerts.length > 0 ? 'Orange' : null
   const rainStretches = rain.data?.stretches ?? []
@@ -387,6 +496,26 @@ export default function RoutePlanner({
                   Real travel times are often longer. Check Google Maps for live traffic.
                 </p>
 
+                <RerouteSection
+                  route={route}
+                  alternative={alternative}
+                  blocked={blocked}
+                  altBlocked={altBlocked}
+                  altStatus={altHazards.status}
+                  avoided={avoid.filter((s) => !altIds.has(s.id)).length}
+                  avoidTotal={avoidIds.size}
+                  canRerouteAgain={reroutes < MAX_REROUTES}
+                  showPrompt={
+                    blocked.length > 0 && !outOfDate && keptRouteId !== route.id && reroutes < MAX_REROUTES
+                  }
+                  busy={rerouting}
+                  error={rerouteError}
+                  outOfDate={outOfDate}
+                  onFind={findAnother}
+                  onUse={adoptAlternative}
+                  onKeep={keepOriginal}
+                />
+
                 {/* Official warnings come first, before anything crowd-sourced, and the biggest first of those */}
                 {globalAlerts.length > 0 && (
                   <div className="mt-3">
@@ -506,7 +635,7 @@ export default function RoutePlanner({
                     </span>
                   ) : (
                     <a
-                      href={googleMapsUrl(route.start, route.end)}
+                      href={googleMapsUrl(route.start, route.end, route.via)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-blue-600 text-base font-semibold text-blue-700 active:bg-blue-50"

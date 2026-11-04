@@ -21,6 +21,7 @@ const MESSAGES = {
   unavailable: 'Search and routes aren’t available right now. Please try again later.',
   tooMany: 'Too many requests right now. Please wait a moment and try again.',
   noRoute: 'No driving route found between those points. Try moving them closer to a road.',
+  noReroute: 'No other route avoids these blocked roads. Take care, or check Google Maps.',
   general: 'Something went wrong. Please try again.',
 }
 
@@ -141,24 +142,73 @@ async function search(input: Record<string, unknown>) {
   return results.slice(0, 5)
 }
 
+// Blocked roads to route around. ORS limits avoid areas to about 200 km² and 20 km across
+// each, and refuses long thin shapes. Twenty 200 m squares come to under 1 km², so this
+// stays far inside that.
+const MAX_AVOID = 20
+const AVOID_HALF_M = 100
+
+function readAvoid(v: unknown): Point[] {
+  if (v === undefined || v === null) return []
+  if (!Array.isArray(v)) throw new ApiError('avoid must be a list of points.', 400)
+  if (v.length > MAX_AVOID) throw new ApiError(`avoid can have at most ${MAX_AVOID} points.`, 400)
+  return v.map((p, i) => readPoint(p, `avoid point ${i + 1}`, true))
+}
+
+// A square about 200 m across around each point, as one GeoJSON MultiPolygon.
+// Each polygon is a single closed ring, longitude first.
+function avoidPolygons(points: Point[]) {
+  const latStep = AVOID_HALF_M / 110_574
+  return {
+    type: 'MultiPolygon',
+    coordinates: points.map(({ lat, lng }) => {
+      const lngStep = AVOID_HALF_M / (111_320 * Math.cos((lat * Math.PI) / 180))
+      return [
+        [
+          [lng - lngStep, lat - latStep],
+          [lng + lngStep, lat - latStep],
+          [lng + lngStep, lat + latStep],
+          [lng - lngStep, lat + latStep],
+          [lng - lngStep, lat - latStep],
+        ],
+      ]
+    }),
+  }
+}
+
+type OrsRoute = {
+  features?: {
+    geometry?: { coordinates?: number[][] }
+    properties?: { summary?: { distance?: unknown; duration?: unknown } }
+  }[]
+}
+
 async function route(input: Record<string, unknown>) {
   const start = readPoint(input.start, 'start', true)
   const end = readPoint(input.end, 'end', true)
+  const avoid = readAvoid(input.avoid)
 
-  const data = (await callOrs('route', '/v2/directions/driving-car/geojson', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      coordinates: [
-        [start.lng, start.lat],
-        [end.lng, end.lat],
-      ],
-    }),
-  })) as {
-    features?: {
-      geometry?: { coordinates?: number[][] }
-      properties?: { summary?: { distance?: unknown; duration?: unknown } }
-    }[]
+  const body: Record<string, unknown> = {
+    coordinates: [
+      [start.lng, start.lat],
+      [end.lng, end.lat],
+    ],
+  }
+  if (avoid.length > 0) body.options = { avoid_polygons: avoidPolygons(avoid) }
+
+  let data: OrsRoute
+  try {
+    data = (await callOrs('route', '/v2/directions/driving-car/geojson', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })) as OrsRoute
+  } catch (err) {
+    // With avoid areas, "no route" means every way round goes through one of them
+    if (avoid.length > 0 && err instanceof ApiError && err.message === MESSAGES.noRoute) {
+      throw new ApiError(MESSAGES.noReroute, 404)
+    }
+    throw err
   }
 
   const feature = data.features?.[0]
