@@ -6,6 +6,8 @@ export type LayerSettings = {
   normalRivers: boolean
   // Light and moderate rain
   mildRain: boolean
+  // Green global alerts
+  greenAlerts: boolean
 }
 
 // The rivers key is the one the old Rivers button used, so people keep their choice
@@ -13,6 +15,7 @@ const KEYS: Record<keyof LayerSettings, string> = {
   passableReports: 'terrafend:showPassableReports',
   normalRivers: 'terrafend:showAllRivers',
   mildRain: 'terrafend:showMildRain',
+  greenAlerts: 'terrafend:showGreenAlerts',
 }
 
 // Storage can be missing or blocked (private windows, strict settings), so it's only ever a bonus
@@ -29,6 +32,7 @@ export function loadLayerSettings(): LayerSettings {
     passableReports: read(KEYS.passableReports),
     normalRivers: read(KEYS.normalRivers),
     mildRain: read(KEYS.mildRain),
+    greenAlerts: read(KEYS.greenAlerts),
   }
 }
 

@@ -1,6 +1,6 @@
 import { CloudLightning, CloudRain } from 'lucide-react'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { gaugeWhen, GAUGE_RAIN_CREDIT, measuredText, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
+import { GAUGE_RAIN_CREDIT, measuredText, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
 import {
   RAIN_COLOR,
   RAIN_CREDIT_URL,
@@ -90,10 +90,10 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
           ))}
           {recent.gauges.map(({ item, distanceAlongM }) => (
             <Item key={item.id} icon="rain" color={item.level ? RAIN_COLOR[item.level] : undefined}>
-              {`${item.level ? RAIN_LABEL[item.level] : 'Rain'} ${gaugeWhen(item)} (measured) at ${item.station}, ${rainPlaceAt(
+              {`${item.level ? RAIN_LABEL[item.level] : 'Rain'} measured ${rainPlaceAt(
                 distanceAlongM / 1000,
                 recent.routeKm,
-              )}: ${measuredText(item, ', ')}`}
+              )} (${item.station} gauge): ${measuredText(item, ', ')}`}
             </Item>
           ))}
         </ul>
@@ -118,7 +118,7 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
 
       {rain.data && (
         <p className="mt-1 text-xs text-slate-600">
-          Checked for {sriLankaClock(rain.data.from)} to {sriLankaClock(rain.data.to)} (Sri Lanka time)
+          Forecast checked for {sriLankaClock(rain.data.from)} to {sriLankaClock(rain.data.to)} (Sri Lanka time)
           {rain.data.partial && '. The forecast doesn’t reach the end of the trip, so only the first part was checked'}
         </p>
       )}

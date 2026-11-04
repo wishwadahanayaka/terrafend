@@ -250,7 +250,7 @@ function applyTestRain(measured: MeasuredRain, now: number) {
     const target =
       real ??
       (spot
-        ? ({ id: `test/${place}`, station: place, river: 'Test', lat: spot[0], lng: spot[1] } as GaugeRain)
+        ? ({ id: `test/${place}`, station: place.charAt(0).toUpperCase() + place.slice(1), river: 'Test', lat: spot[0], lng: spot[1] } as GaugeRain)
         : null)
     if (!target) {
       console.warn(`fakeRainMap: no gauge or town called "${place}"`)

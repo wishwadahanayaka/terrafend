@@ -13,6 +13,8 @@ import {
 } from '../lib/rainForecast'
 import { RIVER_CREDIT, STEP_COLOR, type RiverStep } from '../lib/riverGauges'
 import { GAUGE_RAIN_CREDIT, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
+import { GDACS_CREDIT, GDACS_LEVEL_COLOR, type GdacsLevel } from '../lib/gdacs'
+import { useGdacsEvents } from '../lib/useGdacs'
 import { useMeasuredRain } from '../lib/useMeasuredRain'
 import { useRainMap } from '../lib/useRainMap'
 import { useRiverGauges } from '../lib/useRiverGauges'
@@ -45,12 +47,19 @@ const RAIN_LEGEND: { color: string; meaning: string }[] = [
   { color: MILD_COLOR.light, meaning: MILD_LABEL.light },
 ]
 
+const GDACS_LEGEND: { level: GdacsLevel; meaning: string }[] = [
+  { level: 'Red', meaning: 'Red alert, the most serious' },
+  { level: 'Orange', meaning: 'Orange alert' },
+  { level: 'Green', meaning: 'Green alert, a lower level' },
+]
+
 type Open = 'none' | 'layers' | 'legend'
 
 export default function LayerControls({ map, settings, onChange }: Props) {
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
   const measured = useMeasuredRain()
+  const alerts = useGdacsEvents(settings.greenAlerts)
 
   // Forecast storms and heavy showers that don't pass the tests for a warning are not
   // drawn, because there are often dozens of them. They get this one line instead.
@@ -153,15 +162,27 @@ export default function LayerControls({ map, settings, onChange }: Props) {
             </p>
           )}
 
+          <Toggle
+            icon={<Globe className="h-5 w-5" aria-hidden="true" />}
+            label="Global alerts"
+            hint="Orange and Red alerts for Sri Lanka and nearby (GDACS) always show. Switch on to add Green ones."
+            checked={settings.greenAlerts}
+            onChange={(value) => onChange('greenAlerts', value)}
+          />
+          {alerts.status === 'error' && (
+            <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
+              Global alerts unavailable right now
+            </p>
+          )}
+
           <div className="mt-1 border-t border-slate-200 pt-1">
-            <ComingSoon icon={<Globe className="h-5 w-5" aria-hidden="true" />} label="Global alerts" />
             <ComingSoon icon={<Mountain className="h-5 w-5" aria-hidden="true" />} label="Landslide warnings" />
           </div>
         </div>
       )}
 
       {open === 'legend' && (
-        <div className="w-64 rounded-xl bg-white p-3 text-slate-800 shadow-lg">
+        <div className="max-h-[max(12rem,calc(100dvh-26.5rem))] w-64 overflow-y-auto rounded-xl bg-white p-3 text-slate-800 shadow-lg">
           <p className="text-sm font-semibold">River gauge colours</p>
           <ul className="mt-2 space-y-1.5">
             {RIVER_LEGEND.map(({ step, meaning }) => (
@@ -215,6 +236,26 @@ export default function LayerControls({ map, settings, onChange }: Props) {
               Open-Meteo.com
             </a>
           </p>
+
+          <p className="mt-4 text-sm font-semibold">Global alert colours</p>
+          <ul className="mt-2 space-y-1.5">
+            {GDACS_LEGEND.map(({ level, meaning }) => (
+              <li key={level} className="flex items-center gap-2 text-xs">
+                <span
+                  className="ml-1 h-3.5 w-3.5 shrink-0 rotate-45 rounded-[3px] border border-white shadow"
+                  style={{ backgroundColor: GDACS_LEVEL_COLOR[level] }}
+                  aria-hidden="true"
+                />
+                <span className="ml-1">{meaning}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-slate-600">
+            Diamonds are alerts from GDACS about cyclones, earthquakes, floods, volcanoes, droughts and wildfires that
+            affect Sri Lanka or are within about 500 km of it. Orange and Red always show. Green shows when Global
+            alerts is switched on. A cyclone also shows its track and forecast area.
+          </p>
+          <p className="mt-2 text-[11px] leading-tight text-slate-500">{GDACS_CREDIT}</p>
         </div>
       )}
     </div>

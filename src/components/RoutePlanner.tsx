@@ -25,6 +25,10 @@ import {
 import { STEP_COLOR, STEP_LABEL, stepTextColor, worstStep } from '../lib/riverGauges'
 import { gaugesNearRoute } from '../lib/routeGauges'
 import { useRouteRecentRain } from '../lib/useRouteRecentRain'
+import { GDACS_CREDIT, GDACS_LEVEL_COLOR, GDACS_NOTICE } from '../lib/gdacs'
+import { GDACS_ICON } from '../lib/gdacsIcons'
+import { gdacsAlongRoute } from '../lib/gdacsRoute'
+import { useGdacsEvents } from '../lib/useGdacs'
 import { routeDuration } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
 import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
@@ -110,6 +114,14 @@ export default function RoutePlanner({
   )
   // What the satellite and the gauges near the road say about rain that has already fallen
   const recent = useRouteRecentRain(route)
+
+  // Orange and Red global alerts the route passes through or near. If they can't be loaded
+  // this is simply empty and the rest of the panel carries on.
+  const alerts = useGdacsEvents(false)
+  const globalAlerts = useMemo(
+    () => (route && alerts.events ? gdacsAlongRoute(route, alerts.events) : []),
+    [route, alerts.events],
+  )
   // The inputs live here, not in the panel, so they're still there after it's closed and reopened
   const [fromMe, setFromMe] = useState(true)
   const [fromField, setFromField] = useState<PlaceField>(EMPTY_FIELD)
@@ -202,6 +214,7 @@ export default function RoutePlanner({
   const list = hazards.data ?? []
   const expanded = panel === 'open'
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
+  const alertWorst = globalAlerts.some((a) => a.event.level === 'Red') ? 'Red' : globalAlerts.length > 0 ? 'Orange' : null
   const rainStretches = rain.data?.stretches ?? []
   // Every rain warning counts, whatever it came from: the forecast ahead, the satellite's
   // recent rain, or a gauge near the road
@@ -226,6 +239,17 @@ export default function RoutePlanner({
             {route && (
               <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-slate-600">
                 <span className="shrink-0">{formatKm(route.distance_m)}</span>
+                {alertWorst && (
+                  <>
+                    <span aria-hidden="true">&middot;</span>
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                      style={{ backgroundColor: GDACS_LEVEL_COLOR[alertWorst] }}
+                    >
+                      {globalAlerts.length} {globalAlerts.length === 1 ? 'global alert' : 'global alerts'}
+                    </span>
+                  </>
+                )}
                 {riverWorst && (
                   <>
                     <span aria-hidden="true">&middot;</span>
@@ -363,7 +387,36 @@ export default function RoutePlanner({
                   Real travel times are often longer. Check Google Maps for live traffic.
                 </p>
 
-                {/* Official warnings come first, before anything crowd-sourced */}
+                {/* Official warnings come first, before anything crowd-sourced, and the biggest first of those */}
+                {globalAlerts.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-slate-900">Global alerts</p>
+                    <ul className="mt-2 space-y-2">
+                      {globalAlerts.map(({ event, why }) => {
+                        const Icon = GDACS_ICON[event.type]
+                        return (
+                          <li
+                            key={event.id}
+                            className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-slate-200 px-2 py-1"
+                          >
+                            <Icon
+                              className="h-6 w-6 shrink-0"
+                              style={{ color: GDACS_LEVEL_COLOR[event.level] }}
+                              aria-hidden="true"
+                            />
+                            <span className="text-sm text-slate-900">
+                              {event.level} alert: {event.name}. {why}.
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {GDACS_NOTICE} {GDACS_CREDIT}
+                    </p>
+                  </div>
+                )}
+
                 {riversNear.length > 0 && (
                   <div className="mt-3">
                     <p className="text-sm font-semibold text-slate-900">River gauges near the route</p>
@@ -400,7 +453,7 @@ export default function RoutePlanner({
                     ? 'Checking for hazards…'
                     : hazards.isError
                       ? 'Couldn’t check this route for hazards.'
-                      : hazardSummary(list, riversNear.length > 0) + (list.length >= 200 ? ' (first 200 shown)' : '')}
+                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0) + (list.length >= 200 ? ' (first 200 shown)' : '')}
                 </p>
                 {hazards.isError && (
                   <button
