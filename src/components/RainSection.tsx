@@ -4,7 +4,8 @@ import { gaugeWhen, GAUGE_RAIN_CREDIT, measuredText, SATELLITE_RAIN_CREDIT } fro
 import {
   RAIN_COLOR,
   RAIN_CREDIT_URL,
-  MILD_LABEL,
+  forecastQuietText,
+  possibleText,
   RAIN_LABEL,
   rainPlace,
   rainPlaceAt,
@@ -46,7 +47,9 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
   const stretches = rain.data?.stretches ?? []
   const forecastQuiet = rain.data?.mild ?? null
   const warnings = stretches.length + recent.satellite.length + recent.gauges.length
-  const quiet = (forecastQuiet ? 1 : 0) + recent.quiet.length
+  // A guess, not a warning, so it's one quiet line. It isn't on the map, so it shows whenever the route crosses one.
+  const forecastPossible = rain.data?.possible ?? null
+  const quiet = (forecastQuiet ? 1 : 0) + (forecastPossible ? 1 : 0) + recent.quiet.length
 
   return (
     <div className="mt-3">
@@ -59,7 +62,7 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
           rain couldn't be loaded, it's only the forecast that was checked. */}
       {rain.data && warnings === 0 && quiet === 0 && (
         <p className="mt-1 text-sm text-slate-800">
-          {recent.checked ? 'No rain expected or recently measured along the route' : 'No rain expected along the route'}
+          {recent.checked ? 'No rain likely or recently measured along the route' : 'No rain likely along the route'}
         </p>
       )}
 
@@ -99,7 +102,12 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
       {/* Warnings come first, these quieter lines go under them */}
       {forecastQuiet && (
         <p className="mt-2 text-sm text-slate-800">
-          {MILD_LABEL[forecastQuiet.level]} likely {forecastQuiet.where}
+          {forecastQuietText(forecastQuiet.level, forecastQuiet.where, forecastQuiet.probability)}
+        </p>
+      )}
+      {forecastPossible && (
+        <p className="mt-2 text-sm text-slate-800">
+          {possibleText(forecastPossible.level, forecastPossible.where)}
         </p>
       )}
       {recent.quiet.map((line) => (

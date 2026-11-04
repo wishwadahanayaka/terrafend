@@ -17,6 +17,8 @@ export type RainSquare = {
   mild: MildLevel | null
   // Millimetres per hour, the heaviest hour
   mm: number | null
+  // Chance of rain in percent. Only forecasts have one, so it's null for the satellite.
+  probability: number | null
   source: 'satellite' | 'forecast'
   // The time the number covers: the satellite's 3 hours, or the forecast's one hour
   from: number
@@ -92,6 +94,7 @@ export function combineRain(forecast: RainMap | null, satellite: SatelliteRain |
         level: seenLevel,
         mild: seenMild,
         mm: seen,
+        probability: null,
         source: 'satellite',
         from: satellite.from,
         to: satellite.to,
@@ -102,6 +105,7 @@ export function combineRain(forecast: RainMap | null, satellite: SatelliteRain |
         level: expected.level,
         mild: expected.mild,
         mm: expected.mm,
+        probability: expected.probability,
         source: 'forecast',
         from: expected.hourStart,
         to: expected.hourStart + HOUR_MS,

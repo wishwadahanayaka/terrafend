@@ -10,6 +10,7 @@ import {
   RAIN_COLOR,
   RAIN_CREDIT_URL,
   RAIN_LABEL,
+  forecastWord,
 } from '../lib/rainForecast'
 import { formatMm, satelliteIndexAt, satelliteWhen, SATELLITE_GRID, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
 import type { RainSquare } from '../lib/rainSquares'
@@ -81,7 +82,7 @@ function outsideEdges(squares: RainSquare[], drawn: Set<number>): LatLngTuple[][
 type Selected = { square: RainSquare; at: LatLngTuple }
 
 // The rain over the island as soft coloured squares on one 0.1 degree grid: what the
-// satellite saw in the past 3 hours or what the forecast expects in the next 3,
+// satellite saw in the past 3 hours or what the forecast says is likely in the next 3,
 // whichever is worse. The panes sit under the route line and all the markers, so rain
 // never hides a report or a river. Each pane is faded as a whole, so nothing gets darker
 // where shapes meet.
@@ -175,7 +176,8 @@ function headline(square: RainSquare, now: number): string {
     square.from <= now
       ? `until ${sriLankaClock(square.to)}`
       : `${sriLankaClock(square.from)} to ${sriLankaClock(square.to)}`
-  return `${label} expected ${when} (forecast)`
+  // A forecast never says "expected": it says "likely" or "possible" by how sure the model is
+  return `${label} ${forecastWord(square.probability)} ${when} (forecast)`
 }
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
@@ -190,8 +192,11 @@ function RainSquareCard({ square }: { square: RainSquare }) {
         <Icon className="mt-0.5 h-5 w-5 shrink-0" style={{ color: colorOf(square) }} aria-hidden="true" />
         <span className="text-base font-semibold text-slate-900">{headline(square, now)}</span>
       </div>
+      {square.probability !== null && (
+        <div className="mt-2 text-sm text-slate-800">{Math.round(square.probability)}% chance of rain</div>
+      )}
       {square.mm !== null && (
-        <div className="mt-2 text-sm text-slate-800">
+        <div className="mt-1 text-sm text-slate-800">
           Up to {formatMm(square.mm)} mm an hour in the worst hour
         </div>
       )}

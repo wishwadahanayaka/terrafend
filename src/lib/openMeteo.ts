@@ -24,14 +24,20 @@ export function currentHourEnd(ms: number): number {
   return Math.floor((ms + COLOMBO_OFFSET_MS) / HOUR_MS) * HOUR_MS + HOUR_MS - COLOMBO_OFFSET_MS
 }
 
-export type Hourly = { time: string[]; precipitation: (number | null)[]; weather_code: (number | null)[] }
+export type Hourly = {
+  time: string[]
+  precipitation: (number | null)[]
+  weather_code: (number | null)[]
+  // Chance of rain in that hour, in percent. null means the model didn't say.
+  probability: (number | null)[]
+}
 
 const isNumOrNull = (v: unknown): v is number | null => v === null || typeof v === 'number'
 
 // The answer is only trusted if it has the shape we expect
 function parseHourly(entry: unknown): Hourly {
   const hourly = (entry as { hourly?: Record<string, unknown> } | null)?.hourly
-  const { time, precipitation, weather_code } = hourly ?? {}
+  const { time, precipitation, weather_code, precipitation_probability: probability } = hourly ?? {}
   if (
     !Array.isArray(time) ||
     !time.every((t) => typeof t === 'string') ||
@@ -39,12 +45,15 @@ function parseHourly(entry: unknown): Hourly {
     !precipitation.every(isNumOrNull) ||
     !Array.isArray(weather_code) ||
     !weather_code.every(isNumOrNull) ||
+    !Array.isArray(probability) ||
+    !probability.every(isNumOrNull) ||
     precipitation.length !== time.length ||
-    weather_code.length !== time.length
+    weather_code.length !== time.length ||
+    probability.length !== time.length
   ) {
     throw new Error('Rain forecast: unexpected answer')
   }
-  return { time, precipitation, weather_code }
+  return { time, precipitation, weather_code, probability }
 }
 
 // One request for all the places, answered in the same order. Hours are in Sri Lanka
@@ -54,7 +63,7 @@ export async function fetchHourly(places: { lat: number; lng: number }[]): Promi
   const lat = places.map((p) => p.lat.toFixed(2)).join(',')
   const lng = places.map((p) => p.lng.toFixed(2)).join(',')
   const url =
-    `${API_URL}?latitude=${lat}&longitude=${lng}&hourly=precipitation,weather_code` +
+    `${API_URL}?latitude=${lat}&longitude=${lng}&hourly=precipitation,weather_code,precipitation_probability` +
     `&timezone=Asia%2FColombo&forecast_days=2`
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`Rain forecast: HTTP ${res.status}`)

@@ -120,6 +120,9 @@ function RainCard({ stretch }: { stretch: RainStretch }) {
         <span className="text-base font-semibold text-slate-900">{RAIN_LABEL[stretch.level]}</span>
       </div>
       <div className="mt-2 text-sm text-slate-800">Likely {rainPlace(stretch)}</div>
+      {stretch.probability !== null && (
+        <div className="mt-1 text-sm text-slate-800">At least {Math.round(stretch.probability)}% chance of rain</div>
+      )}
       <div className="mt-1 text-sm text-slate-800">
         When you’d be there: about {sriLankaClock(stretch.at)}
       </div>

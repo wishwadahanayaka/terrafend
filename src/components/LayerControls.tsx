@@ -3,6 +3,8 @@ import { CloudRain, Droplet, Droplets, Globe, Info, Layers, Mountain, TriangleAl
 import type { Map as LeafletMap } from 'leaflet'
 import type { LayerSettings } from '../lib/layerSettings'
 import {
+  FORECAST_MIN_PROBABILITY,
+  THUNDER_MIN_MM,
   MILD_COLOR,
   MILD_LABEL,
   RAIN_COLOR,
@@ -49,6 +51,16 @@ export default function LayerControls({ map, settings, onChange }: Props) {
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
   const measured = useMeasuredRain()
+
+  // Forecast storms and heavy showers that don't pass the tests for a warning are not
+  // drawn, because there are often dozens of them. They get this one line instead.
+  const possible = rain.status === 'success' ? rain.data.cells.flatMap((c) => c.possible ?? []) : []
+  const storms = possible.includes('thunderPossible')
+  const showers = possible.includes('heavyShowers')
+  const possibleNote =
+    storms || showers
+      ? `${storms && showers ? 'Thunderstorms and heavy showers' : storms ? 'Thunderstorms' : 'Heavy showers'} possible in parts of the island over the next 3 hours (forecast, low confidence)`
+      : null
   const [open, setOpen] = useState<Open>('none')
 
   // A map card opening, or a tap on the map, closes the panel so it can't cover anything
@@ -126,6 +138,9 @@ export default function LayerControls({ map, settings, onChange }: Props) {
             checked={settings.mildRain}
             onChange={(value) => onChange('mildRain', value)}
           />
+          {possibleNote && (
+            <p className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">{possibleNote}</p>
+          )}
           {rain.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
               Rain forecast unavailable right now
@@ -186,8 +201,11 @@ export default function LayerControls({ map, settings, onChange }: Props) {
           <p className="mt-3 text-xs text-slate-600">
             Each square shows the worse of two things: the rain the satellite estimated over the past 3 hours, and
             the forecast for the next 3 hours. Tap a square to see which. The small rain badges beside river gauges
-            show rain the gauge measured. Heavy rain, very heavy rain and thunderstorms always show. Moderate and light
-            rain show when Rain is switched on in the Layers menu. Estimates and forecasts, not official warnings.
+            show rain the gauge measured. Heavy rain, very heavy rain and thunderstorms always show. A forecast only
+            counts as a warning when the model gives at least a {FORECAST_MIN_PROBABILITY}% chance of rain, and for a
+            thunderstorm at least {THUNDER_MIN_MM} mm in the hour too. Weaker forecasts of storms and heavy showers are
+            not drawn: they get a line under Rain in the Layers menu. Moderate and light rain show when Rain is
+            switched on. Estimates and forecasts, not official warnings.
           </p>
           <p className="mt-2 text-[11px] leading-tight text-slate-500">{GAUGE_RAIN_CREDIT}</p>
           <p className="mt-1 text-[11px] leading-tight text-slate-500">{SATELLITE_RAIN_CREDIT}</p>

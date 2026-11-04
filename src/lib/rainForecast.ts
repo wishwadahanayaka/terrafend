@@ -42,7 +42,8 @@ export function rainLevel(mm: number | null, code: number | null): RainLevel | n
   return null
 }
 
-// Quieter levels, not warnings: they get one plain line in the panel and nothing on the map
+// Quieter levels, not warnings: they get one plain line in the panel and a pale square
+// on the map when the Rain switch is on
 export type MildLevel = 'light' | 'moderate'
 
 export const MILD_LABEL: Record<MildLevel, string> = {
@@ -62,14 +63,71 @@ export const MILD_BORDER: Record<MildLevel, string> = {
   moderate: '#1d4ed8',
 }
 
+// Forecast storms and heavy showers that don't pass the tests below. They are only ever
+// "possible", so they are never drawn on the map: they get one line in the Layers panel
+// and one in the route panel.
+export type PossibleLevel = 'heavyShowers' | 'thunderPossible'
+
+export const POSSIBLE_LABEL: Record<PossibleLevel, string> = {
+  heavyShowers: 'Heavy showers possible',
+  thunderPossible: 'Thunderstorms possible',
+}
+
 const LIGHT_MM = 0.5
 const MODERATE_MM = 2.5
 
+// Light and moderate rain by amount alone. Used for measured rain, which needs nothing else.
 export function mildRain(mm: number | null): MildLevel | null {
   if (mm === null || mm >= HEAVY_MM) return null
   if (mm >= MODERATE_MM) return 'moderate'
   if (mm >= LIGHT_MM) return 'light'
   return null
+}
+
+// Forecast models flag thunder and heavy rain far more often than they happen, and get
+// the timing and place of storms wrong, so a forecast hour is only a warning when the
+// model is also fairly sure it rains and rains hard. These are the numbers to tune.
+// Anything short of them is only "possible".
+export const FORECAST_MIN_PROBABILITY = 60 // percent chance of rain in the hour
+export const THUNDER_MIN_MM = 7.5 // mm in the hour, for a thunderstorm
+
+// A forecast hour: a warning (level), a quieter amount (mild) or a "possible" note, never
+// more than one of them
+export type ForecastReading = {
+  level: RainLevel | null
+  mild: MildLevel | null
+  possible: PossibleLevel | null
+}
+
+export function forecastHour(mm: number | null, code: number | null, probability: number | null): ForecastReading {
+  // An unknown chance never counts as a high one
+  const sure = probability !== null && probability >= FORECAST_MIN_PROBABILITY
+
+  if (code !== null && code >= 95 && code <= 99) {
+    if (sure && mm !== null && mm >= THUNDER_MIN_MM) return { level: 'thunder', mild: null, possible: null }
+    return { level: null, mild: null, possible: 'thunderPossible' }
+  }
+  if (mm !== null && mm >= HEAVY_MM) {
+    if (!sure) return { level: null, mild: null, possible: 'heavyShowers' }
+    return { level: mm >= VERY_HEAVY_MM ? 'veryHeavy' : 'heavy', mild: null, possible: null }
+  }
+  return { level: null, mild: mildRain(mm), possible: null }
+}
+
+// "likely" when the chance is high enough for a warning, otherwise "possible"
+export function forecastWord(probability: number | null): string {
+  return probability !== null && probability >= FORECAST_MIN_PROBABILITY ? 'likely' : 'possible'
+}
+
+// Quiet forecast lines, worded so a forecast never sounds like it has happened:
+// "Light rain likely near 40 km", "Thunderstorms possible near 40 km"
+export function forecastQuietText(level: MildLevel, where: string, probability: number | null = null): string {
+  return `${MILD_LABEL[level]} ${forecastWord(probability)} ${where}`
+}
+
+// The "possible" labels already say it
+export function possibleText(level: PossibleLevel, where: string): string {
+  return `${POSSIBLE_LABEL[level]} ${where}`
 }
 
 const SPACING_KM = 10
@@ -104,7 +162,13 @@ export function samplePoints(route: RouteResult, departure: number): Sample[] {
 
 // A point's weather: null when the forecast doesn't reach that hour
 // level is a warning; mild is the quieter kind, and only set when there's no warning
-type Reading = { level: RainLevel | null; mild: MildLevel | null; mm: number | null } | null
+type Reading = {
+  level: RainLevel | null
+  mild: MildLevel | null
+  possible: PossibleLevel | null
+  mm: number | null
+  probability: number | null
+} | null
 
 export type RainStretch = {
   // Tells stretches apart, for the map markers and list
@@ -115,21 +179,30 @@ export type RainStretch = {
   // When the driver would reach the first point of the stretch
   at: number
   maxMm: number | null
+  // The lowest chance of rain among the points in the stretch, in percent
+  probability: number | null
   // Length of the whole route, so the stretch can be described as near the start or end
   routeKm: number
 }
 
-export type MildRain = {
-  level: MildLevel
+type RouteNote<Level> = {
+  level: Level
+  // The highest chance of rain among the points it covers, in percent
+  probability: number | null
   // "along most of the route", "around 5–15 km", "near 40 km", "at the start of the route"
   // or "in places along the route"
   where: string
 }
 
+export type MildRain = RouteNote<MildLevel>
+export type PossibleRain = RouteNote<PossibleLevel>
+
 export type RainResult = {
   stretches: RainStretch[]
   // Light or moderate rain, if there is any. Never counted as a warning.
   mild: MildRain | null
+  // Thunderstorms or heavy showers that are only possible. Never counted as a warning.
+  possible: PossibleRain | null
   // Leaving time, and the last arrival time the forecast covered
   from: number
   to: number
@@ -148,8 +221,8 @@ export async function fetchRain(route: RouteResult): Promise<RainResult> {
     const index = hourly.time.indexOf(hourLabel(samples[i].at))
     if (index === -1) return null
     const mm = hourly.precipitation[index]
-    const level = rainLevel(mm, hourly.weather_code[index])
-    return { level, mild: level ? null : mildRain(mm), mm }
+    const probability = hourly.probability[index]
+    return { ...forecastHour(mm, hourly.weather_code[index], probability), mm, probability }
   })
   if (import.meta.env.DEV) applyTestRain(samples, readings)
 
@@ -168,6 +241,7 @@ export async function fetchRain(route: RouteResult): Promise<RainResult> {
     } else if (open && open.level === reading.level) {
       open.toKm = sample.km
       if (reading.mm !== null) open.maxMm = Math.max(open.maxMm ?? 0, reading.mm)
+      if (reading.probability !== null) open.probability = Math.min(open.probability ?? 100, reading.probability)
     } else {
       open = {
         id: `${reading.level}-${Math.round(sample.km)}`,
@@ -176,6 +250,7 @@ export async function fetchRain(route: RouteResult): Promise<RainResult> {
         toKm: sample.km,
         at: sample.at,
         maxMm: reading.mm,
+        probability: reading.probability,
         routeKm,
       }
       stretches.push(open)
@@ -184,7 +259,8 @@ export async function fetchRain(route: RouteResult): Promise<RainResult> {
 
   return {
     stretches,
-    mild: summariseMild(samples, readings),
+    mild: summarise(samples, readings, 'mild', ['moderate', 'light']),
+    possible: summarise(samples, readings, 'possible', ['thunderPossible', 'heavyShowers']),
     from: departure,
     to: known[known.length - 1].at,
     partial: known.length < samples.length,
@@ -227,16 +303,17 @@ export function rainPlaceBetween(fromKm: number, toKm: number, routeKm: number):
   return placeText(fromKm, toKm, routeKm)
 }
 
-// One line for the quieter rain. It talks about the heaviest of it (moderate over
-// light), and says where in the simplest words that fit.
-function summariseMild(samples: Sample[], readings: Reading[]): MildRain | null {
-  const mildAt = (i: number) => readings[i]?.mild ?? null
+// One line for a group of quieter levels (listed heaviest first). It talks about the
+// heaviest of them that's there, and says where in the simplest words that fit.
+function summarise<Key extends 'mild' | 'possible'>(
+  samples: Sample[],
+  readings: Reading[],
+  key: Key,
+  levels: NonNullable<NonNullable<Reading>[Key]>[],
+): RouteNote<NonNullable<NonNullable<Reading>[Key]>> | null {
+  const mildAt = (i: number) => readings[i]?.[key] ?? null
   const all = samples.map((_, i) => i)
-  const level: MildLevel | null = all.some((i) => mildAt(i) === 'moderate')
-    ? 'moderate'
-    : all.some((i) => mildAt(i) === 'light')
-      ? 'light'
-      : null
+  const level = levels.find((l) => all.some((i) => mildAt(i) === l))
   if (!level) return null
 
   const points = all.filter((i) => mildAt(i) === level)
@@ -252,7 +329,8 @@ function summariseMild(samples: Sample[], readings: Reading[]): MildRain | null 
       : together
         ? placeText(samples[first].km, samples[last].km, samples[samples.length - 1].km)
         : 'in places along the route'
-  return { level, where }
+  const chances = points.flatMap((i) => readings[i]?.probability ?? [])
+  return { level, probability: chances.length > 0 ? Math.max(...chances) : null, where }
 }
 
 // How much of the route is drawn for a stretch. A single sample point stands for the
@@ -280,17 +358,21 @@ export function rainMiddle(route: RouteResult, s: RainStretch): [number, number]
 
 // For testing only. In the dev server, ?fakeRain=heavy:35-50,thunder:80 puts heavy
 // rain from 35 to 50 km and a thunderstorm at 80 km (the nearest point), so the
-// warnings can be seen on a dry day. Levels: light, moderate, heavy, veryheavy, thunder.
+// warnings can be seen on a dry day. Levels: light, moderate, heavy, veryheavy, thunder,
+// plus showers and stormpossible for the two quiet "possible" notes. The warning fakes
+// get a high chance of rain, so they pass the tests in forecastHour like a real one would.
 // import.meta.env.DEV is false in the production build, so this is removed there.
 function applyTestRain(samples: Sample[], readings: Reading[]) {
   const spec = new URLSearchParams(window.location.search).get('fakeRain')
   if (!spec) return
   const fakes: Record<string, NonNullable<Reading>> = {
-    light: { level: null, mild: 'light', mm: 1 },
-    moderate: { level: null, mild: 'moderate', mm: 4 },
-    heavy: { level: 'heavy', mild: null, mm: 9 },
-    veryheavy: { level: 'veryHeavy', mild: null, mm: 18 },
-    thunder: { level: 'thunder', mild: null, mm: 20 },
+    light: { level: null, mild: 'light', possible: null, mm: 1, probability: 70 },
+    moderate: { level: null, mild: 'moderate', possible: null, mm: 4, probability: 70 },
+    heavy: { level: 'heavy', mild: null, possible: null, mm: 9, probability: 80 },
+    veryheavy: { level: 'veryHeavy', mild: null, possible: null, mm: 18, probability: 90 },
+    thunder: { level: 'thunder', mild: null, possible: null, mm: 20, probability: 90 },
+    showers: { level: null, mild: null, possible: 'heavyShowers', mm: 9, probability: 40 },
+    stormpossible: { level: null, mild: null, possible: 'thunderPossible', mm: 3, probability: 30 },
   }
   for (const part of spec.split(',')) {
     const [name, range = ''] = part.split(':')

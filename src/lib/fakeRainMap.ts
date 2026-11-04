@@ -1,4 +1,4 @@
-import type { MildLevel, RainLevel } from './rainForecast'
+import type { MildLevel, PossibleLevel, RainLevel } from './rainForecast'
 
 // For testing only. In the dev server, ?fakeRainMap= fakes rain on a dry day. It's a
 // comma-separated list of [kind-]level:place, where the kind says which source to fake:
@@ -9,21 +9,35 @@ import type { MildLevel, RainLevel } from './rainForecast'
 //                         (spaces ignored), or a town from the list below.
 //
 // Levels: light, moderate, heavy, veryheavy, thunder (forecast only, since satellite
-// and gauges can't see thunder). Example:
+// and gauges can't see thunder), and showers and stormpossible, the two quiet forecast
+// notes ("Heavy showers possible", "Thunderstorms possible"), also forecast only.
+// The warning levels get a high chance of rain, so they count as warnings like a real
+// forecast would. Example:
 //   ?fakeRainMap=thunder:kandy,sat-heavy:colombo,gauge-veryheavy:glencourse
 //
 // Only used inside import.meta.env.DEV checks, so the production build removes it.
 
 export type FakeKind = 'forecast' | 'satellite' | 'gauge'
 
-export type FakeLevel = { level: RainLevel | null; mild: MildLevel | null; mm: number }
+export type FakeLevel = {
+  level: RainLevel | null
+  mild: MildLevel | null
+  // A forecast note that is only possible, which is never drawn
+  possible: PossibleLevel | null
+  mm: number
+  // Chance of rain in percent, which only means something for the forecast
+  probability: number
+  forecastOnly?: boolean
+}
 
 const LEVELS: Record<string, FakeLevel> = {
-  light: { level: null, mild: 'light', mm: 1 },
-  moderate: { level: null, mild: 'moderate', mm: 4 },
-  heavy: { level: 'heavy', mild: null, mm: 9 },
-  veryheavy: { level: 'veryHeavy', mild: null, mm: 18 },
-  thunder: { level: 'thunder', mild: null, mm: 20 },
+  light: { level: null, mild: 'light', possible: null, mm: 1, probability: 70 },
+  moderate: { level: null, mild: 'moderate', possible: null, mm: 4, probability: 70 },
+  heavy: { level: 'heavy', mild: null, possible: null, mm: 9, probability: 80 },
+  veryheavy: { level: 'veryHeavy', mild: null, possible: null, mm: 18, probability: 90 },
+  thunder: { level: 'thunder', mild: null, possible: null, mm: 20, probability: 90, forecastOnly: true },
+  showers: { level: null, mild: null, possible: 'heavyShowers', mm: 9, probability: 40, forecastOnly: true },
+  stormpossible: { level: null, mild: null, possible: 'thunderPossible', mm: 3, probability: 30, forecastOnly: true },
 }
 
 export const TEST_PLACES: Record<string, [number, number]> = {
@@ -74,12 +88,12 @@ export function readFakeRainMap(kind: FakeKind): Fake[] {
     const place = normalise(where)
     const spot = TEST_PLACES[place] ?? null
 
-    const okLevel = fake && (fake.level !== 'thunder' || partKind === 'forecast')
+    const okLevel = fake && (!fake.forecastOnly || partKind === 'forecast')
     const okPlace = spot !== null || partKind === 'gauge'
     if (!okLevel || !okPlace) {
       // Every kind reads the same list, so only one of them reports the mistake
       if (kind === 'forecast') console.warn(
-        `fakeRainMap: can't use "${part}". Levels: ${Object.keys(LEVELS)} (thunder only for the forecast). ` +
+        `fakeRainMap: can't use "${part}". Levels: ${Object.keys(LEVELS)} (thunder, showers and stormpossible only for the forecast). ` +
           `Kinds: sat-, gauge-, or none for the forecast. Towns: ${Object.keys(TEST_PLACES)}`,
       )
       continue

@@ -1,6 +1,6 @@
 import { currentHourEnd, fetchHourly, HOUR_MS, labelForHourEnd } from './openMeteo'
 import { kmFrom, readFakeRainMap } from './fakeRainMap'
-import { mildRain, rainLevel, RAIN_RANK, type MildLevel, type RainLevel } from './rainForecast'
+import { forecastHour, RAIN_RANK, type MildLevel, type PossibleLevel, type RainLevel } from './rainForecast'
 
 // How many hours ahead the map looks. Each grid cell shows the worst of them.
 const WINDOW_HOURS = 3
@@ -77,6 +77,11 @@ export type RainCell = GridCell & {
   level: RainLevel | null
   mild: MildLevel | null
   mm: number | null
+  // A storm or heavy showers the forecast only thinks possible in these 3 hours. Kept apart
+  // from the level and the amount above, so it never hides them, and never drawn.
+  possible: PossibleLevel | null
+  // Chance of rain in that hour, in percent. null means the model didn't say.
+  probability: number | null
   // The start of the hour with the worst rain
   hourStart: number
 }
@@ -107,19 +112,29 @@ export async function fetchRainMap(): Promise<RainMap> {
 
   let covered = false
   const all: RainCell[] = points.map((point, i) => {
-    const cell: RainCell = { ...point, level: null, mild: null, mm: null, hourStart: ends[0] - HOUR_MS }
+    const cell: RainCell = {
+      ...point,
+      level: null,
+      mild: null,
+      mm: null,
+      possible: null,
+      probability: null,
+      hourStart: ends[0] - HOUR_MS,
+    }
     let best = 0
     for (const [h, label] of labels.entries()) {
       const index = forecasts[i].time.indexOf(label)
       if (index === -1) continue
       covered = true
       const mm = forecasts[i].precipitation[index]
-      const level = rainLevel(mm, forecasts[i].weather_code[index])
-      const mild = level ? null : mildRain(mm)
+      const probability = forecasts[i].probability[index]
+      const { level, mild, possible } = forecastHour(mm, forecasts[i].weather_code[index], probability)
+      // A thunderstorm note beats a heavy showers one
+      if (possible && (!cell.possible || possible === 'thunderPossible')) cell.possible = possible
       // Strictly worse only, so a tie keeps the earlier hour
       if (rainScore(level, mild) > best) {
         best = rainScore(level, mild)
-        Object.assign(cell, { level, mild, mm, hourStart: ends[h] - HOUR_MS })
+        Object.assign(cell, { level, mild, mm, probability, hourStart: ends[h] - HOUR_MS })
       }
     }
     return cell
@@ -179,7 +194,14 @@ function applyTestRain(cells: RainCell[], hourStart: number) {
     const nearest = cells.reduce((a, b) => (kmFrom(b.lat, b.lng, spot) < kmFrom(a.lat, a.lng, spot) ? b : a))
     for (const cell of cells) {
       if (cell === nearest || kmFrom(cell.lat, cell.lng, spot) <= TEST_RADIUS_KM) {
-        Object.assign(cell, fake, { hourStart })
+        Object.assign(cell, {
+          level: fake.level,
+          mild: fake.mild,
+          possible: fake.possible,
+          mm: fake.mm,
+          probability: fake.probability,
+          hourStart,
+        })
       }
     }
   }
