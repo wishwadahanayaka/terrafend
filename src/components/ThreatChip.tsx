@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { latLngBounds, type Map as LeafletMap } from 'leaflet'
+import { useOnline } from '../lib/useOnline'
 import { useThreats, type ThreatPart } from '../lib/useThreats'
 
 // The chip is never wider than the screen minus its margins, or this
@@ -64,6 +65,7 @@ type Props = {
 // list. Tapping the rest of it zooms the map out to show all of them.
 export default function ThreatChip({ map, onMore }: Props) {
   const { parts, points, state } = useThreats()
+  const online = useOnline()
 
   // Hidden copy of the parts and of "+N more", only to measure how wide each one is
   const measure = useRef<HTMLDivElement>(null)
@@ -136,9 +138,14 @@ export default function ThreatChip({ map, onMore }: Props) {
   // Nothing found. "No active threats" is only said when everything loaded, since a
   // missing source could be hiding one.
   if (state === 'loading') return null
+  // Offline, "no active threats" would be a claim about right now that nothing can back up
   return (
     <p className="rounded-full bg-white/90 px-3 py-1 text-xs text-slate-600 shadow">
-      {state === 'clear' ? 'No active threats' : 'No threats found in the data that loaded'}
+      {!online
+        ? 'No threats in the saved data (offline)'
+        : state === 'clear'
+          ? 'No active threats'
+          : 'No threats found in the data that loaded'}
     </p>
   )
 }

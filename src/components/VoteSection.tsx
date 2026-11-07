@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { submitVote, VOTE_ERRORS, type Vote } from '../lib/reports'
+import { OFFLINE_VOTE_NOTICE } from '../lib/offline'
 import { REPORTS_KEY } from '../lib/queryKeys'
+import { useOnline } from '../lib/useOnline'
 import { MY_VOTE_KEY, useMyVote } from '../lib/useVotes'
 
 const VOTE_LABELS: Record<Vote, string> = {
@@ -11,6 +13,7 @@ const VOTE_LABELS: Record<Vote, string> = {
 
 export default function VoteSection({ reportId }: { reportId: string }) {
   const queryClient = useQueryClient()
+  const online = useOnline()
   const myVote = useMyVote(reportId)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,13 +52,14 @@ export default function VoteSection({ reportId }: { reportId: string }) {
             key={choice}
             type="button"
             onClick={() => vote(choice)}
-            disabled={sending || myVote.isPending}
+            disabled={sending || myVote.isPending || !online}
             className="h-11 rounded-lg border-2 border-slate-300 px-1 text-sm font-medium text-slate-800 active:bg-slate-100 disabled:opacity-50"
           >
             {VOTE_LABELS[choice]}
           </button>
         ))}
       </div>
+      {!online && <div className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900">{OFFLINE_VOTE_NOTICE}</div>}
       {error && (
         <div role="alert" className="mt-2 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-700">
           {error}

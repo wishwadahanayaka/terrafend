@@ -202,7 +202,7 @@ function RainSquareCard({ square }: { square: RainSquare }) {
         </div>
       )}
       {mildForecast && (
-        <div className="mt-1 text-xs text-slate-600">Light forecasts are often wrong for a specific spot.</div>
+        <div className="mt-1 text-xs text-slate-600">Rain forecasts are often wrong for a specific spot.</div>
       )}
       {square.mm !== null && (
         <div className="mt-1 text-sm text-slate-800">

@@ -1,5 +1,6 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { HazardType, Severity } from './hazards'
+import { liveReports, reportsInBox } from './offline'
 import { REPORTS_KEY } from './queryKeys'
 import { supabase } from './supabase'
 
@@ -25,7 +26,11 @@ export type Report = {
 // Reports expire after a few hours, so a minute is fresh enough
 export const REFRESH_MS = 60_000
 
+// Reports that ran out while the data was sitting there (offline, or saved) are left out
+const stillActive = (reports: Report[]) => liveReports(reports, Date.now())
+
 export function useReportsInView(bounds: Bounds) {
+  const queryClient = useQueryClient()
   return useQuery({
     queryKey: [REPORTS_KEY, bounds],
     queryFn: async () => {
@@ -38,8 +43,12 @@ export function useReportsInView(bounds: Bounds) {
       if (error) throw error
       return data as Report[]
     },
-    // Keeps the old markers on screen while the next area loads
-    placeholderData: keepPreviousData,
+    // Until this view has loaded (offline, that is always) the markers come from the
+    // island-wide list, which is the one that is saved on the phone. If there is none,
+    // the old markers stay on screen while the next area loads.
+    placeholderData: (previous) =>
+      reportsInBox(queryClient.getQueryData<Report[]>([REPORTS_KEY, 'island']), bounds) ?? previous,
+    select: stillActive,
     refetchInterval: REFRESH_MS,
   })
 }

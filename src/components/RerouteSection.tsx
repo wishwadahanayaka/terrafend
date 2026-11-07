@@ -1,7 +1,9 @@
 import { OctagonX, Route as RouteIcon } from 'lucide-react'
 import { difference } from '../lib/reroute'
 import { formatKm, NO_REROUTE, type RouteResult } from '../lib/routing'
+import { OFFLINE_REROUTE_NOTICE } from '../lib/offline'
 import { routeDuration } from '../lib/time'
+import { useOnline } from '../lib/useOnline'
 import type { RouteHazard } from '../lib/useRoute'
 
 type Props = {
@@ -31,7 +33,11 @@ const kmAlong = (h: RouteHazard) => `${(h.distance_along_m / 1000).toFixed(1)} k
 
 export default function RerouteSection(props: Props) {
   const { route, alternative, blocked, busy, error, outOfDate, onFind } = props
+  const online = useOnline()
   const disabled = busy || outOfDate
+  // Finding a route asks the routing service, so it can't be done offline
+  const findDisabled = disabled || !online
+  const offlineNote = !online && <p className="mt-2 text-xs text-slate-700">{OFFLINE_REROUTE_NOTICE}</p>
 
   if (!alternative) {
     if (busy) {
@@ -50,12 +56,13 @@ export default function RerouteSection(props: Props) {
             <button
               type="button"
               onClick={() => onFind(route, blocked)}
-              disabled={disabled}
+              disabled={findDisabled}
               className="mt-1 h-11 text-sm font-medium text-blue-700 disabled:text-slate-400"
             >
               Try again
             </button>
           )}
+          {offlineNote}
         </div>
       )
     }
@@ -69,11 +76,12 @@ export default function RerouteSection(props: Props) {
         <button
           type="button"
           onClick={() => onFind(route, blocked)}
-          disabled={disabled}
+          disabled={findDisabled}
           className="mt-2 h-12 w-full rounded-xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
         >
           Find another route
         </button>
+        {offlineNote}
       </div>
     )
   }
@@ -104,7 +112,7 @@ export default function RerouteSection(props: Props) {
             <button
               type="button"
               onClick={() => onFind(alternative, altBlocked)}
-              disabled={disabled}
+              disabled={findDisabled}
               className="mt-1 block h-11 text-sm font-semibold text-blue-700 disabled:text-slate-400"
             >
               {busy
@@ -114,6 +122,7 @@ export default function RerouteSection(props: Props) {
           ) : (
             ' Take care, or check Google Maps.'
           )}
+          {props.canRerouteAgain && offlineNote}
         </div>
       )}
 

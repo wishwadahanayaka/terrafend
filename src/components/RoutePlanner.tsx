@@ -30,7 +30,9 @@ import { GDACS_CREDIT, GDACS_LEVEL_COLOR, GDACS_NOTICE } from '../lib/gdacs'
 import { GDACS_ICON } from '../lib/gdacsIcons'
 import { gdacsAlongRoute } from '../lib/gdacsRoute'
 import { useGdacsEvents } from '../lib/useGdacs'
+import { OFFLINE_ROUTE_NOTICE } from '../lib/offline'
 import { routeDuration } from '../lib/time'
+import { useOnline } from '../lib/useOnline'
 import { useRiverGauges } from '../lib/useRiverGauges'
 import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
 import { RAIN_COLOR, worstRain, type RainStretch } from '../lib/rainForecast'
@@ -113,6 +115,7 @@ export default function RoutePlanner({
   onSelectRain,
   onStaleChange,
 }: Props) {
+  const online = useOnline()
   const hazards = useRouteHazards(route)
   const altHazards = useRouteHazards(alternative)
   // One request per checked route, so it only runs when a route is checked
@@ -471,11 +474,16 @@ export default function RoutePlanner({
               <button
                 type="button"
                 onClick={check}
-                disabled={!to || busy}
+                disabled={!to || busy || !online}
                 className="h-14 w-full rounded-xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
               >
                 {busy ? 'Checking…' : 'Check route'}
               </button>
+              {!online && (
+                <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  {OFFLINE_ROUTE_NOTICE}
+                </p>
+              )}
             </div>
 
             {route && outOfDate && (

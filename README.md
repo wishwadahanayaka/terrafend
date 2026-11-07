@@ -27,6 +27,9 @@ Working now:
 - Rain across the island: soft coloured squares under the markers showing the worse of what the satellite estimated over the past 3 hours and what the forecast expects over the next 3. Tap one to see which, and the hour. Small rain badges beside the river gauges show rain the gauges measured
 - Global alerts: Orange and Red alerts from GDACS (the UN and EU's disaster alert system) for cyclones, earthquakes, floods, volcanoes, droughts and wildfires that affect Sri Lanka or are within about 500 km of it, as diamond markers. A cyclone also shows its track and forecast area. Green alerts show when the Global alerts switch is on. A checked route lists the alerts it passes through or near, first in its panel.
 - A Layers menu with a switch each for Reports, Rivers, Rain and Global alerts. Serious items (blocked or restricted road reports, rivers at Alert or above, heavy rain and thunderstorms) always show, and the switches only add the less serious ones. One chip counts everything serious right now, and tapping it zooms out to show it all
+- Install it like an app: on Android and iPhone, add TerraFend to the home screen and it opens full screen with its own icon
+- Works offline: the app opens without a connection and shows the last data it loaded (rivers, rain, forecasts, global alerts and reports) under a banner such as "Offline: showing data from 4:12 pm. It may be out of date." Map tiles you have already looked at are kept for 7 days. Reporting, route checks and voting wait until you are back online
+- A "New version available, tap to refresh" prompt when an update is released, instead of changing the app while you use it
 - Banner reminding users this is not an official warning service
 
 Roadmap:
@@ -37,7 +40,8 @@ Roadmap:
 - [ ] Official data layers (river gauges, measured rain and GDACS global alerts are done)
 - [ ] Sinhala and Tamil alongside English
 - [ ] Phone alerts
-- [ ] Offline support, so the app still opens and shows the last loaded reports when the signal is weak or gone
+- [x] Installable app that opens offline and shows the last loaded data
+- [ ] Reports written offline and sent later
 
 ## Tech stack
 
@@ -64,10 +68,7 @@ Other:
 - OpenRouteService for place search and driving routes
 - Open-Meteo for the rain forecast, called straight from the browser (no key needed)
 - Vercel for hosting
-
-Planned:
-
-- vite-plugin-pwa for installing the app and working offline
+- vite-plugin-pwa for installing the app and opening it offline (a service worker keeps the app's own files and the map tiles you have viewed; the data is saved by the app itself, with the time it was loaded)
 
 ### Planned data sources
 
@@ -115,11 +116,21 @@ Other commands:
 
 - `npm run build` type-checks and builds for production
 - `npm run lint` runs the linter
+- `npm run preview` serves the production build (with the service worker) after `npm run build`
+- `npm run icons` makes the app icons from `public/icon.svg`
 - `npm test` runs the tests once, `npm run test:watch` re-runs them as you edit
+
+## Installing and offline
+
+The app's own files are kept by a service worker, so it opens without a connection once it has been opened online. The last loaded data is saved on the phone (in localStorage) with the time it was loaded: it is dropped after 6 hours, and the rain forecast after 3. Nothing from Supabase's sign-in, reports, votes or the routing function is ever kept by the service worker.
+
+Map tiles from OpenStreetMap are kept only for the parts of the map you have looked at, for 7 days, up to 400 tiles, following [OSM's tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Nothing is downloaded ahead of time, so offline the map background only shows places you have already viewed.
+
+The service worker is off in `npm run dev`. To try the installable app, run `npm run build` then `npm run preview` and open http://localhost:4173. The icons are made from `public/icon.svg` with `npm run icons`.
 
 ## Testing
 
-The core logic has unit tests, written with [Vitest](https://vitest.dev/): map box rounding, rain levels and the forecast rules, rain gauge rates, river gauge parsing, route distances and wording, finding blocked roads for a reroute, global alert relevance, and time formatting. They run on small sample data only, with no network and no real APIs. The test files sit next to the code they test, as `src/lib/*.test.ts`.
+The core logic has unit tests, written with [Vitest](https://vitest.dev/): map box rounding, rain levels and the forecast rules, rain gauge rates, river gauge parsing, route distances and wording, finding blocked roads for a reroute, global alert relevance, time formatting, and what is saved for offline use. They run on small sample data only, with no network and no real APIs. The test files sit next to the code they test, as `src/lib/*.test.ts`.
 
 Every push and pull request to `main` runs the same checks on GitHub Actions (`.github/workflows/ci.yml`): install, lint, type-check, build, then the tests. The badge at the top shows the latest result.
 

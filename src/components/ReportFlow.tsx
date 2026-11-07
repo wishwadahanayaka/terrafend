@@ -19,11 +19,23 @@ type Props = {
   buttonVisible: boolean
   // The button fades out while a map card is open
   cardOpen: boolean
+  // Reporting needs a connection. The button greys out and a tap says why.
+  offline: boolean
+  onOfflineTap: () => void
 }
 
 const TOAST_MS = 3500
 
-export default function ReportFlow({ map, userLatLng, mode, onModeChange, buttonVisible, cardOpen }: Props) {
+export default function ReportFlow({
+  map,
+  userLatLng,
+  mode,
+  onModeChange,
+  buttonVisible,
+  cardOpen,
+  offline,
+  onOfflineTap,
+}: Props) {
   const [spot, setSpot] = useState<LatLng | null>(null)
   const [toast, setToast] = useState(false)
   const queryClient = useQueryClient()
@@ -50,9 +62,10 @@ export default function ReportFlow({ map, userLatLng, mode, onModeChange, button
       {mode === 'idle' && buttonVisible && (
         <button
           type="button"
-          onClick={startPicking}
+          onClick={offline ? onOfflineTap : startPicking}
+          aria-disabled={offline}
           inert={cardOpen}
-          className={`absolute bottom-24 right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-red-600 px-5 font-semibold text-white shadow-lg active:bg-red-700 ${fadeWhenCardOpen(cardOpen)}`}
+          className={`absolute bottom-24 right-4 z-[1000] flex h-14 items-center gap-2 rounded-full px-5 font-semibold text-white shadow-lg ${offline ? 'bg-slate-400' : 'bg-red-600 active:bg-red-700'} ${fadeWhenCardOpen(cardOpen)}`}
         >
           <Plus className="h-6 w-6" aria-hidden="true" />
           Report

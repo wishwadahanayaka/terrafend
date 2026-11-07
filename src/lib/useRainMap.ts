@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { FORECAST_SAVED_MAX_AGE_MS } from './offline'
 import { fetchRainMap } from './rainMap'
 
 const HALF_HOUR_MS = 30 * 60_000
@@ -11,7 +12,8 @@ export function useRainMap() {
     queryKey: ['rain-map'],
     queryFn: fetchRainMap,
     staleTime: HALF_HOUR_MS,
-    gcTime: HALF_HOUR_MS,
+    // Kept as long as a saved forecast is still of use, for showing when offline
+    gcTime: FORECAST_SAVED_MAX_AGE_MS,
     refetchInterval: HALF_HOUR_MS,
     refetchOnWindowFocus: false,
     retry: 1,

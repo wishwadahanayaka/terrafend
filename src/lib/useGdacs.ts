@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCoreAlerts, fetchGreenAlerts, type GdacsEvent } from './gdacs'
+import { SAVED_MAX_AGE_MS } from './offline'
 
 const REFRESH_MS = 15 * 60_000
 
@@ -8,6 +9,7 @@ const REFRESH_MS = 15 * 60_000
 const OPTIONS = {
   refetchInterval: REFRESH_MS,
   staleTime: REFRESH_MS / 2,
+  gcTime: SAVED_MAX_AGE_MS,
   refetchOnWindowFocus: false,
   retry: 1,
   retryDelay: 5000,

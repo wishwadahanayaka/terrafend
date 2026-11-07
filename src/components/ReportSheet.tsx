@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Camera, X } from 'lucide-react'
 import { HAZARD_TYPES, SEVERITIES, type HazardType, type Severity } from '../lib/hazards'
 import { shrinkPhoto, uploadPhoto } from '../lib/photos'
+import { OFFLINE_REPORT_NOTICE } from '../lib/offline'
 import { NOTE_MAX_LENGTH, submitReport } from '../lib/reports'
+import { useOnline } from '../lib/useOnline'
 
 type Props = {
   lat: number
@@ -25,7 +27,8 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
   const fileInput = useRef<HTMLInputElement>(null)
 
   const busy = stage !== 'idle'
-  const canSubmit = hazardType !== null && severity !== null && !busy && !preparing
+  const online = useOnline()
+  const canSubmit = hazardType !== null && severity !== null && !busy && !preparing && online
 
   // Preview URLs hold the image in memory until revoked
   const previewUrl = useRef<string | null>(null)
@@ -204,6 +207,11 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
         </div>
 
         <div className="border-t border-slate-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {!online && (
+            <p role="status" className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {OFFLINE_REPORT_NOTICE} Keep this open and send it when you are back online.
+            </p>
+          )}
           {error && (
             <p role="alert" className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}

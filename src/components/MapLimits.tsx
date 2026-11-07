@@ -63,8 +63,15 @@ export default function MapLimits({ island, limits }: Props) {
 
     update()
     map.on('resize', update)
+
+    // Leaflet only notices the window changing size. The map's own box also changes when
+    // the offline banner appears above it, so that is watched too.
+    const watcher = new ResizeObserver(() => map.invalidateSize())
+    watcher.observe(map.getContainer())
+
     return () => {
       map.off('resize', update)
+      watcher.disconnect()
     }
   }, [map, island, limits])
 

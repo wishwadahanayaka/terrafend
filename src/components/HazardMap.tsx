@@ -4,6 +4,9 @@ import { Route as RouteIcon } from 'lucide-react'
 import { latLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet'
 import { SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
 import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
+import { OFFLINE_REPORT_NOTICE, OFFLINE_ROUTE_NOTICE } from '../lib/offline'
+import { useNotice } from '../lib/useNotice'
+import { useOnline } from '../lib/useOnline'
 import { loadLayerSettings, saveLayerSetting, type LayerSettings } from '../lib/layerSettings'
 import type { RouteHazard } from '../lib/useRoute'
 import { rainPath, type RainStretch } from '../lib/rainForecast'
@@ -12,6 +15,7 @@ import LocateButton from './LocateButton'
 import MapLimits from './MapLimits'
 import ReportFlow, { type ReportMode } from './ReportFlow'
 import LayerControls from './LayerControls'
+import Notice from './Notice'
 import type { PanelState } from './RoutePlanner'
 
 // The data code (Supabase, hazards, the route planner) loads after the map
@@ -42,6 +46,9 @@ export default function HazardMap() {
   const [routeStale, setRouteStale] = useState(false)
   // Serious items always show. These switches only add the less serious ones.
   const [layers, setLayers] = useState(loadLayerSettings)
+
+  const online = useOnline()
+  const [notice, showNotice] = useNotice()
 
   const picking = mode === 'picking'
   // The buttons down the right fade out while a card is open, so they can't cover it
@@ -78,6 +85,9 @@ export default function HazardMap() {
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          // A tile asked for this way can be kept by the service worker. Without it the
+          // answer is opaque and can't be checked or stored safely.
+          crossOrigin="anonymous"
         />
         <MapLimits island={SRI_LANKA_BOUNDS} limits={SRI_LANKA_LIMITS} />
         <Suspense fallback={null}>
@@ -136,6 +146,8 @@ export default function HazardMap() {
         />
       )}
 
+      <Notice message={notice} />
+
       {map && (
         <>
           <ReportFlow
@@ -145,6 +157,8 @@ export default function HazardMap() {
             onModeChange={setMode}
             buttonVisible={panel === 'closed'}
             cardOpen={cardOpen}
+            offline={!online}
+            onOfflineTap={() => showNotice(OFFLINE_REPORT_NOTICE)}
           />
 
           {panel === 'closed' && !picking && (
@@ -152,10 +166,17 @@ export default function HazardMap() {
               type="button"
               inert={cardOpen}
               onClick={() => {
+                // Offline, a route already checked can still be opened and read. A new
+                // one can't be checked.
+                if (!online && !route) {
+                  showNotice(OFFLINE_ROUTE_NOTICE)
+                  return
+                }
                 setPlannerOpened(true)
                 setPanel('open')
               }}
-              className={`absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full bg-white px-5 font-semibold text-blue-700 shadow-lg active:bg-slate-100 ${fadeWhenCardOpen(cardOpen)}`}
+              aria-disabled={!online && !route}
+              className={`absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full px-5 font-semibold shadow-lg ${!online && !route ? 'bg-slate-200 text-slate-500' : 'bg-white text-blue-700 active:bg-slate-100'} ${fadeWhenCardOpen(cardOpen)}`}
             >
               <RouteIcon className="h-6 w-6" aria-hidden="true" />
               Route
