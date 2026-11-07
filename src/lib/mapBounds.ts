@@ -13,3 +13,14 @@ export const SRI_LANKA_LIMITS: LatLngBoundsLiteral = [
   [5.55, 79.3],
   [10.2, 82.25],
 ]
+
+export type BoxBounds = { minLng: number; minLat: number; maxLng: number; maxLat: number }
+
+// Rounds to 2 decimals (about 1 km), so tiny pans reuse the same cached query. Rounds
+// outward (min down, max up) so the box never shrinks: plain rounding can collapse a
+// zoomed-in view into a zero-width box that finds nothing.
+export function roundOutward(b: BoxBounds): BoxBounds {
+  const down = (n: number) => Math.floor(n * 100) / 100
+  const up = (n: number) => Math.ceil(n * 100) / 100
+  return { minLng: down(b.minLng), minLat: down(b.minLat), maxLng: up(b.maxLng), maxLat: up(b.maxLat) }
+}

@@ -90,10 +90,10 @@ function utc(text: unknown): number | null {
   return Number.isNaN(ms) ? null : ms
 }
 
-type Parsed = Omit<GdacsEvent, 'track' | 'distanceKm'> & { current: boolean; trackUrl: string | null }
+export type Parsed = Omit<GdacsEvent, 'track' | 'distanceKm'> & { current: boolean; trackUrl: string | null }
 
 // Only the shape we expect is trusted. Anything else is skipped, not guessed at.
-function parseEvent(raw: unknown): Parsed | null {
+export function parseEvent(raw: unknown): Parsed | null {
   if (!isObject(raw) || !isObject(raw.properties) || !isObject(raw.geometry)) return null
   const p = raw.properties
   const g = raw.geometry
@@ -274,13 +274,15 @@ async function relevant(features: unknown[]): Promise<GdacsEvent[]> {
     }),
   )
 
-  const found: GdacsEvent[] = []
-  for (const { current: _current, trackUrl: _trackUrl, ...event } of events) {
-    const track = tracks.get(event.id) ?? null
-    const distanceKm = Math.min(islandDistanceKm(event.lat, event.lng), track ? trackDistanceKm(track) : Infinity)
-    if (event.affectsSriLanka || distanceKm <= GDACS_RADIUS_KM) found.push({ ...event, track, distanceKm })
-  }
-  return found
+  return events.flatMap((e) => judgeEvent(e, tracks.get(e.id) ?? null) ?? [])
+}
+
+// The event with its distance from the island, or null when it doesn't concern Sri Lanka.
+// A cyclone is judged by where it is now and where it's forecast to go.
+export function judgeEvent(parsed: Parsed, track: GdacsTrack | null): GdacsEvent | null {
+  const { current: _current, trackUrl: _trackUrl, ...event } = parsed
+  const distanceKm = Math.min(islandDistanceKm(event.lat, event.lng), track ? trackDistanceKm(track) : Infinity)
+  return event.affectsSriLanka || distanceKm <= GDACS_RADIUS_KM ? { ...event, track, distanceKm } : null
 }
 
 const ALL_TYPES = 'eventlist=TC;EQ;FL;VO;DR;WF'

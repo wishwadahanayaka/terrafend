@@ -12,6 +12,7 @@ import {
   type Severity,
 } from '../lib/hazards'
 import { iconToSvg } from '../lib/iconHtml'
+import { roundOutward } from '../lib/mapBounds'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import type { RouteResult } from '../lib/routing'
 import { expiresIn, timeAgo } from '../lib/time'
@@ -26,16 +27,7 @@ const DEBOUNCE_MS = 400
 // Loads slightly more than what's on screen, so small pans don't leave empty edges
 function readBounds(map: LeafletMap): Bounds {
   const b = map.getBounds().pad(0.25)
-  // Round outward (min down, max up) so the box never shrinks. Plain rounding
-  // can collapse a zoomed-in view into a zero-width box and return nothing.
-  const down = (n: number) => Math.floor(n * 100) / 100
-  const up = (n: number) => Math.ceil(n * 100) / 100
-  return {
-    minLng: down(b.getWest()),
-    minLat: down(b.getSouth()),
-    maxLng: up(b.getEast()),
-    maxLat: up(b.getNorth()),
-  }
+  return roundOutward({ minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() })
 }
 
 const iconSvg = new Map<HazardType, string>()

@@ -124,7 +124,7 @@ const mmOrNull = (v: unknown): number | null => (isNum(v) && v >= 0 ? v : null)
 const LAT_RANGE = [5.5, 10.3]
 const LNG_RANGE = [79.2, 82.3]
 
-function parseGauge(raw: unknown, now: number): GaugeRain | null {
+export function parseGauge(raw: unknown, now: number): GaugeRain | null {
   if (!isObject(raw) || !isObject(raw.measured)) return null
   const { station, basin, lat, lon } = raw
   if (!isText(station) || !isNum(lat) || !isNum(lon)) return null

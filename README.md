@@ -1,5 +1,7 @@
 # TerraFend
 
+[![CI](https://github.com/wishwadahanayaka/terrafend/actions/workflows/ci.yml/badge.svg)](https://github.com/wishwadahanayaka/terrafend/actions/workflows/ci.yml)
+
 A mobile-first web app that shows floods, landslides and road blockages across Sri Lanka on a map, and checks your driving route for hazards along the way.
 
 **Live demo:** https://terrafend.vercel.app
@@ -113,6 +115,13 @@ Other commands:
 
 - `npm run build` type-checks and builds for production
 - `npm run lint` runs the linter
+- `npm test` runs the tests once, `npm run test:watch` re-runs them as you edit
+
+## Testing
+
+The core logic has unit tests, written with [Vitest](https://vitest.dev/): map box rounding, rain levels and the forecast rules, rain gauge rates, river gauge parsing, route distances and wording, finding blocked roads for a reroute, global alert relevance, and time formatting. They run on small sample data only, with no network and no real APIs. The test files sit next to the code they test, as `src/lib/*.test.ts`.
+
+Every push and pull request to `main` runs the same checks on GitHub Actions (`.github/workflows/ci.yml`): install, lint, type-check, build, then the tests. The badge at the top shows the latest result.
 
 ## Disclaimer
 

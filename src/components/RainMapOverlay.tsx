@@ -186,6 +186,9 @@ function RainSquareCard({ square }: { square: RainSquare }) {
   // Read once when the card opens, so the wording doesn't change under the reader
   const [now] = useState(Date.now)
   const satellite = square.source === 'satellite'
+  // A light or moderate forecast. Its chance is for any rain somewhere in the square, so
+  // "100% chance of rain" alone read as a promise for the exact spot.
+  const mildForecast = !satellite && square.level === null
   return (
     <div>
       <div className="flex items-start gap-2">
@@ -193,7 +196,13 @@ function RainSquareCard({ square }: { square: RainSquare }) {
         <span className="text-base font-semibold text-slate-900">{headline(square, now)}</span>
       </div>
       {square.probability !== null && (
-        <div className="mt-2 text-sm text-slate-800">{Math.round(square.probability)}% chance of rain</div>
+        <div className="mt-2 text-sm text-slate-800">
+          {Math.round(square.probability)}%{' '}
+          {mildForecast ? 'chance of some rain in this area (about 11 km across)' : 'chance of rain'}
+        </div>
+      )}
+      {mildForecast && (
+        <div className="mt-1 text-xs text-slate-600">Light forecasts are often wrong for a specific spot.</div>
       )}
       {square.mm !== null && (
         <div className="mt-1 text-sm text-slate-800">
