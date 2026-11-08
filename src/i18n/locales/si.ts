@@ -481,6 +481,8 @@ const si: Translations = {
     newRoute: 'නව මාර්ගය: {{distance}} · {{duration}} ({{extraDistance}}, {{extraTime}})',
     avoids_one: 'අවහිර මාර්ග {{count}}ක් මග හරියි',
     avoids_other: 'අවහිර මාර්ග {{count}}ක් මග හරියි',
+    usedNote_one: 'මෙම මාර්ගය අවහිර මාර්ග {{count}}ක් මග හරියි',
+    usedNote_other: 'මෙම මාර්ගය අවහිර මාර්ග {{count}}ක් මග හරියි',
     originalNote: 'මුල් මාර්ගය සිතියමේ අළු පාට කඩ ඉරයි.',
     checkingNew: 'නව මාර්ගයේ අනතුරු පරීක්ෂා කරමින්…',
     checkError: 'නව මාර්ගයේ අනතුරු පරීක්ෂා කළ නොහැකි විය.',

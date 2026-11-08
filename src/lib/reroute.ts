@@ -28,6 +28,13 @@ export function avoidSpot(route: RouteResult, hazard: Avoidable): AvoidSpot {
 export const notAvoided = <T extends Avoidable>(spots: AvoidSpot[], hazards: T[]): T[] =>
   hazards.filter((h) => !idsOf(h).some((id) => spots.some((s) => s.ids.includes(id))))
 
+// How many of the avoided blocked roads a route really stays clear of: the ones none of whose
+// reports are found along it
+export function avoidedCount(spots: AvoidSpot[], onRoute: { members: { id: string }[] }[]): number {
+  const found = new Set(onRoute.flatMap((g) => g.members.map((m) => m.id)))
+  return spots.filter((s) => !s.ids.some((id) => found.has(id))).length
+}
+
 // The spots so far, plus one for each hazard found on `foundOn` that isn't covered yet
 export function addAvoidSpots(spots: AvoidSpot[], foundOn: RouteResult, hazards: Avoidable[]): AvoidSpot[] {
   return [...spots, ...notAvoided(spots, hazards).map((h) => avoidSpot(foundOn, h))]

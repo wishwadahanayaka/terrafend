@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { rainPlaceAt, rainPlaceBetween } from './rainForecast'
 import { groupReports } from './duplicates'
-import { addAvoidSpots, avoidSpot, blockedOn, detourWaypoints, difference, notAvoided } from './reroute'
+import { addAvoidSpots, avoidedCount, avoidSpot, blockedOn, detourWaypoints, difference, notAvoided } from './reroute'
 import { nearRoute } from './routeGauges'
 import { cumulativeMetres, positionAt } from './routeGeometry'
 import type { RouteResult } from './routing'
@@ -146,6 +146,21 @@ describe('reroute', () => {
     expect(addAvoidSpots(first, r, again)).toHaveLength(1)
     // A different road still gets its own spot
     expect(addAvoidSpots(first, r, groupReports([near('z', 18_000)]))).toHaveLength(2)
+  })
+
+  it('counts the avoided roads a route really stays clear of', () => {
+    const near = (id: string, alongM: number) => ({ ...hazard(id, 'blocked', alongM), lat: 7 + alongM / 110_574 })
+    const r = route(NORTH)
+    const spots = addAvoidSpots([], r, groupReports([near('a', 5_000), near('b', 5_040), near('c', 15_000)]))
+    expect(spots).toHaveLength(2)
+    // A route that passes none of them avoids both
+    expect(avoidedCount(spots, [])).toBe(2)
+    // One that still passes the second road (by any one of its reports) avoids only the first
+    expect(avoidedCount(spots, groupReports([near('c', 15_000)]))).toBe(1)
+    expect(avoidedCount(spots, groupReports([near('b', 5_040)]))).toBe(1)
+    // Still passing both
+    expect(avoidedCount(spots, groupReports([near('a', 5_000), near('c', 15_000)]))).toBe(0)
+    expect(avoidedCount([], [])).toBe(0)
   })
 
   it('puts Google Maps waypoints on the detour, at most 3', () => {

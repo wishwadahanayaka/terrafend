@@ -11,7 +11,8 @@ type Point = { lat: number; lng: number }
 
 // Thrown for anything we want to show the user as a plain message
 class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  // `extra` is sent along with the message, for the app to read (see the quota error below)
+  constructor(message: string, public status: number, public extra: Record<string, unknown> = {}) {
     super(message)
   }
 }
@@ -44,11 +45,15 @@ function readPoint(v: unknown, name: string, box: boolean): Point {
 // ORS says when its quota resets in x-ratelimit-reset. Their forum says it's a Unix time
 // in seconds, but other APIs send "seconds from now", so both are understood. Anything
 // that doesn't come out as a time within the next two days is ignored.
-function resetTime(header: string | null): string | null {
+function resetMs(header: string | null): number | null {
   const n = Number(header)
   if (!header || !Number.isFinite(n)) return null
   const ms = n > 1e12 ? n : n > 1e9 ? n * 1000 : Date.now() + n * 1000
   if (ms <= Date.now() || ms > Date.now() + 48 * 3_600_000) return null
+  return ms
+}
+
+function resetTime(ms: number): string {
   const time = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Colombo',
     hour: 'numeric',
@@ -100,10 +105,13 @@ async function callOrs(endpoint: 'search' | 'route', path: string, init: Request
 
   // Only say the quota is used up when ORS says so: nothing remaining, or its text mentions the quota
   if ((res.status === 403 || res.status === 429) && (remaining?.trim() === '0' || /quota/i.test(text))) {
-    const when = resetTime(reset)
+    const ms = resetMs(reset)
+    // The app uses `quota` and `reset_at` to stop asking for searches until the reset. Each
+    // endpoint has its own quota, so it also says which one ran out.
     throw new ApiError(
-      when ? `The daily limit for searches and routes has been reached. It resets around ${when}.` : MESSAGES.dailyLimit,
+      ms ? `The daily limit for searches and routes has been reached. It resets around ${resetTime(ms)}.` : MESSAGES.dailyLimit,
       503,
+      { quota: endpoint, ...(ms ? { reset_at: new Date(ms).toISOString() } : {}) },
     )
   }
   if (res.status === 403) throw new ApiError(MESSAGES.unavailable, 503)
@@ -245,7 +253,7 @@ const handleRequest = withSupabase({ auth: 'user', cors: 'disabled' }, async (re
     if (input.action === 'route') return Response.json(await route(input))
     throw new ApiError('Unknown action. Use "search" or "route".', 400)
   } catch (err) {
-    if (err instanceof ApiError) return Response.json({ error: err.message }, { status: err.status })
+    if (err instanceof ApiError) return Response.json({ error: err.message, ...err.extra }, { status: err.status })
     console.error('Unexpected error:', (err as Error).message)
     return Response.json({ error: MESSAGES.general }, { status: 500 })
   }

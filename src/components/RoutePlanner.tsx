@@ -1,5 +1,5 @@
 import { createElement, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Droplet, ExternalLink, LocateFixed, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Droplet, ExternalLink, LocateFixed, Route as RouteIcon, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   circleMarker,
@@ -43,7 +43,7 @@ import { useRouteHazards, type RouteGroup, type RouteHazard } from '../lib/useRo
 import { groupReports } from '../lib/duplicates'
 import { RAIN_COLOR, worstRain, type RainStretch } from '../lib/rainForecast'
 import { useRouteRain } from '../lib/useRouteRain'
-import { addAvoidSpots, blockedOn, detourWaypoints, notAvoided, type AvoidSpot } from '../lib/reroute'
+import { addAvoidSpots, avoidedCount, blockedOn, detourWaypoints, notAvoided, type AvoidSpot } from '../lib/reroute'
 import PlaceInput from './PlaceInput'
 import RainSection from './RainSection'
 import RerouteSection from './RerouteSection'
@@ -162,6 +162,9 @@ export default function RoutePlanner({
   const [rerouteError, setRerouteError] = useState<string | null>(null)
   // The route "Keep original" was tapped for, so it doesn't ask again
   const [keptRouteId, setKeptRouteId] = useState<number | null>(null)
+  // The reroute that was taken, and how many blocked roads it avoids, for the note under the
+  // summary. It belongs to that route only: a new check or clear drops it.
+  const [taken, setTaken] = useState<{ routeId: number; avoids: number } | null>(null)
   const trip = useRef(0)
 
   const from = fromField.place
@@ -222,6 +225,7 @@ export default function RoutePlanner({
     setReroutes(0)
     setRerouteError(null)
     setKeptRouteId(null)
+    setTaken(null)
     setRerouting(false)
   }
 
@@ -260,6 +264,8 @@ export default function RoutePlanner({
 
   function adoptAlternative() {
     if (!alternative) return
+    // Like the offer, only claims what was checked: nothing if the reroute's hazards didn't load
+    setTaken({ routeId: alternative.id, avoids: altHazards.status === 'success' ? avoidedCount(avoid, altGroups) : 0 })
     // Everything keyed on the route (hazards, rivers, rain, global alerts) checks it afresh
     onRouteChange(alternative)
     onAlternativeChange(null)
@@ -326,7 +332,6 @@ export default function RoutePlanner({
   const blocked = blockedOn(list)
   const altBlocked = blockedOn(altGroups)
   // Every report on the reroute, to tell which avoided roads it really stays clear of
-  const altIds = new Set(altGroups.flatMap((g) => g.members.map((m) => m.id)))
   const avoidTotal = avoid.length + notAvoided(avoid, altBlocked).length
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
   const alertWorst = globalAlerts.some((a) => a.event.level === 'Red') ? 'Red' : globalAlerts.length > 0 ? 'Orange' : null
@@ -502,6 +507,12 @@ export default function RoutePlanner({
                 <p className="text-lg font-semibold text-slate-900">
                   {t('route.summary', { distance: formatKm(route.distance_m), duration: routeDuration(route.duration_s) })}
                 </p>
+                {taken && taken.routeId === route.id && taken.avoids > 0 && (
+                  <p className="mt-1 flex items-start gap-2 text-sm font-medium text-blue-800">
+                    <RouteIcon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t('reroute.usedNote', { count: taken.avoids })}
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-slate-500">
                   {t('route.trafficNote')}
                 </p>
@@ -512,7 +523,7 @@ export default function RoutePlanner({
                   blocked={blocked}
                   altBlocked={altBlocked}
                   altStatus={altHazards.status}
-                  avoided={avoid.filter((s) => !s.ids.some((id) => altIds.has(id))).length}
+                  avoided={avoidedCount(avoid, altGroups)}
                   avoidTotal={avoidTotal}
                   canRerouteAgain={reroutes < MAX_REROUTES}
                   showPrompt={

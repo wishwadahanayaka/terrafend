@@ -486,6 +486,8 @@ const ta: Translations = {
     newRoute: 'புதிய பாதை: {{distance}} · {{duration}} ({{extraDistance}}, {{extraTime}})',
     avoids_one: '{{count}} தடைப்பட்ட வீதியைத் தவிர்க்கிறது',
     avoids_other: '{{count}} தடைப்பட்ட வீதிகளைத் தவிர்க்கிறது',
+    usedNote_one: 'இந்தப் பாதை {{count}} தடைப்பட்ட வீதியைத் தவிர்க்கிறது',
+    usedNote_other: 'இந்தப் பாதை {{count}} தடைப்பட்ட வீதிகளைத் தவிர்க்கிறது',
     originalNote: 'அசல் பாதை வரைபடத்தில் சாம்பல் நிறக் கோடிட்ட கோடு.',
     checkingNew: 'புதிய பாதையில் ஆபத்துகளைச் சரிபார்க்கிறது…',
     checkError: 'புதிய பாதையில் ஆபத்துகளைச் சரிபார்க்க முடியவில்லை.',

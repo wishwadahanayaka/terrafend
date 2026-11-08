@@ -2,6 +2,7 @@ import { FunctionsHttpError } from '@supabase/supabase-js'
 import { t } from '../i18n'
 import { SEVERITIES, type Severity } from './hazards'
 import { backupSearch } from './backupSearch'
+import { isQuotaMessage, quotaUntil, rememberSearchQuota, searchQuotaActive } from './searchQuota'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
 
@@ -33,19 +34,35 @@ export const GENERAL_ERROR = 'Something went wrong. Please try again.'
 const RELOAD_ERROR = 'Please reload the page and try again.'
 const NO_CONNECTION_ERROR = 'Couldn’t reach the route service. Check your connection and try again.'
 
+// An error from the routing function. `quota` is set when the function says the daily quota
+// is used up, and `resetAt` is when it resets, if it said (a newer function sends both; an
+// older one only sends the words, so the message is checked too).
+export class RoutingError extends Error {
+  quota: boolean
+  resetAt: string | null
+
+  constructor(message: string, quota = false, resetAt: string | null = null) {
+    super(message)
+    this.quota = quota
+    this.resetAt = resetAt
+  }
+}
+
 // The function answers with { error: "friendly message" } when it fails
-async function messageFrom(error: unknown): Promise<string> {
+async function errorFrom(error: unknown): Promise<RoutingError> {
   if (error instanceof FunctionsHttpError) {
     try {
       const body = await error.context.json()
-      if (typeof body?.error === 'string') return body.error
+      if (typeof body?.error === 'string') {
+        const quota = typeof body.quota === 'string' || isQuotaMessage(body.error)
+        return new RoutingError(body.error, quota, typeof body.reset_at === 'string' ? body.reset_at : null)
+      }
     } catch {
       // not JSON, fall through
     }
-    if (error.context.status === 401) return RELOAD_ERROR
-    return GENERAL_ERROR
+    return new RoutingError(error.context.status === 401 ? RELOAD_ERROR : GENERAL_ERROR)
   }
-  return NO_CONNECTION_ERROR
+  return new RoutingError(NO_CONNECTION_ERROR)
 }
 
 async function callRouting<T>(body: Record<string, unknown>): Promise<T> {
@@ -56,7 +73,7 @@ async function callRouting<T>(body: Record<string, unknown>): Promise<T> {
     throw new Error(GENERAL_ERROR)
   }
   const { data, error } = await supabase.functions.invoke('routing', { body })
-  if (error) throw new Error(await messageFrom(error))
+  if (error) throw await errorFrom(error)
   return data as T
 }
 
@@ -78,15 +95,29 @@ export type PlaceSearchResult = {
 }
 
 // Any failure of the main search (even a used-up quota) falls back to the backup. An
-// honest empty answer from the main search isn't a failure, so it doesn't.
+// honest empty answer from the main search isn't a failure, so it doesn't. Once the search
+// quota is used up, the main search isn't tried again until it resets: only searches are
+// affected, routes have their own quota.
 export async function searchPlaces(text: string, focus: Point): Promise<PlaceSearchResult> {
   try {
     if (import.meta.env.DEV && fakeRoutingMode() === '1') {
       return { places: await (await import('./fakeRouting')).fakeSearch(text), backup: false }
     }
     if (import.meta.env.DEV && fakeRoutingMode() === 'searchdown') throw new Error('Test: main search is down')
+    // ?fakeRouting=quota pretends the quota is used up. Only held in memory, so a reload
+    // starts afresh and nothing is left in the browser for a real session to find.
+    if (import.meta.env.DEV && fakeRoutingMode() === 'quota' && !searchQuotaActive()) {
+      throw new RoutingError('Test: quota exceeded', true, null)
+    }
+    if (searchQuotaActive()) return { places: await backupSearch(text), backup: true }
     return { places: await callRouting<Place[]>({ action: 'search', text, focus }), backup: false }
   } catch (err) {
+    if (err instanceof RoutingError && err.quota) {
+      rememberSearchQuota(
+        quotaUntil(Date.now(), err.resetAt),
+        !(import.meta.env.DEV && fakeRoutingMode() === 'quota'),
+      )
+    }
     try {
       return { places: await backupSearch(text), backup: true }
     } catch {

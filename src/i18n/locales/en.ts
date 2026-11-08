@@ -480,6 +480,8 @@ const en = {
     newRoute: 'New route: {{distance}} · {{duration}} ({{extraDistance}}, {{extraTime}})',
     avoids_one: 'avoids {{count}} blocked road',
     avoids_other: 'avoids {{count}} blocked roads',
+    usedNote_one: 'This route avoids {{count}} blocked road',
+    usedNote_other: 'This route avoids {{count}} blocked roads',
     originalNote: 'The original route is the grey dashed line on the map.',
     checkingNew: 'Checking the new route for hazards…',
     checkError: 'Couldn’t check the new route for hazards.',

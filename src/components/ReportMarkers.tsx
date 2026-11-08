@@ -14,6 +14,7 @@ import {
 } from '../lib/hazards'
 import { iconToSvg } from '../lib/iconHtml'
 import { roundOutward } from '../lib/mapBounds'
+import { spreadMarkers } from '../lib/markerSpread'
 import { loadMyReportIds } from '../lib/myReports'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import type { RouteResult } from '../lib/routing'
@@ -70,11 +71,16 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
   const map = useMap()
   const popupFit = usePopupFit()
   const [bounds, setBounds] = useState(() => readBounds(map))
+  // Markers that overlap are spread apart, and what overlaps depends on the zoom
+  const [zoom, setZoom] = useState(() => map.getZoom())
   const timer = useRef<number | undefined>(undefined)
   const markers = useRef(new Map<string, LeafletMarker>())
 
   // Wait for the map to stop moving, so dragging doesn't send a request per frame
   useMapEvents({
+    zoomend() {
+      setZoom(map.getZoom())
+    },
     moveend() {
       window.clearTimeout(timer.current)
       timer.current = window.setTimeout(() => setBounds(readBounds(map)), DEBOUNCE_MS)
@@ -103,16 +109,32 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
   }
   for (const report of [...(routeHazards ?? []), ...(altHazards ?? [])]) all.set(report.id, report)
 
+  // Pins that would sit on top of each other are moved apart on screen, so each can be tapped.
+  // The first of a group stays on its real spot and the rest go around it.
+  const reports = [...all.values()]
+  const spread = spreadMarkers(
+    reports.map((r) => {
+      const p = map.project([r.lat, r.lng], zoom)
+      return { id: r.id, x: p.x, y: p.y }
+    }),
+  )
+  const positionOf = (r: Report): [number, number] => {
+    const moved = spread.get(r.id)
+    if (!moved) return [r.lat, r.lng]
+    const at = map.unproject([moved.x, moved.y], zoom)
+    return [at.lat, at.lng]
+  }
+
   return (
     <>
-      {[...all.values()].map((report) => (
+      {reports.map((report) => (
         <Marker
           key={report.id}
           ref={(marker) => {
             if (marker) markers.current.set(report.id, marker)
             else markers.current.delete(report.id)
           }}
-          position={[report.lat, report.lng]}
+          position={positionOf(report)}
           icon={markerIcon(report.hazard_type, report.severity)}
           alt={hazardLabel(report.hazard_type)}
           eventHandlers={popupFit}
