@@ -52,6 +52,15 @@ export function sriLankaDay(ms: number): string {
   return t('time.dayMonth', { day, month: t(`time.month.${month}`) })
 }
 
+// "8 Nov 2026" from a plain date like "2026-11-08". Worked out from the text, so no time zone
+// can move it to another day.
+export function dayMonthYear(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
+  if (!match) return isoDate
+  const [, year, month, day] = match
+  return t('time.dayMonthYear', { day: Number(day), month: t(`time.month.${MONTHS[Number(month) - 1]}`), year })
+}
+
 // The time of day for today, and with the day for any other day, since a bare "2:15 pm"
 // would mislead for something from yesterday
 export function sriLankaWhen(ms: number, now = Date.now()): string {

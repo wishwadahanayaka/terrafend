@@ -14,6 +14,26 @@ const en = {
     notOfficial: 'Not an official warning service. Follow DMC for official alerts.',
   },
 
+  // The emergency numbers screen. The numbers themselves are in lib/emergencyNumbers.ts.
+  emergency: {
+    title: 'Emergency numbers',
+    // The link in the banner and in the legend
+    button: 'Emergency numbers',
+    inDanger: 'In danger right now? Call 117 or 119.',
+    shortNote: "Short numbers may not work on foreign SIMs. If a call doesn't connect, try the landlines below.",
+    landlines: 'Landlines',
+    lastChecked: 'Numbers last checked: {{date}}',
+    call: 'Call {{name}}: {{number}}',
+    name: {
+      dmc117: 'Disaster Management Centre (DMC), 24/7',
+      police: 'Police emergency',
+      fire: 'Fire & Rescue',
+      ambulance: 'Suwa Seriya ambulance (free)',
+      dmcLandline: 'DMC landline',
+      policeDesk: 'Police disaster support desk',
+    },
+  },
+
   common: {
     sriLanka: 'Sri Lanka',
     tryAgain: 'Try again',
@@ -52,6 +72,7 @@ const en = {
     clock: '{{hour}}:{{minute}} {{period}}',
     dateTime: '{{day}} {{month}} {{year}}, {{clock}}',
     dayMonth: '{{day}} {{month}}',
+    dayMonthYear: '{{day}} {{month}} {{year}}',
     month: {
       jan: 'Jan',
       feb: 'Feb',

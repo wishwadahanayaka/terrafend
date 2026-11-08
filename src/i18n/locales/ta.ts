@@ -13,6 +13,26 @@ const ta: Translations = {
     menu: 'மொழியைத் தேர்ந்தெடுக்கவும்',
   },
 
+  // NEEDS REVIEW BY A NATIVE SPEAKER: the emergency numbers screen below, above all the service
+  // names (they should be the names people actually use, such as சுவசெரிய) and the SIM note.
+  emergency: {
+    title: 'அவசர எண்கள்',
+    button: 'அவசர எண்கள்',
+    inDanger: 'இப்போது ஆபத்தில் இருக்கிறீர்களா? 117 அல்லது 119 ஐ அழைக்கவும்.',
+    shortNote: 'குறுகிய எண்கள் வெளிநாட்டு SIM அட்டைகளில் வேலை செய்யாமல் போகலாம். அழைப்பு இணையாவிட்டால், கீழே உள்ள தரைவழி எண்களை முயலவும்.',
+    landlines: 'தரைவழி எண்கள்',
+    lastChecked: 'எண்கள் கடைசியாகச் சரிபார்க்கப்பட்டது: {{date}}',
+    call: 'அழைக்க {{name}}: {{number}}',
+    name: {
+      dmc117: 'அனர்த்த முகாமைத்துவ நிலையம் (DMC), 24 மணி நேரமும்',
+      police: 'பொலிஸ் அவசர அழைப்பு',
+      fire: 'தீயணைப்பு மற்றும் மீட்பு',
+      ambulance: 'சுவசெரிய ஆம்புலன்ஸ் சேவை (இலவசம்)',
+      dmcLandline: 'DMC தரைவழி எண்',
+      policeDesk: 'பொலிஸ் அனர்த்த உதவிப் பிரிவு',
+    },
+  },
+
   banner: {
     notOfficial:
       'இது உத்தியோகபூர்வ எச்சரிக்கை சேவை அல்ல. உத்தியோகபூர்வ எச்சரிக்கைகளுக்கு அனர்த்த முகாமைத்துவ நிலையத்தை (DMC) பின்பற்றவும்.',
@@ -56,6 +76,7 @@ const ta: Translations = {
     clock: '{{hour}}:{{minute}} {{period}}',
     dateTime: '{{day}} {{month}}, {{year}}, {{clock}}',
     dayMonth: '{{day}} {{month}}',
+    dayMonthYear: '{{day}} {{month}}, {{year}}',
     month: {
       jan: 'ஜன.',
       feb: 'பிப்.',

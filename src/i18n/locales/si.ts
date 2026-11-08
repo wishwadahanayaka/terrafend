@@ -12,6 +12,26 @@ const si: Translations = {
     menu: 'භාෂාවක් තෝරන්න',
   },
 
+  // NEEDS REVIEW BY A NATIVE SPEAKER: the emergency numbers screen below, above all the service
+  // names (they should be the names people actually use, such as සුව සැරිය) and the SIM note.
+  emergency: {
+    title: 'හදිසි අංක',
+    button: 'හදිසි අංක',
+    inDanger: 'දැන් අනතුරක සිටිනවාද? 117 හෝ 119 අමතන්න.',
+    shortNote: 'කෙටි අංක විදේශීය SIM පත්වල ක්‍රියා නොකරන්නට පුළුවන්. ඇමතුම සම්බන්ධ නොවන්නේ නම්, පහත ලෑන්ඩ්ලයින් අංක උත්සාහ කරන්න.',
+    landlines: 'ලෑන්ඩ්ලයින් අංක',
+    lastChecked: 'අංක අවසන් වරට පරීක්ෂා කළේ: {{date}}',
+    call: 'අමතන්න {{name}}: {{number}}',
+    name: {
+      dmc117: 'ආපදා කළමනාකරණ මධ්‍යස්ථානය (DMC), පැය 24ම',
+      police: 'පොලිස් හදිසි ඇමතුම',
+      fire: 'ගිනි නිවීම සහ ගලවා ගැනීම',
+      ambulance: 'සුව සැරිය ගිලන් රථ සේවය (නොමිලේ)',
+      dmcLandline: 'DMC ලෑන්ඩ්ලයින් අංකය',
+      policeDesk: 'පොලිස් ආපදා සහාය අංශය',
+    },
+  },
+
   banner: {
     notOfficial: 'මෙය නිල අනතුරු ඇඟවීමේ සේවාවක් නොවේ. නිල අනතුරු ඇඟවීම් සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානය (DMC) අනුගමනය කරන්න.',
   },
@@ -54,6 +74,7 @@ const si: Translations = {
     clock: '{{hour}}:{{minute}} {{period}}',
     dateTime: '{{year}} {{month}} {{day}}, {{clock}}',
     dayMonth: '{{month}} {{day}}',
+    dayMonthYear: '{{year}} {{month}} {{day}}',
     month: {
       jan: 'ජන',
       feb: 'පෙබ',

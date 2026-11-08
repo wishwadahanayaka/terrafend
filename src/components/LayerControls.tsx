@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { ClipboardList, CloudRain, Droplet, Droplets, Globe, Info, Languages, Layers, Mountain, TriangleAlert } from 'lucide-react'
+import { ClipboardList, CloudRain, Droplet, Droplets, Globe, Info, Languages, Layers, Mountain, Phone, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Map as LeafletMap } from 'leaflet'
 import type { LayerSettings } from '../lib/layerSettings'
@@ -34,6 +34,7 @@ type Props = {
   onChange: (name: keyof LayerSettings, value: boolean) => void
   // Opens the My reports panel
   onOpenMyReports: () => void
+  onOpenEmergency: () => void
 }
 
 // Shown in this order, with a plain-words meaning for each
@@ -63,7 +64,7 @@ const GDACS_LEGEND: { level: GdacsLevel; key: string }[] = [
 
 type Open = 'none' | 'layers' | 'legend' | 'language'
 
-export default function LayerControls({ map, settings, onChange, onOpenMyReports }: Props) {
+export default function LayerControls({ map, settings, onChange, onOpenMyReports, onOpenEmergency }: Props) {
   const { t, i18n } = useTranslation()
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
@@ -249,6 +250,18 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
 
       {open === 'legend' && (
         <div className="max-h-[max(12rem,calc(100dvh-26.5rem-var(--banner-extra,0px)))] w-64 overflow-y-auto rounded-xl bg-white p-3 text-slate-800 shadow-lg">
+          {/* A second way in to the emergency numbers (the banner is the main one) */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen('none')
+              onOpenEmergency()
+            }}
+            className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white active:bg-red-700"
+          >
+            <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {t('emergency.button')}
+          </button>
           <p className="text-sm font-semibold">{t('legend.riverTitle')}</p>
           <ul className="mt-2 space-y-1.5">
             {RIVER_LEGEND.map(({ step, key }) => (

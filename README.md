@@ -31,6 +31,7 @@ Working now:
 - Works offline: the app opens without a connection and shows the last data it loaded (rivers, rain, forecasts, global alerts and reports) under a banner such as "Offline: showing data from 4:12 pm. It may be out of date." Map tiles you have already looked at are kept for 7 days. Reporting, route checks and voting wait until you are back online
 - A "New version available, tap to refresh" prompt when an update is released, instead of changing the app while you use it
 - Languages: English, Sinhala and Tamil. A button at the top right switches between them (EN / සිං / த), the choice is remembered, and on a first visit the app follows the phone's language if it is Sinhala or Tamil. Switching works offline too. The translations need review by native speakers (see Languages below)
+- Emergency numbers: tap the banner at the top for big tap-to-call buttons for the Disaster Management Centre (117), police (119), fire (110), the Suwa Seriya ambulance (1990) and some landlines. It works offline, and the numbers and where each was checked are in `src/lib/emergencyNumbers.ts`
 - Banner reminding users this is not an official warning service
 
 Roadmap:

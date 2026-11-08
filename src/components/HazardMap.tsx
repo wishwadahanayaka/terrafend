@@ -30,7 +30,7 @@ const MeasuredRainMarkers = lazy(() => import('./MeasuredRainMarkers'))
 const GdacsMarkers = lazy(() => import('./GdacsMarkers'))
 const MyReportsPanel = lazy(() => import('./MyReportsPanel'))
 
-export default function HazardMap() {
+export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => void }) {
   // The report and route UI sit outside MapContainer so touches in them don't pan the map
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [userLatLng, setUserLatLng] = useState<LatLng | null>(null)
@@ -163,6 +163,7 @@ export default function HazardMap() {
           map={map}
           settings={layers}
           onOpenMyReports={() => setMyReportsOpen(true)}
+          onOpenEmergency={onOpenEmergency}
           onChange={(name: keyof LayerSettings, value) => {
             setLayers((current) => ({ ...current, [name]: value }))
             saveLayerSetting(name, value)
