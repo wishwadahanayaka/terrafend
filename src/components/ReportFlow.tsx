@@ -3,6 +3,7 @@ import { MapPin, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import { useQueryClient } from '@tanstack/react-query'
+import { hiddenByLayers, severityLabel } from '../lib/hazards'
 import { REPORTS_KEY } from '../lib/queryKeys'
 import { fadeWhenCardOpen } from '../lib/useCardOpen'
 
@@ -23,9 +24,13 @@ type Props = {
   // Reporting needs a connection. The button greys out and a tap says why.
   offline: boolean
   onOfflineTap: () => void
+  // The Reports layer switch, to tell when a new report will be left off the map
+  showPassable: boolean
 }
 
 const TOAST_MS = 3500
+const LONG_TOAST_MS = 7000
+const LONG_TOAST_CHARS = 60
 
 export default function ReportFlow({
   map,
@@ -36,15 +41,18 @@ export default function ReportFlow({
   cardOpen,
   offline,
   onOfflineTap,
+  showPassable,
 }: Props) {
   const { t } = useTranslation()
   const [spot, setSpot] = useState<LatLng | null>(null)
-  const [toast, setToast] = useState(false)
+  // The words shown after sending, or null when nothing is showing
+  const [toast, setToast] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   useEffect(() => {
     if (!toast) return
-    const id = setTimeout(() => setToast(false), TOAST_MS)
+    // The longer message about hidden reports needs more time to read
+    const id = setTimeout(() => setToast(null), toast.length > LONG_TOAST_CHARS ? LONG_TOAST_MS : TOAST_MS)
     return () => clearTimeout(id)
   }, [toast])
 
@@ -114,10 +122,18 @@ export default function ReportFlow({
             lat={spot.lat}
             lng={spot.lng}
             onClose={() => onModeChange('idle')}
-            onSent={() => {
+            onSent={(what) => {
               queryClient.invalidateQueries({ queryKey: [REPORTS_KEY] })
               onModeChange('idle')
-              setToast(true)
+              setToast(
+                what.kind === 'report'
+                  ? hiddenByLayers(what.severity, showPassable)
+                    ? `${t('report.sent')}. ${t('report.hiddenNote')}`
+                    : t('report.sent')
+                  : what.kind === 'confirmed'
+                    ? t('report.dup.confirmedToast')
+                    : t('report.dup.updatedToast', { severity: severityLabel(what.severity) }),
+              )
             }}
           />
         </Suspense>
@@ -126,9 +142,9 @@ export default function ReportFlow({
       {toast && (
         <p
           role="status"
-          className="absolute inset-x-4 bottom-24 z-[1200] mx-auto w-fit rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white shadow-lg"
+          className="absolute inset-x-4 bottom-24 z-[1200] mx-auto w-fit max-w-sm rounded-2xl bg-slate-900 px-5 py-3 text-center text-sm font-medium text-white shadow-lg"
         >
-          {t('report.sent')}
+          {toast}
         </p>
       )}
     </>

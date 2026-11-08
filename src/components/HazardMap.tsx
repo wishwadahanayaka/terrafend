@@ -160,6 +160,7 @@ export default function HazardMap() {
             cardOpen={cardOpen}
             offline={!online}
             onOfflineTap={() => showNotice(t('offline.report'))}
+            showPassable={layers.passableReports}
           />
 
           {panel === 'closed' && !picking && (

@@ -21,6 +21,8 @@ export type Report = {
   created_at: string
   expires_at: string
   photo_path: string | null
+  // When someone last said it got worse or better. Missing or null if no one has.
+  severity_updated_at?: string | null
 }
 
 // Reports expire after a few hours, so a minute is fresh enough

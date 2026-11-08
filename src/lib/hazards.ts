@@ -58,6 +58,21 @@ export function isSerious(value: Severity): boolean {
   return value !== 'passable'
 }
 
+// True when the Reports layer settings alone would keep a report of this severity off the map
+export function hiddenByLayers(severity: Severity, showPassable: boolean): boolean {
+  return !showPassable && !isSerious(severity)
+}
+
+// What the map draws from the loaded reports. Serious ones always show, passable ones need the
+// Reports layer, and a person's own reports always show, so a report just sent never seems lost.
+export function isShownOnMap(
+  report: { id: string; severity: Severity },
+  showPassable: boolean,
+  mine: { has(id: string): boolean },
+): boolean {
+  return !hiddenByLayers(report.severity, showPassable) || mine.has(report.id)
+}
+
 export function severityBg(value: Severity): string {
   return SEVERITIES.find((s) => s.value === value)?.bg ?? 'bg-slate-600'
 }

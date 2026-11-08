@@ -32,6 +32,8 @@ describe('what is saved', () => {
     expect(shouldSave(['my-vote', 'abc'])).toBe(false)
     expect(shouldSave(['places', 'kandy', 7.3, 80.6])).toBe(false)
     expect(shouldSave(['reports', 'route', 'r1'])).toBe(false)
+    expect(shouldSave(['reports', 'confirmations', 'r1'])).toBe(false)
+    expect(shouldSave(['similar-reports', 7, 80, 'fallen_tree'])).toBe(false)
     expect(shouldSave(['reports', { minLng: 79, minLat: 5, maxLng: 82, maxLat: 10 }])).toBe(false)
     expect(shouldSave(['route-rain'])).toBe(false)
     expect(shouldSave([])).toBe(false)

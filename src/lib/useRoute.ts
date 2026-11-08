@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import type { Grouped } from './duplicates'
 import { forDatabase, type RouteResult } from './routing'
 import { supabase } from './supabase'
 import { REPORTS_KEY } from './queryKeys'
@@ -8,6 +9,9 @@ export type RouteHazard = Report & {
   distance_along_m: number
   distance_from_route_m: number
 }
+
+// Reports of one hazard close together, counted as one (see groupReports)
+export type RouteGroup = Grouped<RouteHazard>
 
 const BUFFER_M = 150
 

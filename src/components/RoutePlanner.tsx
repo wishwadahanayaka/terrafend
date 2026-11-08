@@ -39,10 +39,11 @@ import { useGdacsEvents } from '../lib/useGdacs'
 import { routeDuration } from '../lib/time'
 import { useOnline } from '../lib/useOnline'
 import { useRiverGauges } from '../lib/useRiverGauges'
-import { useRouteHazards, type RouteHazard } from '../lib/useRoute'
+import { useRouteHazards, type RouteGroup, type RouteHazard } from '../lib/useRoute'
+import { groupReports } from '../lib/duplicates'
 import { RAIN_COLOR, worstRain, type RainStretch } from '../lib/rainForecast'
 import { useRouteRain } from '../lib/useRouteRain'
-import { avoidSpot, blockedOn, detourWaypoints, type AvoidSpot } from '../lib/reroute'
+import { addAvoidSpots, blockedOn, detourWaypoints, notAvoided, type AvoidSpot } from '../lib/reroute'
 import PlaceInput from './PlaceInput'
 import RainSection from './RainSection'
 import RerouteSection from './RerouteSection'
@@ -118,6 +119,10 @@ export default function RoutePlanner({
   const online = useOnline()
   const hazards = useRouteHazards(route)
   const altHazards = useRouteHazards(alternative)
+  // Reports of the same hazard close together count as one (see groupReports). The map
+  // still shows every report, but the lists, counts and the reroute work on these.
+  const groups = useMemo(() => groupReports(hazards.data ?? []), [hazards.data])
+  const altGroups = useMemo(() => groupReports(altHazards.data ?? []), [altHazards.data])
   // One request per checked route, so it only runs when a route is checked
   const rain = useRouteRain(route)
 
@@ -222,12 +227,10 @@ export default function RoutePlanner({
 
   // Asks for a route that misses every blocked road so far plus `blocked`, which were
   // found on `foundOn` (the route, or the reroute already on offer)
-  async function findAnother(foundOn: RouteResult, blocked: RouteHazard[]) {
+  async function findAnother(foundOn: RouteResult, blocked: RouteGroup[]) {
     if (!route) return
-    const spots = [...avoid]
-    for (const h of blocked) {
-      if (!spots.some((s) => s.id === h.id)) spots.push(avoidSpot(foundOn, h))
-    }
+    // One spot for each blocked road, however many reports it has
+    const spots = addAvoidSpots(avoid, foundOn, blocked)
     const thisTrip = trip.current
     setAvoid(spots)
     setRerouting(true)
@@ -316,15 +319,15 @@ export default function RoutePlanner({
   // With the panel closed this still stays mounted, to keep the route line on the map
   if (hidden || panel === 'closed') return null
 
-  const list = hazards.data ?? []
+  const list = groups
   const expanded = panel === 'open'
 
   // Only fully blocked roads lead to a reroute offer. Everything else stays a warning.
   const blocked = blockedOn(list)
-  const altList = altHazards.data ?? []
-  const altBlocked = blockedOn(altList)
-  const altIds = new Set(altList.map((h) => h.id))
-  const avoidIds = new Set([...avoid.map((s) => s.id), ...altBlocked.map((h) => h.id)])
+  const altBlocked = blockedOn(altGroups)
+  // Every report on the reroute, to tell which avoided roads it really stays clear of
+  const altIds = new Set(altGroups.flatMap((g) => g.members.map((m) => m.id)))
+  const avoidTotal = avoid.length + notAvoided(avoid, altBlocked).length
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
   const alertWorst = globalAlerts.some((a) => a.event.level === 'Red') ? 'Red' : globalAlerts.length > 0 ? 'Orange' : null
   const rainStretches = rain.data?.stretches ?? []
@@ -509,8 +512,8 @@ export default function RoutePlanner({
                   blocked={blocked}
                   altBlocked={altBlocked}
                   altStatus={altHazards.status}
-                  avoided={avoid.filter((s) => !altIds.has(s.id)).length}
-                  avoidTotal={avoidIds.size}
+                  avoided={avoid.filter((s) => !s.ids.some((id) => altIds.has(id))).length}
+                  avoidTotal={avoidTotal}
                   canRerouteAgain={reroutes < MAX_REROUTES}
                   showPrompt={
                     blocked.length > 0 && !outOfDate && keptRouteId !== route.id && reroutes < MAX_REROUTES
@@ -591,7 +594,7 @@ export default function RoutePlanner({
                     ? t('route.hazardsChecking')
                     : hazards.isError
                       ? t('route.hazardsError')
-                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0) + (list.length >= 200 ? t('route.first200') : '')}
+                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0) + ((hazards.data?.length ?? 0) >= 200 ? t('route.first200') : '')}
                 </p>
                 {hazards.isError && (
                   <button
@@ -621,10 +624,11 @@ export default function RoutePlanner({
                             {createElement(hazardIcon(h.hazard_type), { className: 'h-5 w-5', 'aria-hidden': true })}
                           </span>
                           <span className="text-sm text-slate-900">
-                            {t('route.hazardLine', {
+                            {t(h.members.length > 1 ? 'route.hazardLineMany' : 'route.hazardLine', {
                               km: t('units.km', { value: (h.distance_along_m / 1000).toFixed(1) }),
                               type: hazardLabel(h.hazard_type),
                               severity: severityLabel(h.severity),
+                              reports: t('route.reports', { count: h.members.length }),
                             })}
                           </span>
                         </button>

@@ -5,12 +5,15 @@ import { hazardLabel, HAZARD_TYPES, severityLabel, SEVERITIES, type HazardType, 
 import { shrinkPhoto, uploadPhoto } from '../lib/photos'
 import { NOTE_MAX_LENGTH, submitReport } from '../lib/reports'
 import { useOnline } from '../lib/useOnline'
+import { useSimilarReports } from '../lib/useSimilarReports'
+import DuplicateQuestion, { type Confirmed } from './DuplicateQuestion'
 
 type Props = {
   lat: number
   lng: number
   onClose: () => void
-  onSent: () => void
+  // A new report went in, or the person confirmed (or updated) one that was already there
+  onSent: (what: { kind: 'report'; severity: Severity } | Confirmed) => void
 }
 
 export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
@@ -29,7 +32,22 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
   const busy = stage !== 'idle'
   const { t } = useTranslation()
   const online = useOnline()
-  const canSubmit = hazardType !== null && severity !== null && !busy && !preparing && online
+
+  // An active report of the same type within 100 m. The person has to answer the question
+  // before sending a new report. If the lookup fails there is no question and nothing blocks.
+  const similar = useSimilarReports(lat, lng, hazardType)
+  const match = similar.data?.[0] ?? null
+  const checking = hazardType !== null && similar.isPending && similar.fetchStatus === 'fetching'
+  // The report this person said is a different one, so it isn't asked about again
+  const [differentFrom, setDifferentFrom] = useState<string | null>(null)
+  const needsAnswer = match !== null && differentFrom !== match.id
+  const canSubmit = hazardType !== null && severity !== null && !busy && !preparing && online && !checking && !needsAnswer
+
+  const question = useRef<HTMLDivElement>(null)
+  const matchId = match?.id
+  useEffect(() => {
+    if (matchId) question.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [matchId])
 
   // Preview URLs hold the image in memory until revoked
   const previewUrl = useRef<string | null>(null)
@@ -85,7 +103,7 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
     })
     setStage('idle')
     if (message) setError(message)
-    else onSent()
+    else onSent({ kind: 'report', severity })
   }
 
   return (
@@ -130,6 +148,30 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
                 </button>
               )
             })}
+          </div>
+
+          <div ref={question}>
+            {match && differentFrom !== match.id && (
+              <DuplicateQuestion
+                key={match.id}
+                match={match}
+                online={online}
+                onDifferent={() => setDifferentFrom(match.id)}
+                onConfirmed={onSent}
+              />
+            )}
+            {match && differentFrom === match.id && (
+              <p className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                {t('report.dup.different')}
+                <button
+                  type="button"
+                  onClick={() => setDifferentFrom(null)}
+                  className="h-11 shrink-0 px-2 font-medium text-blue-700"
+                >
+                  {t('route.change')}
+                </button>
+              </p>
+            )}
           </div>
 
           <p className="mb-2 mt-5 text-sm font-medium text-slate-700">{t('report.canVehicles')}</p>
@@ -216,6 +258,11 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
           {error && (
             <p role="alert" className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
+            </p>
+          )}
+          {online && (checking || needsAnswer) && (
+            <p role="status" className="mb-2 text-center text-sm text-slate-600">
+              {t(checking ? 'report.dup.checking' : 'report.dup.answerFirst')}
             </p>
           )}
           <button

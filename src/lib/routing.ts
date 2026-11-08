@@ -168,16 +168,26 @@ export function routeErrorText(message: string): string {
   return key ? t(key) : message
 }
 
-// Worst first, like "2 hazards: 1 blocked, 1 large vehicles only"
-export function hazardSummary(hazards: { severity: Severity }[], hasRiverWarnings = false): string {
+// Worst first, like "2 hazards: 1 blocked (3 reports), 1 large vehicles only". A hazard made of
+// several reports counts once, and the reports behind it are said in brackets.
+export function hazardSummary(
+  hazards: { severity: Severity; members?: unknown[] }[],
+  hasRiverWarnings = false,
+): string {
   // With a river warning nearby, "nothing reported" must not read as "the route is safe"
   if (hazards.length === 0) {
     return t(hasRiverWarnings ? 'route.noHazardsRiver' : 'route.noHazards')
   }
   const parts = [...SEVERITIES]
     .reverse()
-    .map((s) => ({ s: s.value, n: hazards.filter((h) => h.severity === s.value).length }))
+    .map((s) => {
+      const of = hazards.filter((h) => h.severity === s.value)
+      return { s: s.value, n: of.length, reports: of.reduce((sum, h) => sum + (h.members?.length ?? 1), 0) }
+    })
     .filter((c) => c.n > 0)
-    .map((c) => t(`route.count.${c.s}`, { count: c.n }))
+    .map((c) => {
+      const part = t(`route.count.${c.s}`, { count: c.n })
+      return c.reports > c.n ? t('route.withReports', { part, reports: t('route.reports', { count: c.reports }) }) : part
+    })
   return t('route.hazardsHeader', { count: hazards.length, parts: parts.join(', ') })
 }

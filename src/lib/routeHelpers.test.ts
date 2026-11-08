@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { rainPlaceAt, rainPlaceBetween } from './rainForecast'
-import { avoidSpot, blockedOn, detourWaypoints, difference } from './reroute'
+import { groupReports } from './duplicates'
+import { addAvoidSpots, avoidSpot, blockedOn, detourWaypoints, difference, notAvoided } from './reroute'
 import { nearRoute } from './routeGauges'
 import { cumulativeMetres, positionAt } from './routeGeometry'
 import type { RouteResult } from './routing'
@@ -116,9 +117,35 @@ describe('reroute', () => {
     const r = route(NORTH)
     const total = cumulativeMetres(NORTH)[2]
     const spot = avoidSpot(r, hazard('b', 'blocked', total / 2))
-    expect(spot.id).toBe('b')
+    expect(spot.ids).toEqual(['b'])
     expect(spot.point.lat).toBeCloseTo(7.1, 6)
     expect(spot.point.lng).toBe(80)
+  })
+
+  it('avoids a hazard made of several reports once, in the middle of them', () => {
+    const r = route(NORTH)
+    const near = (id: string, alongM: number) => ({ ...hazard(id, 'blocked', alongM), lat: 7 + alongM / 110_574 })
+    // Three reports of one blocked road 40 m apart, and another road 5 km on
+    const groups = groupReports([near('a', 10_000), near('b', 10_040), near('c', 10_080), near('d', 15_000)])
+    expect(groups).toHaveLength(2)
+
+    const spots = addAvoidSpots([], r, groups)
+    expect(spots).toHaveLength(2)
+    expect(spots[0].ids).toEqual(['a', 'b', 'c'])
+    // Middle of 10,000 and 10,080 m along; the route code counts 111,195 m to a degree
+    expect(spots[0].point.lat).toBeCloseTo(7 + 10_040 / 111_195, 4)
+  })
+
+  it('does not avoid a road twice when a different report now stands for it', () => {
+    const r = route(NORTH)
+    const near = (id: string, alongM: number) => ({ ...hazard(id, 'blocked', alongM), lat: 7 + alongM / 110_574 })
+    const first = addAvoidSpots([], r, groupReports([near('a', 10_000), near('b', 10_040)]))
+    // A third report joins later and the newest one leads the group, but a and b are still in it
+    const again = groupReports([near('a', 10_000), near('b', 10_040), near('c', 10_060)])
+    expect(notAvoided(first, again)).toEqual([])
+    expect(addAvoidSpots(first, r, again)).toHaveLength(1)
+    // A different road still gets its own spot
+    expect(addAvoidSpots(first, r, groupReports([near('z', 18_000)]))).toHaveLength(2)
   })
 
   it('puts Google Maps waypoints on the detour, at most 3', () => {

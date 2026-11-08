@@ -144,6 +144,34 @@ describe('the app text in each language', () => {
     expect(t('reroute.prompt', { count: 3 })).toContain('3 blocked roads.')
   })
 
+  it('words duplicate reports as one hazard with its reports in brackets', async () => {
+    await setLanguage('en', false)
+    const reports = t('route.reports', { count: 3 })
+    expect(reports).toBe('3 reports')
+    expect(t('route.withReports', { part: t('route.count.blocked', { count: 1 }), reports })).toBe('1 blocked (3 reports)')
+    expect(t('reroute.promptReports', { count: 1, reports })).toBe(
+      'This route passes 1 blocked road (3 reports). Find another route?',
+    )
+    expect(t('report.confirmedBy', { count: 1 })).toBe('confirmed by 1 person')
+    expect(t('report.confirmedBy', { count: 4 })).toBe('confirmed by 4 people')
+    expect(t('report.dup.question.fallen_tree')).toBe('Is this the same fallen tree?')
+    expect(t('report.dup.details', { ago: '20 min ago', distance: t('units.m', { value: 40 }) })).toBe(
+      'Reported 20 min ago, 40 m away',
+    )
+    expect(t('report.updatedTo', { severity: 'Blocked', ago: '5 min ago' })).toBe('Updated to Blocked 5 min ago')
+  })
+
+  it('has a "same one?" question for every hazard type in every language', async () => {
+    for (const lang of ['en', 'si', 'ta'] as const) {
+      await setLanguage(lang, false)
+      for (const { value } of HAZARD_TYPES) {
+        const text = t(`report.dup.question.${value}`)
+        expect(text, `${lang}: ${value}`).not.toContain('report.dup')
+        expect(text.trim()).not.toBe('')
+      }
+    }
+  })
+
   it('picks the right plural in Tamil', async () => {
     await setLanguage('ta', false)
     expect(t('chip.river', { count: 1 })).toBe('வெள்ள மட்டத்தில் 1 ஆறு')

@@ -1,18 +1,19 @@
 import { OctagonX, Route as RouteIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { reportTotal } from '../lib/duplicates'
 import { difference } from '../lib/reroute'
 import { formatKm, NO_REROUTE, routeErrorText, type RouteResult } from '../lib/routing'
 import { t } from '../i18n'
 import { routeDuration } from '../lib/time'
 import { useOnline } from '../lib/useOnline'
-import type { RouteHazard } from '../lib/useRoute'
+import type { RouteGroup } from '../lib/useRoute'
 
 type Props = {
   route: RouteResult
   alternative: RouteResult | null
   // Blocked reports on the route, and on the reroute once it has been checked
-  blocked: RouteHazard[]
-  altBlocked: RouteHazard[]
+  blocked: RouteGroup[]
+  altBlocked: RouteGroup[]
   altStatus: 'pending' | 'error' | 'success'
   // How many of the blocked roads asked for the reroute avoids
   avoided: number
@@ -23,12 +24,12 @@ type Props = {
   busy: boolean
   error: string | null
   outOfDate: boolean
-  onFind: (foundOn: RouteResult, blocked: RouteHazard[]) => void
+  onFind: (foundOn: RouteResult, blocked: RouteGroup[]) => void
   onUse: () => void
   onKeep: () => void
 }
 
-const kmAlong = (h: RouteHazard) => t('units.km', { value: (h.distance_along_m / 1000).toFixed(1) })
+const kmAlong = (h: RouteGroup) => t('units.km', { value: (h.distance_along_m / 1000).toFixed(1) })
 
 export default function RerouteSection(props: Props) {
   const { route, alternative, blocked, busy, error, outOfDate, onFind } = props
@@ -67,11 +68,15 @@ export default function RerouteSection(props: Props) {
       )
     }
     if (!props.showPrompt) return null
+    // "2 blocked roads (5 reports)" when several reports stand behind them
+    const reports = reportTotal(blocked)
     return (
       <div className="mt-3 rounded-xl border-2 border-red-200 bg-red-50 px-3 py-3">
         <p className="flex items-start gap-2 text-base font-medium text-red-900">
           <OctagonX className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          {t('reroute.prompt', { count: blocked.length })}
+          {reports > blocked.length
+            ? t('reroute.promptReports', { count: blocked.length, reports: t('route.reports', { count: reports }) })
+            : t('reroute.prompt', { count: blocked.length })}
         </p>
         <button
           type="button"

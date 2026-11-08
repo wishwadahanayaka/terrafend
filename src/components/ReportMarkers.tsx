@@ -6,7 +6,7 @@ import {
   HAZARD_TYPES,
   hazardIcon,
   hazardLabel,
-  isSerious,
+  isShownOnMap,
   severityBg,
   severityLabel,
   type HazardType,
@@ -14,12 +14,14 @@ import {
 } from '../lib/hazards'
 import { iconToSvg } from '../lib/iconHtml'
 import { roundOutward } from '../lib/mapBounds'
+import { loadMyReportIds } from '../lib/myReports'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import type { RouteResult } from '../lib/routing'
 import { expiresIn, timeAgo } from '../lib/time'
 import { usePopupFit } from '../lib/usePopupFit'
 import { useReportsInView, type Bounds, type Report } from '../lib/useReports'
 import { useRouteHazards } from '../lib/useRoute'
+import { useConfirmations } from '../lib/useVotes'
 import ReportPhoto from './ReportPhoto'
 import VoteSection from './VoteSection'
 
@@ -56,7 +58,8 @@ type Props = {
   route: RouteResult | null
   // A reroute on offer. Its hazards show too, so you can see what it passes.
   alternative: RouteResult | null
-  // Blocked and large-vehicles-only reports always show. This adds the passable ones.
+  // Blocked and large-vehicles-only reports always show. This adds the passable ones
+  // (reports sent from this phone always show too).
   showPassable: boolean
   // Asks for one report's card to open. The number makes a repeat tap count as new.
   openRequest: { id: string; n: number } | null
@@ -94,8 +97,9 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
   // Merged by id, so a report in both lists is only drawn once. Reports on the checked
   // route always show, whatever their severity, because the route panel lists them.
   const all = new Map<string, Report>()
+  const mine = loadMyReportIds()
   for (const report of data ?? []) {
-    if (showPassable || isSerious(report.severity)) all.set(report.id, report)
+    if (isShownOnMap(report, showPassable, mine)) all.set(report.id, report)
   }
   for (const report of [...(routeHazards ?? []), ...(altHazards ?? [])]) all.set(report.id, report)
 
@@ -124,7 +128,9 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
 function ReportCard({ report }: { report: Report }) {
-  useTranslation()
+  const { t } = useTranslation()
+  // How many people said "still there". Left out until it loads, and if it can't.
+  const confirmations = useConfirmations(report.id).data ?? 0
   return (
     <div>
       <div className="flex items-center gap-2">
@@ -142,8 +148,15 @@ function ReportCard({ report }: { report: Report }) {
       {report.note && <div className="mt-2 break-words text-sm text-slate-700">{report.note}</div>}
       {report.photo_path && <ReportPhoto path={report.photo_path} />}
       <div className="mt-2 text-xs text-slate-500">
-        {timeAgo(report.created_at)} &middot; {expiresIn(report.expires_at)}
+        {t('report.reported', { ago: timeAgo(report.created_at) })}
+        {confirmations > 0 && <> &middot; {t('report.confirmedBy', { count: confirmations })}</>}
       </div>
+      {report.severity_updated_at && (
+        <div className="text-xs text-slate-500">
+          {t('report.updatedTo', { severity: severityLabel(report.severity), ago: timeAgo(report.severity_updated_at) })}
+        </div>
+      )}
+      <div className="text-xs text-slate-500">{expiresIn(report.expires_at)}</div>
       {/* Test reports from ?fakeReport= aren't in the database, so there's nothing to vote on */}
       {!report.id.startsWith('fake-') && <VoteSection reportId={report.id} />}
     </div>

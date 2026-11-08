@@ -5,16 +5,32 @@ import type { Point, RouteResult } from './routing'
 import type { RouteHazard } from './useRoute'
 
 // Only fully blocked roads are worth a detour. Everything else stays a warning.
-export const blockedOn = (hazards: RouteHazard[]) => hazards.filter((h) => h.severity === 'blocked')
+export const blockedOn = <T extends { severity: RouteHazard['severity'] }>(hazards: T[]): T[] =>
+  hazards.filter((h) => h.severity === 'blocked')
 
-// A blocked road to steer around: the report, and the spot on the route where it was
-// passed. The report can be up to 150 m off the line, so the avoid square goes on the
-// road itself, not on the pin, or it could miss the road entirely.
-export type AvoidSpot = { id: string; point: Point }
+// A blocked road to steer around: the spot on the route where it was passed, and the ids of
+// every report behind it. Several reports of one road are avoided once, and the ids are how a
+// later check tells the road is already covered, even if a different report now stands for it.
+// The report can be up to 150 m off the line, so the avoid square goes on the road itself,
+// not on the pin, or it could miss the road entirely.
+export type AvoidSpot = { ids: string[]; point: Point }
 
-export function avoidSpot(route: RouteResult, hazard: RouteHazard): AvoidSpot {
+type Avoidable = { id: string; distance_along_m: number; members?: { id: string }[] }
+
+const idsOf = (h: Avoidable) => (h.members ?? [h]).map((m) => m.id)
+
+export function avoidSpot(route: RouteResult, hazard: Avoidable): AvoidSpot {
   const [lat, lng] = positionAt(route.coordinates, cumulativeMetres(route.coordinates), hazard.distance_along_m)
-  return { id: hazard.id, point: { lat, lng } }
+  return { ids: idsOf(hazard), point: { lat, lng } }
+}
+
+// The hazards that no spot covers yet
+export const notAvoided = <T extends Avoidable>(spots: AvoidSpot[], hazards: T[]): T[] =>
+  hazards.filter((h) => !idsOf(h).some((id) => spots.some((s) => s.ids.includes(id))))
+
+// The spots so far, plus one for each hazard found on `foundOn` that isn't covered yet
+export function addAvoidSpots(spots: AvoidSpot[], foundOn: RouteResult, hazards: Avoidable[]): AvoidSpot[] {
+  return [...spots, ...notAvoided(spots, hazards).map((h) => avoidSpot(foundOn, h))]
 }
 
 const SAMPLE_M = 250

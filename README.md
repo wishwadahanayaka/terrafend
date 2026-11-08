@@ -112,7 +112,7 @@ The location button only works on `localhost` or `https`, because browsers block
 The app talks to a Supabase project. To run your own copy:
 
 1. Create a free Supabase project and turn on anonymous sign-ins.
-2. Run the files in `supabase/migrations/` in order (0001 to 0004) in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (0001 to 0005) in the SQL Editor.
 3. Copy `.env.example` to `.env` and fill in your project URL and publishable key. The `.env` file isn't committed.
 4. For routes and place search, deploy the `routing` function from `supabase/functions/` and set your OpenRouteService key as the `ORS_API_KEY` secret. For the hourly cleanup, deploy `cleanup-expired` and follow the notes in migration 0003.
 
@@ -142,7 +142,7 @@ The service worker is off in `npm run dev`. To try the installable app, run `npm
 
 ## Testing
 
-The core logic has unit tests, written with [Vitest](https://vitest.dev/): map box rounding, rain levels and the forecast rules, rain gauge rates, river gauge parsing, route distances and wording, finding blocked roads for a reroute, global alert relevance, time formatting, and what is saved for offline use. They run on small sample data only, with no network and no real APIs. The test files sit next to the code they test, as `src/lib/*.test.ts`.
+The core logic has unit tests, written with [Vitest](https://vitest.dev/): map box rounding, rain levels and the forecast rules, rain gauge rates, river gauge parsing, route distances and wording, finding blocked roads for a reroute, matching and grouping duplicate reports, global alert relevance, time formatting, and what is saved for offline use. They run on small sample data only, with no network and no real APIs. The test files sit next to the code they test, as `src/lib/*.test.ts`.
 
 Every push and pull request to `main` runs the same checks on GitHub Actions (`.github/workflows/ci.yml`): install, lint, type-check, build, then the tests. The badge at the top shows the latest result.
 
