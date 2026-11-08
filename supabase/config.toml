@@ -397,6 +397,10 @@ verify_jwt = false
 [functions.routing]
 verify_jwt = false
 
+# Called by a cron job like cleanup-expired, so it checks its own secret header too.
+[functions.forecast-refresh]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

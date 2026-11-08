@@ -65,6 +65,18 @@ function parseHourly(entry: unknown): Hourly {
   return { time, precipitation, weather_code, probability }
 }
 
+// The request for these places. The forecast-refresh function (supabase/functions) builds the
+// same one for the shared cache, and a test checks the two stay identical.
+export function forecastUrl(places: { lat: number; lng: number }[]): string {
+  // Two decimals is about 1 km, finer than the forecast's own grid
+  const lat = places.map((p) => p.lat.toFixed(2)).join(',')
+  const lng = places.map((p) => p.lng.toFixed(2)).join(',')
+  return (
+    `${API_URL}?latitude=${lat}&longitude=${lng}&hourly=precipitation,weather_code,precipitation_probability` +
+    `&timezone=Asia%2FColombo&forecast_days=2`
+  )
+}
+
 // A 429 is remembered, so nothing asks again until the wait is over. `waitMs` is only given
 // by the dev fake, which cuts the wait short.
 function rateLimited(reason: string | null, retryAfterMs: number | null, waitMs?: number): OpenMeteoError {
@@ -103,13 +115,7 @@ export async function fetchHourly(places: { lat: number; lng: number }[]): Promi
     if (fake.fakeForecastFails()) throw rateLimited(fake.FAKE_REASON, null, fake.FAKE_WAIT_MS)
   }
 
-  // Two decimals is about 1 km, finer than the forecast's own grid
-  const lat = places.map((p) => p.lat.toFixed(2)).join(',')
-  const lng = places.map((p) => p.lng.toFixed(2)).join(',')
-  const url =
-    `${API_URL}?latitude=${lat}&longitude=${lng}&hourly=precipitation,weather_code,precipitation_probability` +
-    `&timezone=Asia%2FColombo&forecast_days=2`
-  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+  const res = await fetch(forecastUrl(places), { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw await failureOf(res)
 
   // One place comes back as an object, several as a list

@@ -63,7 +63,7 @@ Backend, all on Supabase's free tier:
 - Row level security, so the database itself decides who can read and write what
 - Anonymous sign-in, so people can report without making an account
 - Storage for report photos, with size and file type limits
-- Edge Functions (Deno): one calls OpenRouteService for place search and routes, keeping its API key off the phone; another cleans up expired data
+- Edge Functions (Deno): one calls OpenRouteService for place search and routes, keeping its API key off the phone; another cleans up expired data, and a third fetches the island rain forecast from Open-Meteo once an hour and keeps it in a table so phones read it from there (see `docs/forecast-cache.md`)
 - Cron and Vault: Supabase Cron runs the cleanup every hour, with its secret kept in Vault
 
 Other:
@@ -113,9 +113,9 @@ The location button only works on `localhost` or `https`, because browsers block
 The app talks to a Supabase project. To run your own copy:
 
 1. Create a free Supabase project and turn on anonymous sign-ins.
-2. Run the files in `supabase/migrations/` in order (0001 to 0006) in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (0001 to 0007) in the SQL Editor.
 3. Copy `.env.example` to `.env` and fill in your project URL and publishable key. The `.env` file isn't committed.
-4. For routes and place search, deploy the `routing` function from `supabase/functions/` and set your OpenRouteService key as the `ORS_API_KEY` secret. For the hourly cleanup, deploy `cleanup-expired` and follow the notes in migration 0003.
+4. For routes and place search, deploy the `routing` function from `supabase/functions/` and set your OpenRouteService key as the `ORS_API_KEY` secret. For the hourly cleanup, deploy `cleanup-expired` and follow the notes in migration 0003. For the shared forecast cache (optional: without it the app asks Open-Meteo itself), follow `docs/forecast-cache.md`.
 
 Other commands:
 

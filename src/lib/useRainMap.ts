@@ -2,8 +2,9 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { FORECAST_MAX_AGE_MS } from './forecastAge'
 import { FORECAST_SAVED_MAX_AGE_MS } from './offline'
-import { refreshDelay, shouldRetry } from './openMeteoLimit'
-import { fetchForecastGrid, rainMapAt, rainMapState, type RainMapState } from './rainMap'
+import { islandRefreshDelay, loadIslandForecast } from './forecastCache'
+import { rateLimitedUntil, shouldRetry } from './openMeteoLimit'
+import { rainMapAt, rainMapState, type RainMapState } from './rainMap'
 import { useHourClock } from './useHourClock'
 import { useWaiting } from './useWaiting'
 
@@ -16,8 +17,9 @@ function normalRefreshMs(): number {
   return globalThis.location?.search.includes('fakeForecast=429later') ? FAKE_REFRESH_MS : HOUR_MS
 }
 
-// One request for the whole island, kept for an hour and refreshed every hour. It brings the
-// hourly numbers for today and tomorrow, and the "next 3 hours" are picked from them here, so
+// One request for the whole island, kept for an hour and refreshed every hour. It reads the shared
+// cache first and only goes to Open-Meteo itself when that has nothing good enough (forecastCache.ts).
+// It brings the hourly numbers for today and tomorrow, and the "next 3 hours" are picked from them here, so
 // a forecast that is a bit old is still right until it runs out of hours. If a refresh fails
 // the old one stays on the map for as long as it still covers the next 3 hours (rainMapState).
 // A 429 isn't retried: the next try comes once the wait is over (openMeteoLimit.ts). The map,
@@ -25,11 +27,11 @@ function normalRefreshMs(): number {
 export function useRainMap(): RainMapState {
   const query = useQuery({
     queryKey: ['rain-map'],
-    queryFn: fetchForecastGrid,
+    queryFn: loadIslandForecast,
     staleTime: HOUR_MS,
     // Kept as long as a saved forecast is still of use, for showing when offline
     gcTime: FORECAST_SAVED_MAX_AGE_MS,
-    refetchInterval: (q) => refreshDelay(q.state.error, Date.now(), normalRefreshMs()),
+    refetchInterval: (q) => islandRefreshDelay(q.state.error, q.state.data, Date.now(), normalRefreshMs(), rateLimitedUntil()),
     refetchOnWindowFocus: false,
     retry: shouldRetry,
     retryDelay: 2000,

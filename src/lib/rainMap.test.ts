@@ -179,6 +179,11 @@ describe('what the screens are told', () => {
     expect(state).toEqual({ status: 'success', data: map, olderFrom: at(14, 15) })
   })
 
+  it('labels a forecast taken from the old cache with its time, though the last load worked', () => {
+    const fromCache = { ...grid, staleCache: true }
+    expect(rainMapState(fromCache, map, idle)).toEqual({ status: 'success', data: map, olderFrom: at(14, 15) })
+  })
+
   it('has nothing to show when the older forecast no longer reaches the next 3 hours', () => {
     expect(rainMapState(grid, null, { ...idle, isError: true })).toEqual({ status: 'error', data: null, olderFrom: null })
   })

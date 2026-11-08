@@ -24,6 +24,8 @@ const usingFakes = import.meta.env.DEV && [...new URLSearchParams(location.searc
 // Where the last loaded data is kept on the phone. Null if the browser won't allow it
 // (some private windows), in which case the app just works without saved data.
 function makePersister(): Persister | null {
+  // ?fakeForecastCache= tests how the forecast is loaded, so saved data would only hide it
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('fakeForecastCache')) return null
   try {
     const saver = createSyncStoragePersister({
       storage: window.localStorage,

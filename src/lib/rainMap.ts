@@ -105,6 +105,9 @@ export type ForecastGrid = {
   times: string[]
   // In the same order as landGrid()
   cells: { mm: (number | null)[]; code: (number | null)[]; chance: (number | null)[] }[]
+  // Set when this came from the shared cache after it had got too old to trust as current and the
+  // direct request failed: it is shown with its time ("Forecast from ...") and retried sooner
+  staleCache?: boolean
 }
 
 // Higher is worse. Any warning beats any quieter level.
@@ -113,27 +116,31 @@ export function rainScore(level: RainLevel | null, mild: MildLevel | null): numb
   return mild === 'moderate' ? 2 : mild === 'light' ? 1 : 0
 }
 
-// Keeps the hours from the current one onward (earlier ones are of no use to anyone), and
-// checks every cell came back with the same hours, since they are stored once for all of them.
+// Keeps the hours from the current one onward (earlier ones are of no use to anyone). Used for a
+// forecast just fetched and for one read from the shared cache, which can be an hour or more old,
+// so the hours are counted from `now`, not from when it was fetched.
+export function trimGrid(times: string[], cells: ForecastGrid['cells'], fetchedAt: number, now: number): ForecastGrid {
+  const first = times.indexOf(labelForHourEnd(currentHourEnd(now)))
+  const from = first === -1 ? 0 : first
+  return {
+    fetchedAt,
+    times: times.slice(from),
+    cells: cells.map((c) => ({ mm: c.mm.slice(from), code: c.code.slice(from), chance: c.chance.slice(from) })),
+  }
+}
+
+// Checks every cell came back with the same hours, since they are stored once for all of them
 export function buildGrid(forecasts: Hourly[], now: number): ForecastGrid {
   const times = forecasts[0]?.time
   if (!times || forecasts.some((f) => f.time.length !== times.length || f.time.some((t, i) => t !== times[i]))) {
     throw new Error('Rain forecast: unexpected answer')
   }
-  const first = times.indexOf(labelForHourEnd(currentHourEnd(now)))
-  const from = first === -1 ? 0 : first
-  return {
-    fetchedAt: now,
-    times: times.slice(from),
-    cells: forecasts.map((f) => ({
-      mm: f.precipitation.slice(from),
-      code: f.weather_code.slice(from),
-      chance: f.probability.slice(from),
-    })),
-  }
+  const cells = forecasts.map((f) => ({ mm: f.precipitation, code: f.weather_code, chance: f.probability }))
+  return trimGrid(times, cells, now, now)
 }
 
-// One request for the whole island
+// One request straight to Open-Meteo for the whole island. The app asks the shared cache first
+// (forecastCache.ts) and comes here when that has nothing good enough.
 export async function fetchForecastGrid(): Promise<ForecastGrid> {
   const forecasts = await fetchHourly(landGrid().cells)
   const grid = buildGrid(forecasts, Date.now())
@@ -214,7 +221,9 @@ export function rainMapState(
   map: RainMap | null,
   query: { isError: boolean; isFetching: boolean; isPending: boolean },
 ): RainMapState {
-  if (grid && map) return { status: 'success', data: map, olderFrom: query.isError ? grid.fetchedAt : null }
+  // Older numbers are labelled with their time after a failed refresh, and when they came from a
+  // cache that had got too old (staleCache)
+  if (grid && map) return { status: 'success', data: map, olderFrom: query.isError || grid.staleCache ? grid.fetchedAt : null }
   if (grid ? query.isFetching : query.isPending) return { status: 'pending', data: null, olderFrom: null }
   return { status: 'error', data: null, olderFrom: null }
 }
