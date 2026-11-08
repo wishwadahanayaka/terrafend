@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { CloudRain, Droplet, Droplets, Globe, Info, Languages, Layers, Mountain, TriangleAlert } from 'lucide-react'
+import { ClipboardList, CloudRain, Droplet, Droplets, Globe, Info, Languages, Layers, Mountain, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Map as LeafletMap } from 'leaflet'
 import type { LayerSettings } from '../lib/layerSettings'
@@ -30,6 +30,8 @@ type Props = {
   map: LeafletMap | null
   settings: LayerSettings
   onChange: (name: keyof LayerSettings, value: boolean) => void
+  // Opens the My reports panel
+  onOpenMyReports: () => void
 }
 
 // Shown in this order, with a plain-words meaning for each
@@ -59,7 +61,7 @@ const GDACS_LEGEND: { level: GdacsLevel; key: string }[] = [
 
 type Open = 'none' | 'layers' | 'legend' | 'language'
 
-export default function LayerControls({ map, settings, onChange }: Props) {
+export default function LayerControls({ map, settings, onChange, onOpenMyReports }: Props) {
   const { t, i18n } = useTranslation()
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
@@ -108,12 +110,25 @@ export default function LayerControls({ map, settings, onChange }: Props) {
           type="button"
           onClick={() => toggle('layers')}
           aria-expanded={open === 'layers'}
-          className={`flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold shadow-lg ${
+          className={`flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold shadow-lg max-[339px]:px-3 ${
             open === 'layers' ? 'bg-sky-600 text-white active:bg-sky-700' : 'bg-white text-slate-700 active:bg-slate-100'
           }`}
         >
           <Layers className="h-5 w-5 shrink-0" aria-hidden="true" />
-          {t('layers.button')}
+          {/* On the very narrowest phones only the icon shows, so four buttons fit in the row */}
+          <span className="max-[339px]:sr-only">{t('layers.button')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen('none')
+            onOpenMyReports()
+          }}
+          aria-label={t('myReports.button')}
+          title={t('myReports.button')}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg active:bg-slate-100"
+        >
+          <ClipboardList className="h-5 w-5" aria-hidden="true" />
         </button>
         <button
           type="button"

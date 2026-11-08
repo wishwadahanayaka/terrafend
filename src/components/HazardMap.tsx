@@ -9,6 +9,7 @@ import { useNotice } from '../lib/useNotice'
 import { useOnline } from '../lib/useOnline'
 import { loadLayerSettings, saveLayerSetting, type LayerSettings } from '../lib/layerSettings'
 import type { RouteHazard } from '../lib/useRoute'
+import { reportStatus, type MyReportRow } from '../lib/myReportsList'
 import { rainPath, type RainStretch } from '../lib/rainForecast'
 import type { RouteResult } from '../lib/routing'
 import LocateButton from './LocateButton'
@@ -27,12 +28,14 @@ const RainOverlay = lazy(() => import('./RainOverlay'))
 const RainMapOverlay = lazy(() => import('./RainMapOverlay'))
 const MeasuredRainMarkers = lazy(() => import('./MeasuredRainMarkers'))
 const GdacsMarkers = lazy(() => import('./GdacsMarkers'))
+const MyReportsPanel = lazy(() => import('./MyReportsPanel'))
 
 export default function HazardMap() {
   // The report and route UI sit outside MapContainer so touches in them don't pan the map
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [userLatLng, setUserLatLng] = useState<LatLng | null>(null)
   const [mode, setMode] = useState<ReportMode>('idle')
+  const [myReportsOpen, setMyReportsOpen] = useState(false)
 
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
@@ -62,6 +65,18 @@ export default function HazardMap() {
     setPanel('collapsed')
     map.setView([hazard.lat, hazard.lng], Math.max(map.getZoom(), 16), { animate: false })
     setOpenRequest({ id: hazard.id, n: Date.now() })
+  }
+
+  // Tapping one of your own reports: close the list and fly there. An active report's card
+  // opens when the flight ends (a cleared one is no longer on the map, so only the place shows).
+  function showMine(row: MyReportRow) {
+    setMyReportsOpen(false)
+    if (!map) return
+    if (panel === 'open') setPanel('collapsed')
+    map.flyTo([row.lat, row.lng], Math.max(map.getZoom(), 16), { duration: 0.8 })
+    if (reportStatus(row, Date.now()) === 'active') {
+      map.once('moveend', () => setOpenRequest({ id: row.id, n: Date.now() }))
+    }
   }
 
   function showRain(stretch: RainStretch) {
@@ -140,6 +155,7 @@ export default function HazardMap() {
         <LayerControls
           map={map}
           settings={layers}
+          onOpenMyReports={() => setMyReportsOpen(true)}
           onChange={(name: keyof LayerSettings, value) => {
             setLayers((current) => ({ ...current, [name]: value }))
             saveLayerSetting(name, value)
@@ -148,6 +164,12 @@ export default function HazardMap() {
       )}
 
       <Notice message={notice} />
+
+      {myReportsOpen && (
+        <Suspense fallback={null}>
+          <MyReportsPanel onClose={() => setMyReportsOpen(false)} onShow={showMine} />
+        </Suspense>
+      )}
 
       {map && (
         <>

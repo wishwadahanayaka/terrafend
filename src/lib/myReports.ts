@@ -49,3 +49,28 @@ export function rememberMyReport(id: string, now = Date.now()) {
     // not kept, the report is still sent
   }
 }
+
+export const dropMyReport = (list: MyReport[], id: string): MyReport[] => list.filter((r) => r.id !== id)
+
+// Forget one report, after it was cleared
+export function forgetMyReport(id: string, now = Date.now()) {
+  try {
+    const list = parseMyReports(localStorage.getItem(KEY), now)
+    localStorage.setItem(KEY, JSON.stringify(dropMyReport(list, id)))
+  } catch {
+    // not changed, the report is off the map anyway
+  }
+}
+
+// Brings the remembered list in line with what the database says (see syncMyReports)
+export function updateMyReports(change: (list: MyReport[]) => MyReport[], now = Date.now()) {
+  try {
+    const list = parseMyReports(localStorage.getItem(KEY), now)
+    const next = change(list)
+    if (next.length !== list.length || next.some((r, i) => r.id !== list[i].id)) {
+      localStorage.setItem(KEY, JSON.stringify(next))
+    }
+  } catch {
+    // storage is blocked, the layer rules apply as usual
+  }
+}

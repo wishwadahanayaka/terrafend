@@ -27,6 +27,7 @@ import ReportPhoto from './ReportPhoto'
 import VoteSection from './VoteSection'
 
 const DEBOUNCE_MS = 400
+const OPEN_WAIT_MS = 8000
 
 // Loads slightly more than what's on screen, so small pans don't leave empty edges
 function readBounds(map: LeafletMap): Bounds {
@@ -93,9 +94,24 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
   const { data: routeHazards } = useRouteHazards(route)
   const { data: altHazards } = useRouteHazards(alternative)
 
+  // A card that was asked for opens as soon as its pin exists. Usually that is at once, but
+  // a report that was just flown to may still be loading. It gives up after a few seconds, so
+  // a card never pops open much later by surprise.
+  const wanted = useRef<{ id: string; until: number } | null>(null)
   useEffect(() => {
-    if (openRequest) markers.current.get(openRequest.id)?.openPopup()
+    if (openRequest) wanted.current = { id: openRequest.id, until: Date.now() + OPEN_WAIT_MS }
   }, [openRequest])
+  useEffect(() => {
+    const want = wanted.current
+    if (!want) return
+    const marker = markers.current.get(want.id)
+    if (marker) {
+      wanted.current = null
+      marker.openPopup()
+    } else if (Date.now() > want.until) {
+      wanted.current = null
+    }
+  })
 
   // The query keeps running while hidden, so markers are fresh when picking ends
   if (hidden) return null

@@ -112,7 +112,7 @@ The location button only works on `localhost` or `https`, because browsers block
 The app talks to a Supabase project. To run your own copy:
 
 1. Create a free Supabase project and turn on anonymous sign-ins.
-2. Run the files in `supabase/migrations/` in order (0001 to 0005) in the SQL Editor.
+2. Run the files in `supabase/migrations/` in order (0001 to 0006) in the SQL Editor.
 3. Copy `.env.example` to `.env` and fill in your project URL and publishable key. The `.env` file isn't committed.
 4. For routes and place search, deploy the `routing` function from `supabase/functions/` and set your OpenRouteService key as the `ORS_API_KEY` secret. For the hourly cleanup, deploy `cleanup-expired` and follow the notes in migration 0003.
 
