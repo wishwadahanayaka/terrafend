@@ -1,6 +1,7 @@
 import type { PersistedClient } from '@tanstack/react-query-persist-client'
 import { REPORTS_KEY } from './queryKeys'
-import { sriLankaClock } from './time'
+import { t } from '../i18n'
+import { sriLankaClock, sriLankaDay } from './time'
 
 const HOUR_MS = 3_600_000
 
@@ -64,19 +65,12 @@ export function dataFrom(entries: CacheEntry[]): number | null {
   return newest.size === 0 ? null : Math.min(...newest.values())
 }
 
-const colomboDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Colombo', day: 'numeric', month: 'short' })
-
 export function offlineMessage(from: number | null, now = Date.now()): string {
-  if (from === null) return 'Offline: no saved data yet. Reports, rivers and rain will load when you are back online.'
+  if (from === null) return t('offline.bannerNoData')
   // The time of day alone would be misleading for data from another day
-  const day = colomboDay.format(new Date(from))
-  const when = day === colomboDay.format(new Date(now)) ? sriLankaClock(from) : `${day}, ${sriLankaClock(from)}`
-  return `Offline: showing data from ${when}. It may be out of date.`
+  const when = sriLankaDay(from) === sriLankaDay(now) ? sriLankaClock(from) : `${sriLankaDay(from)}, ${sriLankaClock(from)}`
+  return t('offline.banner', { when })
 }
-
-export const OFFLINE_REPORT_NOTICE = 'You are offline. Reporting needs a connection.'
-export const OFFLINE_ROUTE_NOTICE = 'You are offline. Route checks need a connection.'
-export const OFFLINE_VOTE_NOTICE = 'You are offline. Voting needs a connection.'
 
 type Timed = { expires_at: string }
 
@@ -94,4 +88,3 @@ type Box = { minLng: number; minLat: number; maxLng: number; maxLat: number }
 export function reportsInBox<T extends Located>(reports: T[] | undefined, box: Box): T[] | undefined {
   return reports?.filter((r) => r.lat >= box.minLat && r.lat <= box.maxLat && r.lng >= box.minLng && r.lng <= box.maxLng)
 }
-export const OFFLINE_REROUTE_NOTICE = 'You are offline. Finding another route needs a connection.'

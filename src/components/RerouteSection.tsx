@@ -1,7 +1,8 @@
 import { OctagonX, Route as RouteIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { difference } from '../lib/reroute'
-import { formatKm, NO_REROUTE, type RouteResult } from '../lib/routing'
-import { OFFLINE_REROUTE_NOTICE } from '../lib/offline'
+import { formatKm, NO_REROUTE, routeErrorText, type RouteResult } from '../lib/routing'
+import { t } from '../i18n'
 import { routeDuration } from '../lib/time'
 import { useOnline } from '../lib/useOnline'
 import type { RouteHazard } from '../lib/useRoute'
@@ -27,30 +28,29 @@ type Props = {
   onKeep: () => void
 }
 
-const roads = (n: number) => `${n} blocked ${n === 1 ? 'road' : 'roads'}`
-
-const kmAlong = (h: RouteHazard) => `${(h.distance_along_m / 1000).toFixed(1)} km`
+const kmAlong = (h: RouteHazard) => t('units.km', { value: (h.distance_along_m / 1000).toFixed(1) })
 
 export default function RerouteSection(props: Props) {
   const { route, alternative, blocked, busy, error, outOfDate, onFind } = props
+  const { t } = useTranslation()
   const online = useOnline()
   const disabled = busy || outOfDate
   // Finding a route asks the routing service, so it can't be done offline
   const findDisabled = disabled || !online
-  const offlineNote = !online && <p className="mt-2 text-xs text-slate-700">{OFFLINE_REROUTE_NOTICE}</p>
+  const offlineNote = !online && <p className="mt-2 text-xs text-slate-700">{t('offline.reroute')}</p>
 
   if (!alternative) {
     if (busy) {
       return (
         <p role="status" className="mt-3 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-700">
-          Finding another route…
+          {t('reroute.finding')}
         </p>
       )
     }
     if (error) {
       return (
         <div role="alert" className="mt-3 rounded-xl border-2 border-amber-200 bg-amber-50 px-3 py-2">
-          <p className="text-sm text-amber-900">{error}</p>
+          <p className="text-sm text-amber-900">{routeErrorText(error)}</p>
           {/* "No other route" won't change on a retry, but a dropped connection might */}
           {error !== NO_REROUTE && (
             <button
@@ -59,7 +59,7 @@ export default function RerouteSection(props: Props) {
               disabled={findDisabled}
               className="mt-1 h-11 text-sm font-medium text-blue-700 disabled:text-slate-400"
             >
-              Try again
+              {t('common.tryAgain')}
             </button>
           )}
           {offlineNote}
@@ -71,7 +71,7 @@ export default function RerouteSection(props: Props) {
       <div className="mt-3 rounded-xl border-2 border-red-200 bg-red-50 px-3 py-3">
         <p className="flex items-start gap-2 text-base font-medium text-red-900">
           <OctagonX className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          This route passes {roads(blocked.length)}. Find another route?
+          {t('reroute.prompt', { count: blocked.length })}
         </p>
         <button
           type="button"
@@ -79,7 +79,7 @@ export default function RerouteSection(props: Props) {
           disabled={findDisabled}
           className="mt-2 h-12 w-full rounded-xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
         >
-          Find another route
+          {t('reroute.find')}
         </button>
         {offlineNote}
       </div>
@@ -92,22 +92,23 @@ export default function RerouteSection(props: Props) {
       <p className="flex items-start gap-2 text-sm text-slate-900">
         <RouteIcon className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" aria-hidden="true" />
         <span>
-          <span className="font-semibold">New route:</span> {formatKm(alternative.distance_m)} &middot;{' '}
-          {routeDuration(alternative.duration_s)} (
-          {difference((alternative.distance_m - route.distance_m) / 1000, 'km')},{' '}
-          {difference((alternative.duration_s - route.duration_s) / 60, 'min')})
-          {altStatus === 'success' && props.avoided > 0 && <> &middot; avoids {roads(props.avoided)}</>}
+          {t('reroute.newRoute', {
+            distance: formatKm(alternative.distance_m),
+            duration: routeDuration(alternative.duration_s),
+            extraDistance: difference((alternative.distance_m - route.distance_m) / 1000, 'km'),
+            extraTime: difference((alternative.duration_s - route.duration_s) / 60, 'min'),
+          })}
+          {altStatus === 'success' && props.avoided > 0 && <> &middot; {t('reroute.avoids', { count: props.avoided })}</>}
         </span>
       </p>
-      <p className="mt-1 text-xs text-slate-600">The original route is the grey dashed line on the map.</p>
+      <p className="mt-1 text-xs text-slate-600">{t('reroute.originalNote')}</p>
 
-      {altStatus === 'pending' && <p className="mt-2 text-sm text-slate-700">Checking the new route for hazards…</p>}
-      {altStatus === 'error' && <p className="mt-2 text-sm text-slate-700">Couldn’t check the new route for hazards.</p>}
+      {altStatus === 'pending' && <p className="mt-2 text-sm text-slate-700">{t('reroute.checkingNew')}</p>}
+      {altStatus === 'error' && <p className="mt-2 text-sm text-slate-700">{t('reroute.checkError')}</p>}
 
       {altBlocked.length > 0 && (
         <div className="mt-2 rounded-lg bg-red-100 px-2 py-1.5 text-sm text-red-900">
-          The new route passes {altBlocked.length === 1 ? 'a different blocked road' : roads(altBlocked.length)}, at{' '}
-          {altBlocked.map(kmAlong).join(', ')}.
+          {t('reroute.different', { count: altBlocked.length, where: altBlocked.map(kmAlong).join(', ') })}
           {props.canRerouteAgain ? (
             <button
               type="button"
@@ -116,11 +117,13 @@ export default function RerouteSection(props: Props) {
               className="mt-1 block h-11 text-sm font-semibold text-blue-700 disabled:text-slate-400"
             >
               {busy
-                ? 'Finding another route…'
-                : `Find a route that avoids ${props.avoidTotal === 2 ? 'both' : `all ${props.avoidTotal}`}`}
+                ? t('reroute.finding')
+                : props.avoidTotal === 2
+                  ? t('reroute.avoidBoth')
+                  : t('reroute.avoidAll', { count: props.avoidTotal })}
             </button>
           ) : (
-            ' Take care, or check Google Maps.'
+ ` ${t('reroute.takeCare')}`
           )}
           {props.canRerouteAgain && offlineNote}
         </div>
@@ -128,7 +131,7 @@ export default function RerouteSection(props: Props) {
 
       {error && (
         <p role="alert" className="mt-2 rounded-lg bg-amber-100 px-2 py-1.5 text-sm text-amber-900">
-          {error}
+          {routeErrorText(error)}
         </p>
       )}
 
@@ -139,7 +142,7 @@ export default function RerouteSection(props: Props) {
           disabled={disabled}
           className="h-12 rounded-xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
         >
-          Use this route
+          {t('reroute.use')}
         </button>
         <button
           type="button"
@@ -147,7 +150,7 @@ export default function RerouteSection(props: Props) {
           disabled={busy}
           className="h-12 rounded-xl border-2 border-slate-300 bg-white text-base font-semibold text-slate-700 active:bg-slate-100 disabled:text-slate-400"
         >
-          Keep original
+          {t('reroute.keep')}
         </button>
       </div>
     </div>

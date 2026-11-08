@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import {
   MILD_LABEL,
   mildRain,
@@ -59,10 +60,10 @@ const MILD_RANK: Record<MildLevel, number> = { light: 1, moderate: 2 }
 function where(points: number[], samplesWithData: number, routeKm: number): string {
   const first = points[0]
   const last = points[points.length - 1]
-  if (points.length / samplesWithData >= 0.6) return 'along much of the route'
+  if (points.length / samplesWithData >= 0.6) return t('rain.where.much')
   // A gauge stands for the ground around it, so one or a few close together read as a place
   if (last - first <= 20) return first === last ? rainPlaceAt(first, routeKm) : rainPlaceBetween(first, last, routeKm)
-  return 'in places along the route'
+  return t('rain.where.places')
 }
 
 // The points along the route are the same ones the forecast uses (about every 10 km),
@@ -113,7 +114,7 @@ export function recentRainAlongRoute(route: RouteResult, measured: MeasuredRain 
       const top = mildReadings.reduce((a, b) => (MILD_RANK[b.mild as MildLevel] > MILD_RANK[a.mild as MildLevel] ? b : a))
       const level = top.mild as MildLevel
       const points = mildReadings.filter((r) => r.mild === level).map((r) => r.km)
-      quiet.push(`${MILD_LABEL[level]} fell ${where(points, samples.length, routeKm)} ${when}`)
+      quiet.push(t('rain.section.quietFell', { label: MILD_LABEL[level], where: where(points, samples.length, routeKm), when }))
     }
   }
 
@@ -130,14 +131,19 @@ export function recentRainAlongRoute(route: RouteResult, measured: MeasuredRain 
     const level = top.item.mild as MildLevel
     const sameLevel = mildGauges.filter((n) => n.item.mild === level)
     // The reading's own age is said when it isn't recent, since "the past 3 hours" counts back from it
-    const stale = now - top.item.at > 90 * 60_000 ? ` (reading from ${sriLankaClock(top.item.at)})` : ''
+    const reading = now - top.item.at > 90 * 60_000 ? t('rain.section.readingFrom', { time: sriLankaClock(top.item.at) }) : ''
     quiet.push(
-      `${MILD_LABEL[level]} measured ${where(
-        sameLevel.map((n) => n.km),
-        // Gauges are scattered, so "much of the route" would overstate them
-        Infinity,
-        routeKm,
-      )} ${gaugeWhen(top.item)}${stale}`,
+      t('rain.section.quietMeasured', {
+        label: MILD_LABEL[level],
+        where: where(
+          sameLevel.map((n) => n.km),
+          // Gauges are scattered, so "much of the route" would overstate them
+          Infinity,
+          routeKm,
+        ),
+        when: gaugeWhen(top.item),
+        reading,
+      }),
     )
   }
 
@@ -152,5 +158,5 @@ export function recentRainAlongRoute(route: RouteResult, measured: MeasuredRain 
 
 export function satelliteStretchText(s: SatelliteStretch): string {
   const place = s.fromKm === s.toKm ? rainPlaceAt(s.fromKm, s.routeKm) : rainPlaceBetween(s.fromKm, s.toKm, s.routeKm)
-  return `${RAIN_LABEL[s.level]} fell ${place} ${s.when} (satellite)`
+  return t('rain.section.satellite', { label: RAIN_LABEL[s.level], where: place, when: s.when })
 }

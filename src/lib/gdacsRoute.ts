@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { GDACS_ROUTE_KM, insideRing, isSerious, type GdacsEvent } from './gdacs'
 import { samplePoints } from './rainForecast'
 import { metresBetween } from './routeGauges'
@@ -5,8 +6,8 @@ import type { RouteResult } from './routing'
 
 export type RouteAlert = {
   event: GdacsEvent
-  // Why it's on the list, in plain words
-  why: string
+  // Why it's on the list. A translation key and its numbers, so it follows the language.
+  why: { key: string; params?: Record<string, number> }
 }
 
 // Orange and Red global alerts that matter to a checked route. An alert counts when the
@@ -29,9 +30,9 @@ export function gdacsAlongRoute(route: RouteResult, events: GdacsEvent[]): Route
         ? Infinity
         : Math.min(...points.map((p) => metresBetween([p.lng, p.lat], [event.lng, event.lat]) / 1000))
 
-    if (inside) found.push({ event, why: 'Your route passes through its forecast area', km })
-    else if (event.affectsSriLanka) found.push({ event, why: 'It affects Sri Lanka', km })
-    else if (km <= GDACS_ROUTE_KM) found.push({ event, why: `Your route passes ${Math.round(km)} km from it`, km })
+    if (inside) found.push({ event, why: { key: 'gdacs.whyInside' }, km })
+    else if (event.affectsSriLanka) found.push({ event, why: { key: 'gdacs.whyLanka' }, km })
+    else if (km <= GDACS_ROUTE_KM) found.push({ event, why: { key: 'gdacs.whyNear', params: { km: Math.round(km) } }, km })
   }
 
   // Red before Orange, then the closest first
@@ -39,3 +40,5 @@ export function gdacsAlongRoute(route: RouteResult, events: GdacsEvent[]): Route
     .sort((a, b) => Number(b.event.level === 'Red') - Number(a.event.level === 'Red') || a.km - b.km)
     .map(({ event, why }) => ({ event, why }))
 }
+
+export const whyText = (why: RouteAlert['why']): string => t(why.key, why.params)

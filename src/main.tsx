@@ -5,6 +5,7 @@ import { PersistQueryClientProvider, type Persister } from '@tanstack/react-quer
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 import './index.css'
 import App from './App.tsx'
+import { startI18n } from './i18n'
 import { dropOldQueries, SAVED_MAX_AGE_MS, shouldSave } from './lib/offline'
 
 const queryClient = new QueryClient()
@@ -54,6 +55,10 @@ const app = (
     <App />
   </StrictMode>
 )
+
+// The chosen language is loaded before the first screen is drawn, so nothing flashes in English.
+// If it can't be loaded (offline, never cached) English is used.
+await startI18n().catch(() => {})
 
 createRoot(document.getElementById('root')!).render(
   persister ? (

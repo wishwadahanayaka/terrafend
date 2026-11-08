@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Circle, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
+import { useTranslation } from 'react-i18next'
 import { latLngBounds, type LatLng } from 'leaflet'
 import { SRI_LANKA_LIMITS } from '../lib/mapBounds'
 import { fadeWhenCardOpen } from '../lib/useCardOpen'
@@ -7,10 +8,10 @@ import { fadeWhenCardOpen } from '../lib/useCardOpen'
 type Position = { latlng: LatLng; accuracy: number }
 
 // Codes come from the browser: 1 denied, 2 unavailable, 3 timeout
-const ERROR_MESSAGES: Record<number, string> = {
-  1: 'Location permission was denied. Allow it in your browser settings.',
-  2: 'Your device couldn’t find its location. On a laptop, check that Windows location services are on.',
-  3: 'Finding your location took too long. Try again.',
+const ERROR_KEYS: Record<number, string> = {
+  1: 'locate.denied',
+  2: 'locate.unavailable',
+  3: 'locate.timeout',
 }
 const ERROR_SHOW_MS = 6000
 const LOCATE_TIMEOUT_MS = 15000
@@ -24,8 +25,10 @@ type Props = {
 }
 
 export default function LocateButton({ onLocated, bottomClass, hidden }: Props) {
+  const { t } = useTranslation()
   const map = useMap()
   const [position, setPosition] = useState<Position | null>(null)
+  // A key, not text, so a message already on screen follows the language
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -43,13 +46,13 @@ export default function LocateButton({ onLocated, bottomClass, hidden }: Props) 
       // The fixed box, not map.options.maxBounds, which is wider on narrow screens
       setError(
         !latLngBounds(SRI_LANKA_LIMITS).contains(e.latlng)
-          ? 'You appear to be outside Sri Lanka, so your position can’t be shown on this map.'
+          ? 'locate.outside'
           : null,
       )
       setLoading(false)
     },
     locationerror(e) {
-      setError(ERROR_MESSAGES[e.code] ?? ERROR_MESSAGES[2])
+      setError(ERROR_KEYS[e.code] ?? ERROR_KEYS[2])
       setLoading(false)
     },
   })
@@ -83,13 +86,13 @@ export default function LocateButton({ onLocated, bottomClass, hidden }: Props) 
         className={`absolute right-4 z-[1000] flex items-center gap-2 ${bottomClass} ${fadeWhenCardOpen(hidden)}`}
       >
         {error && (
-          <p className="max-w-[65vw] rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow">{error}</p>
+          <p className="max-w-[65vw] rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow">{t(error)}</p>
         )}
         <button
           type="button"
           onClick={locate}
           disabled={loading}
-          aria-label="Show my location"
+          aria-label={t('locate.show')}
           className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-blue-600 shadow-lg active:bg-slate-100 disabled:opacity-60"
         >
           <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2">

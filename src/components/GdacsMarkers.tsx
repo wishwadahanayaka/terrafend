@@ -1,11 +1,13 @@
 import { Marker, Pane, Polygon, Polyline, Popup } from 'react-leaflet'
+import { useTranslation } from 'react-i18next'
 import { divIcon, type DivIcon } from 'leaflet'
+import { t } from '../i18n'
 import { GDACS_ICON } from '../lib/gdacsIcons'
 import {
   GDACS_CREDIT,
   GDACS_LEVEL_COLOR,
-  GDACS_NOTICE,
   GDACS_TYPE_LABEL,
+  gdacsAlertLabel,
   gdacsDetails,
   isSerious,
   type GdacsEvent,
@@ -49,6 +51,7 @@ type Props = {
 // its track and forecast area. Under the hazard reports, like the river drops. If the
 // alerts can't be loaded there is simply nothing here.
 export default function GdacsMarkers({ showGreen }: Props) {
+  useTranslation() // redraws the marker names when the language changes
   const { events } = useGdacsEvents(showGreen)
   const popupFit = usePopupFit()
   if (!events) return null
@@ -67,7 +70,7 @@ export default function GdacsMarkers({ showGreen }: Props) {
           key={event.id}
           position={[event.lat, event.lng]}
           icon={icons.get(`${event.type}:${event.level}`)}
-          alt={`${event.level} alert: ${event.name}`}
+          alt={t('gdacs.alt', { alert: gdacsAlertLabel(event.level), name: event.name })}
           eventHandlers={popupFit}
           // Hazard reports matter more, so they sit on top where the two overlap
           zIndexOffset={-600}
@@ -110,6 +113,7 @@ function Track({ event }: { event: GdacsEvent }) {
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
 function GdacsCard({ event }: { event: GdacsEvent }) {
+  const { t } = useTranslation()
   const Icon = GDACS_ICON[event.type]
   const color = GDACS_LEVEL_COLOR[event.level]
   const happened = event.type === 'EQ' || event.type === 'VO'
@@ -122,7 +126,7 @@ function GdacsCard({ event }: { event: GdacsEvent }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         <span className="rounded-full px-2.5 py-0.5 font-medium text-white" style={{ backgroundColor: color }}>
-          {event.level} alert
+          {gdacsAlertLabel(event.level)}
         </span>
         <span className="text-slate-600">{GDACS_TYPE_LABEL[event.type]}</span>
       </div>
@@ -134,14 +138,14 @@ function GdacsCard({ event }: { event: GdacsEvent }) {
       ))}
       {/* When it affects Sri Lanka, the Affected line above already says so */}
       {!event.affectsSriLanka && (
-        <div className="mt-2 text-xs text-slate-600">About {Math.round(event.distanceKm)} km from Sri Lanka</div>
+        <div className="mt-2 text-xs text-slate-600">{t('gdacs.distance', { km: Math.round(event.distanceKm) })}</div>
       )}
 
       <div className="mt-1 text-xs text-slate-600">
-        {happened ? 'Time' : 'Started'}: {sriLankaTime(new Date(event.from).toISOString())}
+        {t(happened ? 'gdacs.happened' : 'gdacs.started', { time: sriLankaTime(new Date(event.from).toISOString()) })}
       </div>
       <div className="mt-1 text-xs text-slate-600">
-        Updated {timeAgo(new Date(event.modified).toISOString())}
+        {t('gdacs.updated', { ago: timeAgo(new Date(event.modified).toISOString()) })}
       </div>
 
       <a
@@ -150,9 +154,9 @@ function GdacsCard({ event }: { event: GdacsEvent }) {
         rel="noopener noreferrer"
         className="mt-2 block text-sm font-medium text-blue-700 underline"
       >
-        More on GDACS
+        {t('gdacs.more')}
       </a>
-      <div className="mt-2 text-xs italic text-slate-600">{GDACS_NOTICE}</div>
+      <div className="mt-2 text-xs italic text-slate-600">{t('gdacs.notice')}</div>
       <div className="mt-1 text-[11px] leading-tight text-slate-500">{GDACS_CREDIT}</div>
     </div>
   )

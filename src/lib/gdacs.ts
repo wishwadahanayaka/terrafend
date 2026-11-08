@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { SRI_LANKA_BOUNDS } from './mapBounds'
 import { metresBetween } from './routeGauges'
 
@@ -7,7 +8,6 @@ const API = 'https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH'
 const FETCH_TIMEOUT_MS = 15_000
 
 export const GDACS_CREDIT = 'Data: GDACS (European Commission JRC and UN OCHA)'
-export const GDACS_NOTICE = 'Not an official warning. Follow DMC for official alerts.'
 
 // The server sends 100 events a page
 const PAGE_SIZE = 100
@@ -30,14 +30,30 @@ export const GDACS_ROUTE_KM = 100
 export type GdacsType = 'TC' | 'EQ' | 'FL' | 'VO' | 'DR' | 'WF'
 export type GdacsLevel = 'Green' | 'Orange' | 'Red'
 
+// Looked up when read, so the names follow the chosen language
 export const GDACS_TYPE_LABEL: Record<GdacsType, string> = {
-  TC: 'Tropical cyclone',
-  EQ: 'Earthquake',
-  FL: 'Flood',
-  VO: 'Volcano',
-  DR: 'Drought',
-  WF: 'Wildfire',
+  get TC() {
+    return t('gdacs.type.TC')
+  },
+  get EQ() {
+    return t('gdacs.type.EQ')
+  },
+  get FL() {
+    return t('gdacs.type.FL')
+  },
+  get VO() {
+    return t('gdacs.type.VO')
+  },
+  get DR() {
+    return t('gdacs.type.DR')
+  },
+  get WF() {
+    return t('gdacs.type.WF')
+  },
 }
+
+// "Red alert", "Orange alert", "Green alert"
+export const gdacsAlertLabel = (level: GdacsLevel): string => t(`gdacs.alert.${level}`)
 
 // GDACS's own green, orange and red
 export const GDACS_LEVEL_COLOR: Record<GdacsLevel, string> = {
@@ -320,22 +336,32 @@ export function gdacsDetails(e: GdacsEvent): string[] {
   const lines: string[] = []
   if (e.type === 'EQ' && e.severity !== null) {
     const depth = /depth:\s*(\d+)\s*km/i.exec(e.severityText)
-    lines.push(`Magnitude ${e.severity}${depth ? ` · depth ${depth[1]} km` : ''}`)
+    lines.push(
+      depth
+        ? t('gdacs.magnitudeDepth', { value: e.severity, depth: depth[1] })
+        : t('gdacs.magnitude', { value: e.severity }),
+    )
   } else if (e.type === 'TC' && e.severity !== null) {
-    lines.push(`Maximum wind speed ${Math.round(e.severity)} km/h`)
+    lines.push(t('gdacs.wind', { value: Math.round(e.severity) }))
   } else if (e.type === 'DR' && e.severity !== null) {
-    lines.push(`${Math.round(e.severity).toLocaleString('en-GB')} km² affected`)
+    // en-GB keeps the digits 0-9 with commas, in every language
+    lines.push(t('gdacs.area', { value: Math.round(e.severity).toLocaleString('en-GB') }))
   } else if (e.type === 'WF' && e.severity !== null) {
-    lines.push(`${Math.round(e.severity).toLocaleString('en-GB')} ha burned or burning`)
+    lines.push(t('gdacs.burned', { value: Math.round(e.severity).toLocaleString('en-GB') }))
   }
   // Sri Lanka goes first, so it's never hidden in "and 12 more". This is the card's
   // only mention of it, so it's added even when GDACS left it out of the list.
   const others = e.countries.filter((c) => !/sri lanka/i.test(c))
-  const countries = e.affectsSriLanka ? ['Sri Lanka', ...others] : e.countries
+  // Country names are GDACS's own and stay in English, but Sri Lanka is ours to name
+  const countries = e.affectsSriLanka ? [t('common.sriLanka'), ...others] : e.countries
   if (countries.length > 0) {
     // Droughts can list dozens of countries
-    const shown = countries.slice(0, 4).join(', ')
-    lines.push(`Affected: ${shown}${countries.length > 4 ? ` and ${countries.length - 4} more` : ''}`)
+    const list = countries.slice(0, 4).join(', ')
+    lines.push(
+      countries.length > 4
+        ? t('gdacs.affected_more', { list, count: countries.length - 4 })
+        : t('gdacs.affected', { list }),
+    )
   }
   return lines
 }

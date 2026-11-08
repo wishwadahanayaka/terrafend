@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMap } from 'react-leaflet'
-import { latLngBounds, type LatLngBoundsLiteral } from 'leaflet'
+import { latLngBounds, point, type LatLngBoundsLiteral } from 'leaflet'
+import { BUTTON_COLUMN_PX } from '../lib/mapBounds'
 import { POPUP_EDGE_GAP, POPUP_PADDING, popupContentMax, popupTotalWidth } from '../lib/popupPadding'
 
 // A card opens centred on its marker. For markers on the coast, the map has to be
@@ -34,8 +35,9 @@ export default function MapLimits({ island, limits }: Props) {
       const size = map.getSize()
       if (size.x === 0 || size.y === 0) return
 
-      // Leaflet pulls the view back in range itself if the current zoom is now too low
-      map.setMinZoom(map.getBoundsZoom(island))
+      // The island fits in the width left of the button column, not the whole screen.
+      // Leaflet pulls the view back in range itself if the current zoom is now too low.
+      map.setMinZoom(map.getBoundsZoom(island, false, point(BUTTON_COLUMN_PX, 0)))
 
       // Read by the card CSS in index.css
       map.getContainer().style.setProperty('--popup-content-max', `${popupContentMax(size.x)}px`)
@@ -51,14 +53,26 @@ export default function MapLimits({ island, limits }: Props) {
       // from the top of the screen, then turned back into a latitude.
       const markerY = POPUP_PADDING.autoPanPaddingTopLeft[1] + TALL_CARD + CARD_TO_MARKER
       const ref = map.project([NORTH_REF_LAT, 80.7], zoom)
-      const north = map.unproject([ref.x, ref.y - markerY], zoom).lat
+      const cardNorth = map.unproject([ref.x, ref.y - markerY], zoom).lat
 
-      map.setMaxBounds(
-        latLngBounds(
-          [base.getSouth(), Math.min(base.getWest(), WEST_COAST_LNG - room)],
-          [Math.max(base.getNorth(), north), Math.max(base.getEast(), EAST_COAST_LNG + room)],
-        ),
-      )
+      // The limits must also reach as far as the screen does when the island sits where it
+      // starts (in the middle of the space left of the button column). If they fall short,
+      // Leaflet pushes the view against that edge and the island ends up off to one side.
+      const middle = map.project(latLngBounds(island).getCenter(), zoom)
+      const startX = middle.x + BUTTON_COLUMN_PX / 2
+      const edge = (x: number, y: number) => map.unproject([x, y], zoom)
+      let south = base.getSouth()
+      let north = Math.max(base.getNorth(), cardNorth)
+      let west = Math.min(base.getWest(), WEST_COAST_LNG - room)
+      // Room for a card on the east coast, plus the button column, so the island can be
+      // dragged clear of the buttons
+      let east = Math.max(base.getEast(), EAST_COAST_LNG + room) + BUTTON_COLUMN_PX / pixelsPerDegree
+      south = Math.min(south, edge(0, middle.y + size.y / 2).lat)
+      north = Math.max(north, edge(0, middle.y - size.y / 2).lat)
+      west = Math.min(west, edge(startX - size.x / 2, 0).lng)
+      east = Math.max(east, edge(startX + size.x / 2, 0).lng)
+
+      map.setMaxBounds(latLngBounds([south, west], [north, east]))
     }
 
     update()

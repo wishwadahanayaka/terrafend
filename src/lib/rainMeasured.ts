@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { kmFrom, normalise, readFakeRainMap } from './fakeRainMap'
 import { HOUR_MS } from './openMeteo'
 import { mildRain, rainLevel, RAIN_RANK, type MildLevel, type RainLevel } from './rainForecast'
@@ -65,7 +66,7 @@ export type GaugeRain = {
 
 // "in the last hour" or "in the past 3 hours", whichever the level really comes from
 export function gaugeWhen(g: GaugeRain): string {
-  return g.lastHour ? 'in the last hour' : 'in the past 3 hours'
+  return t(g.lastHour ? 'rain.when.lastHour' : 'rain.when.past3Hours')
 }
 
 // How serious a rate is, as one number: any warning beats any quieter level
@@ -84,18 +85,18 @@ const FRESH_MS = 90 * 60_000
 export function satelliteWhen(window: { from: number; to: number }, now: number): string {
   if (now - window.to <= FRESH_MS) {
     const hours = Math.max(1, Math.round((window.to - window.from) / HOUR_MS))
-    return hours === 1 ? 'in the past hour' : `in the past ${hours} hours`
+    return t('rain.when.pastHours', { count: hours })
   }
-  return `from ${sriLankaClock(window.from)} to ${sriLankaClock(window.to)}`
+  return t('rain.when.range', { from: sriLankaClock(window.from), to: sriLankaClock(window.to) })
 }
 
 // "25 mm in the last hour · 27.9 mm in 3 hours · 29.4 mm in 24 hours". A number the gauge
 // didn't send is left out, never shown as 0.
 export function measuredText(g: GaugeRain, separator = ' · '): string {
   const parts = [
-    g.mm1h !== null && `${formatMm(g.mm1h)} mm in the last hour`,
-    g.mm3h !== null && `${formatMm(g.mm3h)} mm in 3 hours`,
-    g.mm24h !== null && `${formatMm(g.mm24h)} mm in 24 hours`,
+    g.mm1h !== null && t('rain.measured.lastHour', { mm: formatMm(g.mm1h) }),
+    g.mm3h !== null && t('rain.measured.threeHours', { mm: formatMm(g.mm3h) }),
+    g.mm24h !== null && t('rain.measured.day', { mm: formatMm(g.mm24h) }),
   ].filter(Boolean)
   return parts.join(separator)
 }

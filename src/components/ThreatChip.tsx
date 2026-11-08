@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { latLngBounds, type Map as LeafletMap } from 'leaflet'
+import { useTranslation } from 'react-i18next'
 import { useOnline } from '../lib/useOnline'
 import { useThreats, type ThreatPart } from '../lib/useThreats'
 
@@ -65,6 +66,7 @@ type Props = {
 // list. Tapping the rest of it zooms the map out to show all of them.
 export default function ThreatChip({ map, onMore }: Props) {
   const { parts, points, state } = useThreats()
+  const { t } = useTranslation()
   const online = useOnline()
 
   // Hidden copy of the parts and of "+N more", only to measure how wide each one is
@@ -105,7 +107,7 @@ export default function ThreatChip({ map, onMore }: Props) {
           className="pointer-events-none invisible absolute left-0 top-0 flex w-max gap-x-1.5 px-3 py-2 text-[13px] font-semibold"
         >
           <Parts parts={parts} hideLastDot={false} />
-          <span className={partClass}>+{parts.length} more</span>
+          <span className={partClass}>{t('chip.more', { count: parts.length })}</span>
         </div>
         <div className="flex max-h-[3.75rem] flex-wrap items-center gap-x-1.5 gap-y-0.5 overflow-hidden px-3 py-2 text-left text-[13px] font-semibold text-slate-900">
           {/* Every part zooms to the threats, like tapping the chip always has */}
@@ -127,7 +129,7 @@ export default function ThreatChip({ map, onMore }: Props) {
           ))}
           {hidden > 0 && (
             <button type="button" onClick={onMore} className={`${partClass} text-sky-700 underline active:opacity-60`}>
-              +{hidden} more
+              {t('chip.more', { count: hidden })}
             </button>
           )}
         </div>
@@ -142,10 +144,10 @@ export default function ThreatChip({ map, onMore }: Props) {
   return (
     <p className="rounded-full bg-white/90 px-3 py-1 text-xs text-slate-600 shadow">
       {!online
-        ? 'No threats in the saved data (offline)'
+        ? t('offline.noThreats')
         : state === 'clear'
-          ? 'No active threats'
-          : 'No threats found in the data that loaded'}
+          ? t('chip.clear')
+          : t('chip.partial')}
     </p>
   )
 }

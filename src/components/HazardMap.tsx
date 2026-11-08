@@ -1,10 +1,10 @@
 import { lazy, Suspense, useState } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import { Route as RouteIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { latLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet'
-import { SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
+import { BUTTON_COLUMN_PX, SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
 import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
-import { OFFLINE_REPORT_NOTICE, OFFLINE_ROUTE_NOTICE } from '../lib/offline'
 import { useNotice } from '../lib/useNotice'
 import { useOnline } from '../lib/useOnline'
 import { loadLayerSettings, saveLayerSetting, type LayerSettings } from '../lib/layerSettings'
@@ -47,6 +47,7 @@ export default function HazardMap() {
   // Serious items always show. These switches only add the less serious ones.
   const [layers, setLayers] = useState(loadLayerSettings)
 
+  const { t } = useTranslation()
   const online = useOnline()
   const [notice, showNotice] = useNotice()
 
@@ -76,7 +77,7 @@ export default function HazardMap() {
       <MapContainer
         ref={setMap}
         bounds={SRI_LANKA_BOUNDS}
-        maxBounds={SRI_LANKA_LIMITS}
+        boundsOptions={{ paddingBottomRight: [BUTTON_COLUMN_PX, 0] }}
         maxBoundsViscosity={1}
         zoomSnap={0.25}
         zoomControl={false}
@@ -158,7 +159,7 @@ export default function HazardMap() {
             buttonVisible={panel === 'closed'}
             cardOpen={cardOpen}
             offline={!online}
-            onOfflineTap={() => showNotice(OFFLINE_REPORT_NOTICE)}
+            onOfflineTap={() => showNotice(t('offline.report'))}
           />
 
           {panel === 'closed' && !picking && (
@@ -169,17 +170,18 @@ export default function HazardMap() {
                 // Offline, a route already checked can still be opened and read. A new
                 // one can't be checked.
                 if (!online && !route) {
-                  showNotice(OFFLINE_ROUTE_NOTICE)
+                  showNotice(t('offline.route'))
                   return
                 }
                 setPlannerOpened(true)
                 setPanel('open')
               }}
               aria-disabled={!online && !route}
-              className={`absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 items-center gap-2 rounded-full px-5 font-semibold shadow-lg ${!online && !route ? 'bg-slate-200 text-slate-500' : 'bg-white text-blue-700 active:bg-slate-100'} ${fadeWhenCardOpen(cardOpen)}`}
+              aria-label={t('route.title')}
+              title={t('route.title')}
+              className={`absolute bottom-[10.5rem] right-4 z-[1000] flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${!online && !route ? 'bg-slate-200 text-slate-500' : 'bg-white text-blue-700 active:bg-slate-100'} ${fadeWhenCardOpen(cardOpen)}`}
             >
-              <RouteIcon className="h-6 w-6" aria-hidden="true" />
-              Route
+              <RouteIcon className="h-7 w-7" aria-hidden="true" />
             </button>
           )}
 

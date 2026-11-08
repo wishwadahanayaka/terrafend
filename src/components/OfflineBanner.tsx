@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { dataFrom, offlineMessage } from '../lib/offline'
 import { useOnline } from '../lib/useOnline'
 
@@ -7,6 +8,7 @@ import { useOnline } from '../lib/useOnline'
 // floating over the map, so it can't cover the buttons, and the map just gets a bit shorter.
 // The time is when the data on screen was loaded, so old data is never passed off as current.
 export default function OfflineBanner() {
+  useTranslation() // redraws the message when the language changes
   const online = useOnline()
   const cache = useQueryClient().getQueryCache()
 

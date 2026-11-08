@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NO_RECENT_RAIN, recentRainAlongRoute, type RecentRain } from './routeRecentRain'
 import type { RouteResult } from './routing'
 import { useMeasuredRain } from './useMeasuredRain'
@@ -11,9 +12,12 @@ export function useRouteRecentRain(route: RouteResult | null): RecentRain {
   const data = measured.status === 'success' ? measured.data : null
   // The time the data was loaded stands in for "now", so the wording doesn't flicker
   const loadedAt = measured.dataUpdatedAt
+  // The lines are finished text, so they are worked out again when the language changes
+  const { i18n } = useTranslation()
+  const language = i18n.language
 
-  return useMemo(
-    () => (route ? recentRainAlongRoute(route, data, loadedAt) : NO_RECENT_RAIN),
-    [route, data, loadedAt],
-  )
+  return useMemo(() => {
+    void language
+    return route ? recentRainAlongRoute(route, data, loadedAt) : NO_RECENT_RAIN
+  }, [route, data, loadedAt, language])
 }

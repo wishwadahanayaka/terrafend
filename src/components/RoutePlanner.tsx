@@ -1,5 +1,6 @@
 import { createElement, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Droplet, ExternalLink, LocateFixed, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {
   circleMarker,
   latLngBounds,
@@ -17,20 +18,24 @@ import {
   formatKm,
   googleMapsUrl,
   hazardSummary,
+  ERROR_CHOOSE_START,
+  ERROR_LOCATION_DENIED,
+  ERROR_LOCATION_FAILED,
+  GENERAL_ERROR,
   MAX_AVOID,
+  routeErrorText,
   type Place,
   type PlaceField,
   type Point,
   type RouteResult,
 } from '../lib/routing'
-import { STEP_COLOR, STEP_LABEL, stepTextColor, worstStep } from '../lib/riverGauges'
+import { gaugeName, STEP_COLOR, STEP_LABEL, stepTextColor, worstStep } from '../lib/riverGauges'
 import { gaugesNearRoute } from '../lib/routeGauges'
 import { useRouteRecentRain } from '../lib/useRouteRecentRain'
-import { GDACS_CREDIT, GDACS_LEVEL_COLOR, GDACS_NOTICE } from '../lib/gdacs'
+import { GDACS_CREDIT, GDACS_LEVEL_COLOR, gdacsAlertLabel } from '../lib/gdacs'
 import { GDACS_ICON } from '../lib/gdacsIcons'
-import { gdacsAlongRoute } from '../lib/gdacsRoute'
+import { gdacsAlongRoute, whyText } from '../lib/gdacsRoute'
 import { useGdacsEvents } from '../lib/useGdacs'
-import { OFFLINE_ROUTE_NOTICE } from '../lib/offline'
 import { routeDuration } from '../lib/time'
 import { useOnline } from '../lib/useOnline'
 import { useRiverGauges } from '../lib/useRiverGauges'
@@ -75,13 +80,7 @@ function findMe(map: LeafletMap): Promise<Point> {
     }
     const onError = (e: LeafletErrorEvent) => {
       map.off('locationfound', onFound)
-      reject(
-        new Error(
-          e.code === 1
-            ? 'Location permission was denied. Allow it in your browser settings, or search for a starting place.'
-            : 'Couldn’t find your location. Search for a starting place instead.',
-        ),
-      )
+      reject(new Error(e.code === 1 ? ERROR_LOCATION_DENIED : ERROR_LOCATION_FAILED))
     }
     map.once('locationfound', onFound)
     map.once('locationerror', onError)
@@ -115,6 +114,7 @@ export default function RoutePlanner({
   onSelectRain,
   onStaleChange,
 }: Props) {
+  const { t } = useTranslation()
   const online = useOnline()
   const hazards = useRouteHazards(route)
   const altHazards = useRouteHazards(alternative)
@@ -249,7 +249,7 @@ export default function RoutePlanner({
       )
     } catch (err) {
       if (thisTrip !== trip.current) return
-      setRerouteError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+      setRerouteError(err instanceof Error ? err.message : GENERAL_ERROR)
     } finally {
       if (thisTrip === trip.current) setRerouting(false)
     }
@@ -280,7 +280,7 @@ export default function RoutePlanner({
       } else if (from) {
         start = { lat: from.lat, lng: from.lng }
       } else {
-        throw new Error('Choose where to start from, or use your location.')
+        throw new Error(ERROR_CHOOSE_START)
       }
 
       const result = await fetchRoute(start, { lat: to.lat, lng: to.lng })
@@ -296,7 +296,7 @@ export default function RoutePlanner({
         paddingBottomRight: [24, bottom],
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+      setError(err instanceof Error ? err.message : GENERAL_ERROR)
     } finally {
       setBusy(false)
     }
@@ -347,18 +347,18 @@ export default function RoutePlanner({
             aria-expanded={expanded}
             className="flex min-h-14 flex-1 items-center gap-2 py-1 text-left"
           >
-            <span className="text-base font-semibold text-slate-900">Route</span>
+            <span className="text-base font-semibold text-slate-900">{t('route.title')}</span>
             {route && (
-              <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-slate-600">
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-slate-600">
                 <span className="shrink-0">{formatKm(route.distance_m)}</span>
                 {alertWorst && (
                   <>
                     <span aria-hidden="true">&middot;</span>
                     <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                      className="max-w-full rounded-full px-2 py-0.5 text-xs font-semibold text-white"
                       style={{ backgroundColor: GDACS_LEVEL_COLOR[alertWorst] }}
                     >
-                      {globalAlerts.length} {globalAlerts.length === 1 ? 'global alert' : 'global alerts'}
+                      {t('route.alertCount', { count: globalAlerts.length })}
                     </span>
                   </>
                 )}
@@ -366,10 +366,10 @@ export default function RoutePlanner({
                   <>
                     <span aria-hidden="true">&middot;</span>
                     <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+                      className="max-w-full rounded-full px-2 py-0.5 text-xs font-semibold"
                       style={{ backgroundColor: STEP_COLOR[riverWorst], color: stepTextColor(riverWorst) }}
                     >
-                      {riversNear.length} {riversNear.length === 1 ? 'river warning' : 'river warnings'}
+                      {t('route.riverCount', { count: riversNear.length })}
                     </span>
                   </>
                 )}
@@ -377,10 +377,10 @@ export default function RoutePlanner({
                   <>
                     <span aria-hidden="true">&middot;</span>
                     <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                      className="max-w-full rounded-full px-2 py-0.5 text-xs font-semibold text-white"
                       style={{ backgroundColor: RAIN_COLOR[rainWorst] }}
                     >
-                      {rainWarnings} {rainWarnings === 1 ? 'rain warning' : 'rain warnings'}
+                      {t('route.rainCount', { count: rainWarnings })}
                     </span>
                   </>
                 )}
@@ -388,27 +388,27 @@ export default function RoutePlanner({
                   <>
                     <span aria-hidden="true">&middot;</span>
                     <span className="truncate">
-                      {list.length} {list.length === 1 ? 'hazard' : 'hazards'}
+                      {t('route.hazardCount', { count: list.length })}
                     </span>
                   </>
                 )}
                 {outOfDate && (
-                  <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
-                    out of date
+                  <span className="max-w-full rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                    {t('route.outOfDate')}
                   </span>
                 )}
               </span>
             )}
             {expanded ? (
-              <ChevronDown className="ml-auto h-5 w-5 shrink-0 text-slate-500" aria-label="Collapse" />
+              <ChevronDown className="ml-auto h-5 w-5 shrink-0 text-slate-500" aria-label={t('route.collapse')} />
             ) : (
-              <ChevronUp className="ml-auto h-5 w-5 shrink-0 text-slate-500" aria-label="Expand" />
+              <ChevronUp className="ml-auto h-5 w-5 shrink-0 text-slate-500" aria-label={t('route.expand')} />
             )}
           </button>
           <button
             type="button"
             onClick={() => onPanelChange('closed')}
-            aria-label="Close route panel"
+            aria-label={t('route.closePanel')}
             className="flex h-11 w-11 items-center justify-center rounded-full text-slate-600 active:bg-slate-100"
           >
             <X className="h-6 w-6" />
@@ -420,26 +420,26 @@ export default function RoutePlanner({
             <div className="space-y-3">
               {fromMe ? (
                 <div>
-                  <p className="mb-1 text-sm font-medium text-slate-700">From</p>
+                  <p className="mb-1 text-sm font-medium text-slate-700">{t('route.from')}</p>
                   <div className="flex h-12 items-center justify-between rounded-xl border-2 border-slate-200 pl-3">
                     <span className="flex items-center gap-2 text-base text-slate-900">
                       <LocateFixed className="h-5 w-5 text-blue-600" aria-hidden="true" />
-                      My location
+                      {t('route.myLocation')}
                     </span>
                     <button
                       type="button"
                       onClick={() => setFromMe(false)}
                       className="h-12 px-3 text-sm font-medium text-blue-700"
                     >
-                      Change
+                      {t('route.change')}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div>
                   <PlaceInput
-                    label="From"
-                    placeholder="Search for a starting place"
+                    label={t('route.from')}
+                    placeholder={t('route.searchStart')}
                     value={fromField}
                     onChange={setFromField}
                     focus={focus}
@@ -452,14 +452,14 @@ export default function RoutePlanner({
                     }}
                     className="mt-1 h-11 text-sm font-medium text-blue-700"
                   >
-                    Use my location instead
+                    {t('route.useMyLocation')}
                   </button>
                 </div>
               )}
 
               <PlaceInput
-                label="To"
-                placeholder="Search for a destination"
+                label={t('route.to')}
+                placeholder={t('route.searchDestination')}
                 value={toField}
                 onChange={setToField}
                 focus={focus}
@@ -467,7 +467,7 @@ export default function RoutePlanner({
 
               {error && (
                 <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {error}
+                  {routeErrorText(error)}
                 </p>
               )}
 
@@ -477,19 +477,18 @@ export default function RoutePlanner({
                 disabled={!to || busy || !online}
                 className="h-14 w-full rounded-xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
               >
-                {busy ? 'Checking…' : 'Check route'}
+                {busy ? t('route.checking') : t('route.check')}
               </button>
               {!online && (
                 <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  {OFFLINE_ROUTE_NOTICE}
+                  {t('offline.route')}
                 </p>
               )}
             </div>
 
             {route && outOfDate && (
               <p role="status" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                You changed the From or To. The results below are for the earlier route. Tap Check route to
-                update them.
+                {t('route.outOfDateNote')}
               </p>
             )}
 
@@ -498,10 +497,10 @@ export default function RoutePlanner({
                 {/* Only the results fade, the buttons below stay at full strength */}
                 <div className={outOfDate ? 'opacity-60' : ''}>
                 <p className="text-lg font-semibold text-slate-900">
-                  {formatKm(route.distance_m)} &middot; {routeDuration(route.duration_s)} (without traffic)
+                  {t('route.summary', { distance: formatKm(route.distance_m), duration: routeDuration(route.duration_s) })}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Real travel times are often longer. Check Google Maps for live traffic.
+                  {t('route.trafficNote')}
                 </p>
 
                 <RerouteSection
@@ -527,7 +526,7 @@ export default function RoutePlanner({
                 {/* Official warnings come first, before anything crowd-sourced, and the biggest first of those */}
                 {globalAlerts.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-sm font-semibold text-slate-900">Global alerts</p>
+                    <p className="text-sm font-semibold text-slate-900">{t('route.alertsTitle')}</p>
                     <ul className="mt-2 space-y-2">
                       {globalAlerts.map(({ event, why }) => {
                         const Icon = GDACS_ICON[event.type]
@@ -542,21 +541,21 @@ export default function RoutePlanner({
                               aria-hidden="true"
                             />
                             <span className="text-sm text-slate-900">
-                              {event.level} alert: {event.name}. {why}.
+                              {t('route.alertLine', { alert: gdacsAlertLabel(event.level), name: event.name, why: whyText(why) })}
                             </span>
                           </li>
                         )
                       })}
                     </ul>
                     <p className="mt-1 text-xs text-slate-500">
-                      {GDACS_NOTICE} {GDACS_CREDIT}
+                      {t('gdacs.notice')} {GDACS_CREDIT}
                     </p>
                   </div>
                 )}
 
                 {riversNear.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-sm font-semibold text-slate-900">River gauges near the route</p>
+                    <p className="text-sm font-semibold text-slate-900">{t('route.riversTitle')}</p>
                     <ul className="mt-2 space-y-2">
                       {riversNear.map(({ gauge, distanceAlongM }) => (
                         <li
@@ -571,11 +570,13 @@ export default function RoutePlanner({
                             aria-hidden="true"
                           />
                           <span className="text-sm text-slate-900">
-                            {gauge.river} at {gauge.station} &middot; {STEP_LABEL[gauge.step]} &middot; near{' '}
-                            {distanceAlongM < 10_000
-                              ? (distanceAlongM / 1000).toFixed(1)
-                              : Math.round(distanceAlongM / 1000)}{' '}
-                            km
+                            {t('route.riverLine', {
+                              name: gaugeName(gauge),
+                              step: STEP_LABEL[gauge.step],
+                              km: t('units.km', {
+                                value: distanceAlongM < 10_000 ? (distanceAlongM / 1000).toFixed(1) : Math.round(distanceAlongM / 1000),
+                              }),
+                            })}
                           </span>
                         </li>
                       ))}
@@ -587,10 +588,10 @@ export default function RoutePlanner({
 
                 <p className="mt-3 text-base text-slate-800">
                   {hazards.isPending
-                    ? 'Checking for hazards…'
+                    ? t('route.hazardsChecking')
                     : hazards.isError
-                      ? 'Couldn’t check this route for hazards.'
-                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0) + (list.length >= 200 ? ' (first 200 shown)' : '')}
+                      ? t('route.hazardsError')
+                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0) + (list.length >= 200 ? t('route.first200') : '')}
                 </p>
                 {hazards.isError && (
                   <button
@@ -598,11 +599,11 @@ export default function RoutePlanner({
                     onClick={() => hazards.refetch()}
                     className="mt-1 h-11 text-sm font-medium text-blue-700"
                   >
-                    Try again
+                    {t('common.tryAgain')}
                   </button>
                 )}
                 <p className="mt-1 text-xs text-slate-500">
-                  Based on reports from TerraFend users. Not an official source.
+                  {t('route.usersNote')}
                 </p>
 
                 {list.length > 0 && (
@@ -620,8 +621,11 @@ export default function RoutePlanner({
                             {createElement(hazardIcon(h.hazard_type), { className: 'h-5 w-5', 'aria-hidden': true })}
                           </span>
                           <span className="text-sm text-slate-900">
-                            {(h.distance_along_m / 1000).toFixed(1)} km &middot; {hazardLabel(h.hazard_type)} &middot;{' '}
-                            {severityLabel(h.severity)}
+                            {t('route.hazardLine', {
+                              km: t('units.km', { value: (h.distance_along_m / 1000).toFixed(1) }),
+                              type: hazardLabel(h.hazard_type),
+                              severity: severityLabel(h.severity),
+                            })}
                           </span>
                         </button>
                       </li>
@@ -639,7 +643,7 @@ export default function RoutePlanner({
                       className="flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-100 text-base font-semibold text-slate-400"
                     >
                       <ExternalLink className="h-5 w-5" aria-hidden="true" />
-                      Open in Google Maps
+                      {t('route.openGoogle')}
                     </span>
                   ) : (
                     <a
@@ -649,7 +653,7 @@ export default function RoutePlanner({
                       className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-blue-600 text-base font-semibold text-blue-700 active:bg-blue-50"
                     >
                       <ExternalLink className="h-5 w-5" aria-hidden="true" />
-                      Open in Google Maps
+                      {t('route.openGoogle')}
                     </a>
                   )}
                   <button
@@ -657,7 +661,7 @@ export default function RoutePlanner({
                     onClick={clear}
                     className="h-12 rounded-xl border-2 border-slate-300 text-base font-semibold text-slate-700 active:bg-slate-100"
                   >
-                    Clear route
+                    {t('route.clear')}
                   </button>
                 </div>
               </div>

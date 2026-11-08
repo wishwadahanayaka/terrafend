@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 export const RIVER_API_URL = 'https://waterlevels.lk/api/levels'
 
 export const RIVER_CREDIT =
@@ -33,13 +35,26 @@ export type RiverGauge = {
   forecast: Forecast | null
 }
 
+// The names are looked up when read, so they follow the chosen language
 export const STEP_LABEL: Record<RiverStep, string> = {
-  normal: 'Normal',
-  alert: 'Alert',
-  minor: 'Minor flood',
-  major: 'Major flood',
-  none: 'No official flood levels',
-  stale: 'Not reporting',
+  get normal() {
+    return t('river.step.normal')
+  },
+  get alert() {
+    return t('river.step.alert')
+  },
+  get minor() {
+    return t('river.step.minor')
+  },
+  get major() {
+    return t('river.step.major')
+  },
+  get none() {
+    return t('river.step.none')
+  },
+  get stale() {
+    return t('river.step.stale')
+  },
 }
 
 // Yellow, orange, red in that order. The orange is a bright one and the red a
@@ -178,11 +193,28 @@ export function parseGauges(json: unknown): RiverGauge[] {
 }
 
 export function formatFt(feet: number): string {
-  return `${feet.toFixed(2)} ft`
+  return t('units.ft', { value: feet.toFixed(2) })
 }
 
 export const CROSSING_LABEL: Record<FloodMark, string> = {
-  alert: 'Alert',
-  minor: 'Minor flood',
-  major: 'Major flood',
+  get alert() {
+    return t('river.step.alert')
+  },
+  get minor() {
+    return t('river.step.minor')
+  },
+  get major() {
+    return t('river.step.major')
+  },
 }
+
+// The API writes its own notes in English. The two it sends are translated, and any
+// other note is shown as it came.
+export function riverNote(note: string): string {
+  if (note === 'Near alert') return t('river.noteNearAlert')
+  if (note.startsWith("This gauge's reading looks unreliable")) return t('river.noteUnreliable')
+  return note
+}
+
+// "Kelani Ganga at Hanwella". The names are the API's own and stay in English.
+export const gaugeName = (g: { river: string; station: string }) => t('river.name', { river: g.river, station: g.station })

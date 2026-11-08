@@ -1,5 +1,7 @@
 import { CloudLightning, CloudRain } from 'lucide-react'
 import type { UseQueryResult } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+import { t } from '../i18n'
 import { GAUGE_RAIN_CREDIT, measuredText, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
 import {
   RAIN_COLOR,
@@ -16,9 +18,11 @@ import { satelliteStretchText, type RecentRain } from '../lib/routeRecentRain'
 import { sriLankaClock } from '../lib/time'
 
 function describe(s: RainStretch): string {
-  const at = sriLankaClock(s.at)
-  const when = s.fromKm === s.toKm ? `about ${at}` : `when you’d be there, about ${at}`
-  return `${RAIN_LABEL[s.level]} likely ${rainPlace(s)} (${when})`
+  return t(s.fromKm === s.toKm ? 'rain.section.stretch_point' : 'rain.section.stretch_range', {
+    label: RAIN_LABEL[s.level],
+    where: rainPlace(s),
+    time: sriLankaClock(s.at),
+  })
 }
 
 type Props = {
@@ -44,6 +48,7 @@ function Item({ icon, color, children }: { icon: 'storm' | 'rain'; color: string
 // (the forecast ahead, the satellite's recent rain and the gauges), and so do the quieter
 // light and moderate lines, so the section tells one story that matches the map.
 export default function RainSection({ rain, onSelect, recent }: Props) {
+  const { t } = useTranslation()
   const stretches = rain.data?.stretches ?? []
   const forecastQuiet = rain.data?.mild ?? null
   const warnings = stretches.length + recent.satellite.length + recent.gauges.length
@@ -53,16 +58,16 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
 
   return (
     <div className="mt-3">
-      <p className="text-sm font-semibold text-slate-900">Rain along the route</p>
+      <p className="text-sm font-semibold text-slate-900">{t('rain.section.title')}</p>
 
-      {rain.isPending && <p className="mt-1 text-sm text-slate-600">Checking the rain forecast…</p>}
-      {rain.isError && <p className="mt-1 text-sm text-slate-600">Rain forecast unavailable right now</p>}
+      {rain.isPending && <p className="mt-1 text-sm text-slate-600">{t('rain.section.checking')}</p>}
+      {rain.isError && <p className="mt-1 text-sm text-slate-600">{t('rain.section.unavailable')}</p>}
 
       {/* Only said when every source looked and found less than light rain. If the measured
           rain couldn't be loaded, it's only the forecast that was checked. */}
       {rain.data && warnings === 0 && quiet === 0 && (
         <p className="mt-1 text-sm text-slate-800">
-          {recent.checked ? 'No rain likely or recently measured along the route' : 'No rain likely along the route'}
+          {recent.checked ? t('rain.section.noneRecent') : t('rain.section.noneLikely')}
         </p>
       )}
 
@@ -90,10 +95,12 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
           ))}
           {recent.gauges.map(({ item, distanceAlongM }) => (
             <Item key={item.id} icon="rain" color={item.level ? RAIN_COLOR[item.level] : undefined}>
-              {`${item.level ? RAIN_LABEL[item.level] : 'Rain'} measured ${rainPlaceAt(
-                distanceAlongM / 1000,
-                recent.routeKm,
-              )} (${item.station} gauge): ${measuredText(item, ', ')}`}
+              {t('rain.section.gauge', {
+                label: item.level ? RAIN_LABEL[item.level] : t('rain.label.plain'),
+                where: rainPlaceAt(distanceAlongM / 1000, recent.routeKm),
+                station: item.station,
+                measured: measuredText(item, ', '),
+              })}
             </Item>
           ))}
         </ul>
@@ -118,8 +125,11 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
 
       {rain.data && (
         <p className="mt-1 text-xs text-slate-600">
-          Forecast checked for {sriLankaClock(rain.data.from)} to {sriLankaClock(rain.data.to)} (Sri Lanka time)
-          {rain.data.partial && '. The forecast doesn’t reach the end of the trip, so only the first part was checked'}
+          {t('rain.section.checked', {
+            context: rain.data.partial ? 'partial' : undefined,
+            from: sriLankaClock(rain.data.from),
+            to: sriLankaClock(rain.data.to),
+          })}
         </p>
       )}
       {recent.checked && (
@@ -130,7 +140,7 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
       )}
       {rain.data && (
         <p className="mt-1 text-xs text-slate-500">
-          Forecast, not an official warning. Weather data by{' '}
+          {t('common.forecastNotOfficial')}. Weather data by{' '}
           <a href={RAIN_CREDIT_URL} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline">
             Open-Meteo.com
           </a>

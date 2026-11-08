@@ -1,7 +1,8 @@
 import { useId, useState } from 'react'
 import { MapPin, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { OPEN_METEO_URL } from '../lib/backupSearch'
-import { EMPTY_FIELD, type PlaceField, type Point } from '../lib/routing'
+import { EMPTY_FIELD, routeErrorText, type PlaceField, type Point } from '../lib/routing'
 import { usePlaceSearch } from '../lib/usePlaceSearch'
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export default function PlaceInput({ label, placeholder, value, onChange, focus }: Props) {
+  const { t } = useTranslation()
   const id = useId()
   const [open, setOpen] = useState(false)
 
@@ -44,7 +46,7 @@ export default function PlaceInput({ label, placeholder, value, onChange, focus 
         {value.text && (
           <button
             type="button"
-            aria-label="Clear"
+            aria-label={t('common.clear')}
             // Keeps the input focused, so the tap isn't swallowed by a blur
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
@@ -81,7 +83,7 @@ export default function PlaceInput({ label, placeholder, value, onChange, focus 
           ))}
           {search.places.length === 0 && (
             <li className="px-3 py-3 text-sm text-slate-500">
-              {search.error ?? (search.searching ? 'Searching…' : 'No places found')}
+              {search.error ? routeErrorText(search.error) : search.searching ? t('search.searching') : t('search.none')}
             </li>
           )}
         </ul>
@@ -89,7 +91,7 @@ export default function PlaceInput({ label, placeholder, value, onChange, focus 
       {showList && search.backup && (
         // mousedown is blocked for the same reason as the list above, so the link can be tapped
         <p onMouseDown={(e) => e.preventDefault()} className="mt-1 px-1 text-xs text-slate-600">
-          Using backup search, which finds towns and cities only. Search by{' '}
+          {t('search.backup')}{' '}
           <a href={OPEN_METEO_URL} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline">
             Open-Meteo.com
           </a>

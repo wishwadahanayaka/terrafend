@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import Banner from './components/Banner'
 import HazardMap from './components/HazardMap'
 import OfflineBanner from './components/OfflineBanner'
@@ -8,6 +9,8 @@ import OfflineBanner from './components/OfflineBanner'
 const UpdatePrompt = lazy(() => import('./components/UpdatePrompt'))
 
 export default function App() {
+  // Redraws the whole app when the language changes, including text worked out outside React
+  useTranslation()
   return (
     <div className="flex h-dvh w-full flex-col">
       <OfflineBanner />

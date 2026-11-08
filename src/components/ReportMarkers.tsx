@@ -1,4 +1,5 @@
 import { createElement, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, type DivIcon, type Map as LeafletMap, type Marker as LeafletMarker } from 'leaflet'
 import {
@@ -62,6 +63,7 @@ type Props = {
 }
 
 export default function ReportMarkers({ hidden, route, alternative, showPassable, openRequest }: Props) {
+  useTranslation() // redraws the marker names when the language changes
   const map = useMap()
   const popupFit = usePopupFit()
   const [bounds, setBounds] = useState(() => readBounds(map))
@@ -122,6 +124,7 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
 function ReportCard({ report }: { report: Report }) {
+  useTranslation()
   return (
     <div>
       <div className="flex items-center gap-2">

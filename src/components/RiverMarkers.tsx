@@ -1,12 +1,16 @@
 import { Droplet } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Marker, Popup } from 'react-leaflet'
 import { divIcon, type DivIcon } from 'leaflet'
+import { t } from '../i18n'
 import { iconToSvg } from '../lib/iconHtml'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import {
   CROSSING_LABEL,
   formatFt,
+  gaugeName,
   isAlertOrAbove,
+  riverNote,
   RIVER_CREDIT,
   STEP_COLOR,
   STEP_LABEL,
@@ -38,6 +42,7 @@ for (const step of STEPS) {
 
 // Gauges at Alert or above always show. The rest only show when the user asks for them.
 export default function RiverMarkers({ showAll }: { showAll: boolean }) {
+  useTranslation() // redraws the marker names when the language changes
   const { data, status } = useRiverGauges()
   const popupFit = usePopupFit()
 
@@ -53,7 +58,7 @@ export default function RiverMarkers({ showAll }: { showAll: boolean }) {
           key={gauge.id}
           position={[gauge.lat, gauge.lng]}
           icon={dropIcons.get(gauge.step)}
-          alt={`${gauge.river} at ${gauge.station}: ${STEP_LABEL[gauge.step]}`}
+          alt={t('river.alt', { name: gaugeName(gauge), step: STEP_LABEL[gauge.step] })}
           eventHandlers={popupFit}
           // Hazard reports matter more, so they sit on top where the two overlap
           zIndexOffset={-1000}
@@ -67,16 +72,15 @@ export default function RiverMarkers({ showAll }: { showAll: boolean }) {
   )
 }
 
-const DIRECTION_WORD = { rising: 'rising', falling: 'falling', steady: 'steady' } as const
-
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
 function RiverCard({ gauge }: { gauge: RiverGauge }) {
+  const { t } = useTranslation()
   const { step, level, marks, forecast } = gauge
 
   return (
     <div>
       <div className="text-base font-semibold text-slate-900">
-        {gauge.river} at {gauge.station}
+        {gaugeName(gauge)}
       </div>
 
       <span
@@ -85,40 +89,44 @@ function RiverCard({ gauge }: { gauge: RiverGauge }) {
       >
         {STEP_LABEL[step]}
       </span>
-      {gauge.note && <span className="ml-2 text-xs text-slate-600">{gauge.note}</span>}
+      {gauge.note && <span className="ml-2 text-xs text-slate-600">{riverNote(gauge.note)}</span>}
 
       {step === 'none' && (
-        <div className="mt-2 text-sm text-slate-700">No official flood levels for this gauge</div>
+        <div className="mt-2 text-sm text-slate-700">{t('river.noFloodLevels')}</div>
       )}
-      {step === 'stale' && <div className="mt-2 text-sm text-slate-700">Not reporting</div>}
+      {step === 'stale' && <div className="mt-2 text-sm text-slate-700">{t('river.notReporting')}</div>}
 
       {step !== 'stale' && (
         <div className="mt-2 text-sm text-slate-800">
-          Level: {level === null ? 'not available' : formatFt(level)}
+          {level === null ? t('river.levelNone') : t('river.level', { level: formatFt(level) })}
         </div>
       )}
 
       {marks && (
         <div className="mt-1 text-xs text-slate-600">
-          Alert {formatFt(marks.alert)} &middot; Minor flood {formatFt(marks.minor)} &middot; Major flood{' '}
-          {formatFt(marks.major)}
+          {t('river.marks', { alert: formatFt(marks.alert), minor: formatFt(marks.minor), major: formatFt(marks.major) })}
         </div>
       )}
 
       {gauge.observedAt && (
         <div className="mt-1 text-xs text-slate-600">
-          Reading: {sriLankaTime(gauge.observedAt)} &middot; {timeAgo(gauge.observedAt)}
+          {t('common.reading', { time: sriLankaTime(gauge.observedAt), ago: timeAgo(gauge.observedAt) })}
         </div>
       )}
 
       {forecast && (
         <div className="mt-2 rounded-lg bg-slate-100 px-2 py-1.5 text-xs text-slate-700">
-          <span className="font-medium">Next hour:</span> about {formatFt(forecast.levelFt)}
-          {forecast.lowFt !== null && forecast.highFt !== null &&
-            ` (${forecast.lowFt.toFixed(2)} to ${forecast.highFt.toFixed(2)})`}
-          {forecast.direction && `, ${DIRECTION_WORD[forecast.direction]}`}
-          {forecast.crossing && `. May reach the ${CROSSING_LABEL[forecast.crossing]} mark`}
-          <div className="mt-0.5 italic">forecast, not an official warning</div>
+          <span className="font-medium">{t('river.nextHour')}</span>{' '}
+          {forecast.lowFt !== null && forecast.highFt !== null
+            ? t('river.nextHourRange', {
+                level: formatFt(forecast.levelFt),
+                low: forecast.lowFt.toFixed(2),
+                high: forecast.highFt.toFixed(2),
+              })
+            : t('river.nextHourAbout', { level: formatFt(forecast.levelFt) })}
+          {forecast.direction && <div className="mt-0.5">{t(`river.${forecast.direction}`)}</div>}
+          {forecast.crossing && <div className="mt-0.5">{t('river.mayReach', { mark: CROSSING_LABEL[forecast.crossing] })}</div>}
+          <div className="mt-0.5 italic">{t('river.forecastNote')}</div>
         </div>
       )}
 
@@ -129,7 +137,7 @@ function RiverCard({ gauge }: { gauge: RiverGauge }) {
           rel="noopener noreferrer"
           className="mt-2 block text-sm font-medium text-blue-700 underline"
         >
-          More on Sri Lanka Water Levels
+          {t('river.more')}
         </a>
       )}
       <div className="mt-2 text-[11px] leading-tight text-slate-500">{RIVER_CREDIT}</div>

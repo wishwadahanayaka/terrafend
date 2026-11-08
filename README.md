@@ -30,6 +30,7 @@ Working now:
 - Install it like an app: on Android and iPhone, add TerraFend to the home screen and it opens full screen with its own icon
 - Works offline: the app opens without a connection and shows the last data it loaded (rivers, rain, forecasts, global alerts and reports) under a banner such as "Offline: showing data from 4:12 pm. It may be out of date." Map tiles you have already looked at are kept for 7 days. Reporting, route checks and voting wait until you are back online
 - A "New version available, tap to refresh" prompt when an update is released, instead of changing the app while you use it
+- Languages: English, Sinhala and Tamil. A button at the top right switches between them (EN / සිං / த), the choice is remembered, and on a first visit the app follows the phone's language if it is Sinhala or Tamil. Switching works offline too. The translations need review by native speakers (see Languages below)
 - Banner reminding users this is not an official warning service
 
 Roadmap:
@@ -38,7 +39,7 @@ Roadmap:
 - [x] Crowd hazard reports (with photos and voting)
 - [x] Route check: find hazards along a travel route
 - [ ] Official data layers (river gauges, measured rain and GDACS global alerts are done)
-- [ ] Sinhala and Tamil alongside English
+- [x] Sinhala and Tamil alongside English (translations welcome review)
 - [ ] Phone alerts
 - [x] Installable app that opens offline and shows the last loaded data
 - [ ] Reports written offline and sent later
@@ -51,6 +52,7 @@ Frontend:
 - Tailwind CSS
 - Leaflet with react-leaflet, and OpenStreetMap tiles
 - TanStack Query for loading and caching data
+- i18next and react-i18next for English, Sinhala and Tamil
 - lucide-react for icons
 - browser-image-compression for shrinking photos
 
@@ -88,6 +90,8 @@ Global alerts: Data: GDACS (European Commission JRC and UN OCHA). See [gdacs.org
 
 Rain forecast, and the backup place search: Weather data and geocoding by [Open-Meteo.com](https://open-meteo.com/).
 
+Fonts: Noto Sans Sinhala and Noto Sans Tamil (Noto Project Authors, SIL Open Font License 1.1), used only on phones that have no Sinhala or Tamil font of their own.
+
 The rain map uses a simplified Sri Lanka coastline, derived from [geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0), only to leave sea out of its grid.
 
 ## Running it locally
@@ -119,6 +123,14 @@ Other commands:
 - `npm run preview` serves the production build (with the service worker) after `npm run build`
 - `npm run icons` makes the app icons from `public/icon.svg`
 - `npm test` runs the tests once, `npm run test:watch` re-runs them as you edit
+
+## Languages
+
+TerraFend is in English, Sinhala (සිංහල) and Tamil (தமிழ்). English is built in. The Sinhala and Tamil files (`src/i18n/locales/si.ts` and `ta.ts`) only download when someone picks them, and the service worker keeps them so switching works offline. Every piece of the app's own text, including the safety wording, the cards, the report form, the route panel, and phrases like "20 min ago", is translated, and plurals follow each language's rules.
+
+**The Sinhala and Tamil translations were written by an AI and have not been reviewed by a native speaker. Corrections are very welcome**, especially for the safety text and the longer explanations. Open an issue or a pull request that edits the file for that language. Each file starts with a note saying the same, and a test makes sure all three files have exactly the same keys.
+
+Not translated, on purpose: names that come from other sources (rivers and gauges, GDACS event and country names, place search results), the data credit lines, and the database values behind the report types. Digits are always 0-9, as is usual in Sri Lanka. The Sinhala and Tamil letters use the phone's own fonts. Only if a phone has none does the browser fetch the small [Noto Sans Sinhala](https://fonts.google.com/noto/specimen/Noto+Sans+Sinhala) or [Noto Sans Tamil](https://fonts.google.com/noto/specimen/Noto+Sans+Tamil) file in `public/fonts/` (SIL Open Font License 1.1, licences included).
 
 ## Installing and offline
 

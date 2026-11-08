@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
 
@@ -23,7 +24,7 @@ type UploadResult = { path: string; error: null } | { path: null; error: string 
 export async function uploadPhoto(file: File): Promise<UploadResult> {
   const failed = {
     path: null,
-    error: 'Couldn’t upload your photo. Try again, or remove the photo to send without it.',
+    error: t('errors.uploadPhoto'),
   } as const
 
   try {

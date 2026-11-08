@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { CloudLightning, CloudRain } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Marker, Pane, Polyline, Popup } from 'react-leaflet'
 import { divIcon, type DivIcon, type Marker as LeafletMarker } from 'leaflet'
 import { iconToSvg } from '../lib/iconHtml'
@@ -49,6 +50,7 @@ type Props = {
 // The rain stretches drawn on the route, each with an icon at its middle. The forecast
 // comes from the same query the route panel uses, so this adds no request.
 export default function RainOverlay({ route, hidden, outOfDate, openRequest }: Props) {
+  useTranslation() // redraws the marker names when the language changes
   const rain = useRouteRain(route)
   const popupFit = usePopupFit()
   const markers = useRef(new Map<string, LeafletMarker>())
@@ -112,6 +114,7 @@ export default function RainOverlay({ route, hidden, outOfDate, openRequest }: P
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
 function RainCard({ stretch }: { stretch: RainStretch }) {
+  const { t } = useTranslation()
   const Icon = stretch.level === 'thunder' ? CloudLightning : CloudRain
   return (
     <div>
@@ -119,14 +122,16 @@ function RainCard({ stretch }: { stretch: RainStretch }) {
         <Icon className="h-5 w-5 shrink-0" style={{ color: RAIN_COLOR[stretch.level] }} aria-hidden="true" />
         <span className="text-base font-semibold text-slate-900">{RAIN_LABEL[stretch.level]}</span>
       </div>
-      <div className="mt-2 text-sm text-slate-800">Likely {rainPlace(stretch)}</div>
+      <div className="mt-2 text-sm text-slate-800">{t('rain.card.likelyWhere', { where: rainPlace(stretch) })}</div>
       {stretch.probability !== null && (
-        <div className="mt-1 text-sm text-slate-800">At least {Math.round(stretch.probability)}% chance of rain</div>
+        <div className="mt-1 text-sm text-slate-800">
+          {t('rain.card.chanceAtLeast', { pct: Math.round(stretch.probability) })}
+        </div>
       )}
       <div className="mt-1 text-sm text-slate-800">
-        When you’d be there: about {sriLankaClock(stretch.at)}
+        {t('rain.card.whenYoudBeThere', { time: sriLankaClock(stretch.at) })}
       </div>
-      <div className="mt-2 text-xs italic text-slate-600">Forecast, not an official warning</div>
+      <div className="mt-2 text-xs italic text-slate-600">{t('common.forecastNotOfficial')}</div>
       <div className="mt-1 text-[11px] leading-tight text-slate-500">
         Weather data by{' '}
         <a href={RAIN_CREDIT_URL} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline">

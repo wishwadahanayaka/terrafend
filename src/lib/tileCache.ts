@@ -9,3 +9,8 @@ export const TILE_CACHE_NAME = 'osm-tiles'
 export const TILE_CACHE_DAYS = 7
 // About 5 to 10 MB. The oldest go first when it is full.
 export const TILE_CACHE_MAX_ENTRIES = 400
+
+// The two small Sinhala and Tamil fallback fonts in public/fonts. They are kept the first time
+// a phone actually needs one (a phone with no Sinhala or Tamil font of its own), not at install.
+export const FONT_PATH_PREFIX = '/fonts/'
+export const FONT_CACHE_NAME = 'terrafend-fonts'

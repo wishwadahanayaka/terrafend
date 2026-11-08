@@ -69,14 +69,16 @@ describe('forecast rules', () => {
     })
   })
 
+  const near40 = { key: 'rain.where.near', params: { km: 40 } }
+
   it('words forecasts as "likely" or "possible", never as having happened', () => {
     expect(forecastWord(60)).toBe('likely')
     expect(forecastWord(59)).toBe('possible')
     expect(forecastWord(null)).toBe('possible')
-    expect(forecastQuietText('light', 'near 40 km', 70)).toBe('Light rain likely near 40 km')
-    expect(forecastQuietText('moderate', 'near 40 km')).toBe('Moderate rain possible near 40 km')
-    expect(possibleText('thunderPossible', 'near 40 km')).toBe('Thunderstorms possible near 40 km')
-    expect(possibleText('heavyShowers', 'along most of the route')).toBe(
+    expect(forecastQuietText('light', near40, 70)).toBe('Light rain likely near 40 km')
+    expect(forecastQuietText('moderate', near40)).toBe('Moderate rain possible near 40 km')
+    expect(possibleText('thunderPossible', near40)).toBe('Thunderstorms possible near 40 km')
+    expect(possibleText('heavyShowers', { key: 'rain.where.most' })).toBe(
       'Heavy showers possible along most of the route',
     )
   })

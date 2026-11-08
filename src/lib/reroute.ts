@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { cumulativeMetres, positionAt } from './routeGeometry'
 import { nearRoute } from './routeGauges'
 import type { Point, RouteResult } from './routing'
@@ -84,5 +85,5 @@ export function detourWaypoints(next: RouteResult, original: RouteResult): Point
 export function difference(value: number, unit: 'km' | 'min'): string {
   const n = Math.round(value)
   const sign = n > 0 ? '+' : n < 0 ? '−' : '±'
-  return `${sign}${Math.abs(n)} ${unit}`
+  return t(`units.${unit}`, { value: `${sign}${Math.abs(n)}` })
 }

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { MapPin, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import { useQueryClient } from '@tanstack/react-query'
 import { REPORTS_KEY } from '../lib/queryKeys'
@@ -36,6 +37,7 @@ export default function ReportFlow({
   offline,
   onOfflineTap,
 }: Props) {
+  const { t } = useTranslation()
   const [spot, setSpot] = useState<LatLng | null>(null)
   const [toast, setToast] = useState(false)
   const queryClient = useQueryClient()
@@ -64,19 +66,20 @@ export default function ReportFlow({
           type="button"
           onClick={offline ? onOfflineTap : startPicking}
           aria-disabled={offline}
+          aria-label={t('report.button')}
+          title={t('report.button')}
           inert={cardOpen}
-          className={`absolute bottom-24 right-4 z-[1000] flex h-14 items-center gap-2 rounded-full px-5 font-semibold text-white shadow-lg ${offline ? 'bg-slate-400' : 'bg-red-600 active:bg-red-700'} ${fadeWhenCardOpen(cardOpen)}`}
+          className={`absolute bottom-24 right-4 z-[1000] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg ${offline ? 'bg-slate-400' : 'bg-red-600 active:bg-red-700'} ${fadeWhenCardOpen(cardOpen)}`}
         >
-          <Plus className="h-6 w-6" aria-hidden="true" />
-          Report
+          <Plus className="h-7 w-7" aria-hidden="true" />
         </button>
       )}
 
       {mode === 'picking' && (
         <>
-          <div className="pointer-events-none absolute inset-x-0 top-[4.5rem] z-[1000] flex justify-center px-2">
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--banner-bottom,56px)+1rem)] z-[1000] flex justify-center px-2">
             <p className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-lg">
-              Move the map to the hazard
+              {t('report.pickHint')}
             </p>
           </div>
 
@@ -92,14 +95,14 @@ export default function ReportFlow({
               onClick={() => onModeChange('idle')}
               className="h-14 flex-1 rounded-xl border-2 border-slate-300 font-semibold text-slate-700 active:bg-slate-100"
             >
-              Cancel
+              {t('report.cancel')}
             </button>
             <button
               type="button"
               onClick={useThisSpot}
               className="h-14 flex-[2] rounded-xl bg-blue-600 font-semibold text-white active:bg-blue-700"
             >
-              Use this spot
+              {t('report.useSpot')}
             </button>
           </div>
         </>
@@ -125,7 +128,7 @@ export default function ReportFlow({
           role="status"
           className="absolute inset-x-4 bottom-24 z-[1200] mx-auto w-fit rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white shadow-lg"
         >
-          Report sent, thanks
+          {t('report.sent')}
         </p>
       )}
     </>

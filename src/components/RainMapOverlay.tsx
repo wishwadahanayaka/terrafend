@@ -1,7 +1,9 @@
 import { Fragment, useMemo, useState } from 'react'
 import { CloudLightning, CloudRain } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { LatLngTuple, LeafletMouseEvent } from 'leaflet'
 import { Pane, Polygon, Polyline, Popup } from 'react-leaflet'
+import { t } from '../i18n'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import {
   MILD_BORDER,
@@ -171,17 +173,18 @@ export default function RainMapOverlay({ hidden, showMild }: Props) {
 
 function headline(square: RainSquare, now: number): string {
   const label = labelOf(square)
-  if (square.source === 'satellite') return `${label} ${satelliteWhen(square, now)} (satellite)`
+  if (square.source === 'satellite') return t('rain.mapCard.satellite', { label, when: satelliteWhen(square, now) })
   const when =
     square.from <= now
-      ? `until ${sriLankaClock(square.to)}`
-      : `${sriLankaClock(square.from)} to ${sriLankaClock(square.to)}`
+      ? t('rain.mapCard.until', { time: sriLankaClock(square.to) })
+      : t('rain.mapCard.timeRange', { from: sriLankaClock(square.from), to: sriLankaClock(square.to) })
   // A forecast never says "expected": it says "likely" or "possible" by how sure the model is
-  return `${label} ${forecastWord(square.probability)} ${when} (forecast)`
+  return t('rain.mapCard.forecast', { context: forecastWord(square.probability), label, when })
 }
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
 function RainSquareCard({ square }: { square: RainSquare }) {
+  const { t } = useTranslation()
   const Icon = square.level === 'thunder' ? CloudLightning : CloudRain
   // Read once when the card opens, so the wording doesn't change under the reader
   const [now] = useState(Date.now)
@@ -197,28 +200,27 @@ function RainSquareCard({ square }: { square: RainSquare }) {
       </div>
       {square.probability !== null && (
         <div className="mt-2 text-sm text-slate-800">
-          {Math.round(square.probability)}%{' '}
-          {mildForecast ? 'chance of some rain in this area (about 11 km across)' : 'chance of rain'}
+          {t(mildForecast ? 'rain.mapCard.chanceSome' : 'rain.mapCard.chance', { pct: Math.round(square.probability) })}
         </div>
       )}
       {mildForecast && (
-        <div className="mt-1 text-xs text-slate-600">Rain forecasts are often wrong for a specific spot.</div>
+        <div className="mt-1 text-xs text-slate-600">{t('rain.mapCard.forecastWrong')}</div>
       )}
       {square.mm !== null && (
         <div className="mt-1 text-sm text-slate-800">
-          Up to {formatMm(square.mm)} mm an hour in the worst hour
+          {t('rain.mapCard.upTo', { mm: formatMm(square.mm) })}
         </div>
       )}
       <div className="mt-1 text-xs text-slate-600">
         {satellite
-          ? `Satellite estimate for ${sriLankaClock(square.from)} to ${sriLankaClock(square.to)} (Sri Lanka time)`
-          : 'Open-Meteo forecast, next 3 hours (Sri Lanka time)'}
+          ? t('rain.mapCard.satelliteWindow', { from: sriLankaClock(square.from), to: sriLankaClock(square.to) })
+          : t('rain.mapCard.forecastWindow')}
       </div>
       {satellite && (
-        <div className="mt-1 text-xs text-slate-600">Satellite estimates can read high in the dry zone.</div>
+        <div className="mt-1 text-xs text-slate-600">{t('rain.mapCard.satelliteHigh')}</div>
       )}
       <div className="mt-2 text-xs italic text-slate-600">
-        {satellite ? 'Estimate from space, not an official warning' : 'Forecast, not an official warning'}
+        {satellite ? t('rain.mapCard.satelliteNotOfficial') : t('common.forecastNotOfficial')}
       </div>
       <div className="mt-1 text-[11px] leading-tight text-slate-500">
         {satellite ? (

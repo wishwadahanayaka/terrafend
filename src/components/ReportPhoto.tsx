@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { photoUrl } from '../lib/photos'
 
 export default function ReportPhoto({ path }: { path: string }) {
+  const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
   if (failed) return null
 
@@ -16,7 +18,7 @@ export default function ReportPhoto({ path }: { path: string }) {
     >
       <img
         src={url}
-        alt="Photo of the hazard"
+        alt={t('report.photoAlt')}
         loading="lazy"
         onError={() => setFailed(true)}
         className="h-full w-full object-cover"

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { fetchHourly, hourLabel } from './openMeteo'
 import { cumulativeMetres, positionAt, sliceRoute } from './routeGeometry'
 import type { RouteResult } from './routing'
@@ -6,10 +7,17 @@ export const RAIN_CREDIT_URL = 'https://open-meteo.com/'
 
 export type RainLevel = 'heavy' | 'veryHeavy' | 'thunder'
 
+// The names are looked up when read, so they follow the chosen language
 export const RAIN_LABEL: Record<RainLevel, string> = {
-  heavy: 'Heavy rain',
-  veryHeavy: 'Very heavy rain',
-  thunder: 'Thunderstorms',
+  get heavy() {
+    return t('rain.label.heavy')
+  },
+  get veryHeavy() {
+    return t('rain.label.veryHeavy')
+  },
+  get thunder() {
+    return t('rain.label.thunder')
+  },
 }
 
 // Blue-purple, so rain can't be mistaken for the yellow to red of the river steps.
@@ -47,8 +55,12 @@ export function rainLevel(mm: number | null, code: number | null): RainLevel | n
 export type MildLevel = 'light' | 'moderate'
 
 export const MILD_LABEL: Record<MildLevel, string> = {
-  light: 'Light rain',
-  moderate: 'Moderate rain',
+  get light() {
+    return t('rain.label.light')
+  },
+  get moderate() {
+    return t('rain.label.moderate')
+  },
 }
 
 // Paler blues than the warnings above, so the two kinds are easy to tell apart on the map
@@ -67,11 +79,6 @@ export const MILD_BORDER: Record<MildLevel, string> = {
 // "possible", so they are never drawn on the map: they get one line in the Layers panel
 // and one in the route panel.
 export type PossibleLevel = 'heavyShowers' | 'thunderPossible'
-
-export const POSSIBLE_LABEL: Record<PossibleLevel, string> = {
-  heavyShowers: 'Heavy showers possible',
-  thunderPossible: 'Thunderstorms possible',
-}
 
 const LIGHT_MM = 0.5
 const MODERATE_MM = 2.5
@@ -114,20 +121,22 @@ export function forecastHour(mm: number | null, code: number | null, probability
   return { level: null, mild: mildRain(mm), possible: null }
 }
 
-// "likely" when the chance is high enough for a warning, otherwise "possible"
-export function forecastWord(probability: number | null): string {
+// "likely" when the chance is high enough for a warning, otherwise "possible". The word
+// is only ever used to pick the wording of a whole sentence (a translation context), because
+// other languages can't just swap one word.
+export function forecastWord(probability: number | null): 'likely' | 'possible' {
   return probability !== null && probability >= FORECAST_MIN_PROBABILITY ? 'likely' : 'possible'
 }
 
 // Quiet forecast lines, worded so a forecast never sounds like it has happened:
-// "Light rain likely near 40 km", "Thunderstorms possible near 40 km"
-export function forecastQuietText(level: MildLevel, where: string, probability: number | null = null): string {
-  return `${MILD_LABEL[level]} ${forecastWord(probability)} ${where}`
+// "Light rain likely near 40 km", "Light rain possible near 40 km"
+export function forecastQuietText(level: MildLevel, where: Where, probability: number | null = null): string {
+  return t('rain.forecastQuiet', { context: forecastWord(probability), label: MILD_LABEL[level], where: whereText(where) })
 }
 
-// The "possible" labels already say it
-export function possibleText(level: PossibleLevel, where: string): string {
-  return `${POSSIBLE_LABEL[level]} ${where}`
+// "Thunderstorms possible near 40 km". The wording already says "possible".
+export function possibleText(level: PossibleLevel, where: Where): string {
+  return t(`rain.possible.${level}`, { where: whereText(where) })
 }
 
 const SPACING_KM = 10
@@ -185,13 +194,19 @@ export type RainStretch = {
   routeKm: number
 }
 
+// Where along the route, kept as a translation key and its numbers instead of finished text,
+// so a route checked in one language reads in another after the language is switched.
+export type Where = { key: string; params?: Record<string, number> }
+
+export const whereText = (w: Where): string => t(w.key, w.params)
+
 type RouteNote<Level> = {
   level: Level
   // The highest chance of rain among the points it covers, in percent
   probability: number | null
   // "along most of the route", "around 5–15 km", "near 40 km", "at the start of the route"
   // or "in places along the route"
-  where: string
+  where: Where
 }
 
 export type MildRain = RouteNote<MildLevel>
@@ -271,7 +286,7 @@ export async function fetchRain(route: RouteResult): Promise<RainResult> {
 const END_ZONE_KM = 5
 
 // "near 78 km", "around 39–49 km", or in words when it's at the start or the end
-function placeText(fromKm: number, toKm: number, routeKm: number): string {
+function placeSpec(fromKm: number, toKm: number, routeKm: number): Where {
   const atStart = (km: number) => km <= END_ZONE_KM
   const atEnd = (km: number) => routeKm - km <= END_ZONE_KM
   const from = Math.round(fromKm)
@@ -279,15 +294,17 @@ function placeText(fromKm: number, toKm: number, routeKm: number): string {
 
   if (atStart(toKm) && atEnd(fromKm)) {
     // A short route has both ends close by, so the nearer one wins
-    return fromKm <= routeKm - toKm ? 'at the start of the route' : 'near the end of the route'
+    return { key: fromKm <= routeKm - toKm ? 'rain.where.start' : 'rain.where.end' }
   }
-  if (atStart(toKm)) return 'at the start of the route'
-  if (atEnd(fromKm)) return 'near the end of the route'
-  if (atStart(fromKm) && atEnd(toKm)) return 'along the whole route'
-  if (atStart(fromKm)) return `from the start of the route to ${to} km`
-  if (atEnd(toKm)) return `from ${from} km to the end of the route`
-  return from === to ? `near ${from} km` : `around ${from}–${to} km`
+  if (atStart(toKm)) return { key: 'rain.where.start' }
+  if (atEnd(fromKm)) return { key: 'rain.where.end' }
+  if (atStart(fromKm) && atEnd(toKm)) return { key: 'rain.where.whole' }
+  if (atStart(fromKm)) return { key: 'rain.where.fromStart', params: { to } }
+  if (atEnd(toKm)) return { key: 'rain.where.toEnd', params: { from } }
+  return from === to ? { key: 'rain.where.near', params: { km: from } } : { key: 'rain.where.around', params: { from, to } }
 }
+
+const placeText = (fromKm: number, toKm: number, routeKm: number): string => whereText(placeSpec(fromKm, toKm, routeKm))
 
 export function rainPlace(s: RainStretch): string {
   return placeText(s.fromKm, s.toKm, s.routeKm)
@@ -323,12 +340,12 @@ function summarise<Key extends 'mild' | 'possible'>(
   // Only the points with this rain next to each other make one range
   const together = last - first + 1 === points.length
 
-  const where =
+  const where: Where =
     points.length / known >= 0.6
-      ? 'along most of the route'
+      ? { key: 'rain.where.most' }
       : together
-        ? placeText(samples[first].km, samples[last].km, samples[samples.length - 1].km)
-        : 'in places along the route'
+        ? placeSpec(samples[first].km, samples[last].km, samples[samples.length - 1].km)
+        : { key: 'rain.where.places' }
   const chances = points.flatMap((i) => readings[i]?.probability ?? [])
   return { level, probability: chances.length > 0 ? Math.max(...chances) : null, where }
 }

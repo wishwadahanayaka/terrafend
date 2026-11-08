@@ -1,5 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
-import { severityLabel, SEVERITIES, type Severity } from './hazards'
+import { t } from '../i18n'
+import { SEVERITIES, type Severity } from './hazards'
 import { backupSearch } from './backupSearch'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
@@ -26,7 +27,11 @@ export type RouteResult = {
   via?: Point[]
 }
 
-const GENERAL_ERROR = 'Something went wrong. Please try again.'
+// Errors carry English text, and the screen turns the ones it knows into the chosen language
+// when it shows them (see routeErrorText). Anything else is shown as it came.
+export const GENERAL_ERROR = 'Something went wrong. Please try again.'
+const RELOAD_ERROR = 'Please reload the page and try again.'
+const NO_CONNECTION_ERROR = 'Couldn’t reach the route service. Check your connection and try again.'
 
 // The function answers with { error: "friendly message" } when it fails
 async function messageFrom(error: unknown): Promise<string> {
@@ -37,10 +42,10 @@ async function messageFrom(error: unknown): Promise<string> {
     } catch {
       // not JSON, fall through
     }
-    if (error.context.status === 401) return 'Please reload the page and try again.'
+    if (error.context.status === 401) return RELOAD_ERROR
     return GENERAL_ERROR
   }
-  return 'Couldn’t reach the route service. Check your connection and try again.'
+  return NO_CONNECTION_ERROR
 }
 
 async function callRouting<T>(body: Record<string, unknown>): Promise<T> {
@@ -97,6 +102,10 @@ let nextRouteId = 1
 export const MAX_AVOID = 20
 
 // What the routing function says when every way round passes a spot to avoid
+export const ERROR_CHOOSE_START = 'Choose where to start from, or use your location.'
+export const ERROR_LOCATION_DENIED =
+  'Location permission was denied. Allow it in your browser settings, or search for a starting place.'
+export const ERROR_LOCATION_FAILED = 'Couldn’t find your location. Search for a starting place instead.'
 export const NO_REROUTE = 'No other route avoids these blocked roads. Take care, or check Google Maps.'
 
 // `avoid` is a list of spots (blocked roads) the route must not pass through
@@ -127,7 +136,7 @@ export function forDatabase(coordinates: [number, number][]): [number, number][]
 
 export function formatKm(meters: number): string {
   const km = meters / 1000
-  return `${km >= 100 ? Math.round(km) : km.toFixed(1)} km`
+  return t('units.km', { value: km >= 100 ? Math.round(km) : km.toFixed(1) })
 }
 
 const at = (p: Point) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`
@@ -138,17 +147,37 @@ export function googleMapsUrl(start: Point, end: Point, via: Point[] = []): stri
   return `https://www.google.com/maps/dir/?api=1&origin=${at(start)}&destination=${at(end)}${waypoints}&travelmode=driving`
 }
 
+// The answers the routing function and this file give, by their English text. The screen
+// shows these in the chosen language, and anything not listed as it came.
+const KNOWN_ERRORS = new Map<string, string>([
+  [GENERAL_ERROR, 'errors.general'],
+  [RELOAD_ERROR, 'errors.reload'],
+  [NO_CONNECTION_ERROR, 'errors.noConnection'],
+  [NO_REROUTE, 'errors.noReroute'],
+  ['The daily limit for searches and routes has been reached. Please try again tomorrow.', 'errors.dailyLimit'],
+  ['Search and routes aren’t available right now. Please try again later.', 'errors.unavailable'],
+  ['Too many requests right now. Please wait a moment and try again.', 'errors.tooMany'],
+  ['No driving route found between those points. Try moving them closer to a road.', 'errors.noRoute'],
+  [ERROR_CHOOSE_START, 'errors.chooseStart'],
+  [ERROR_LOCATION_DENIED, 'errors.locationDeniedRoute'],
+  [ERROR_LOCATION_FAILED, 'errors.locationFailedRoute'],
+])
+
+export function routeErrorText(message: string): string {
+  const key = KNOWN_ERRORS.get(message)
+  return key ? t(key) : message
+}
+
 // Worst first, like "2 hazards: 1 blocked, 1 large vehicles only"
 export function hazardSummary(hazards: { severity: Severity }[], hasRiverWarnings = false): string {
   // With a river warning nearby, "nothing reported" must not read as "the route is safe"
   if (hazards.length === 0) {
-    return hasRiverWarnings ? 'No hazards reported by users on this route' : 'No reported hazards on this route'
+    return t(hasRiverWarnings ? 'route.noHazardsRiver' : 'route.noHazards')
   }
   const parts = [...SEVERITIES]
     .reverse()
     .map((s) => ({ s: s.value, n: hazards.filter((h) => h.severity === s.value).length }))
     .filter((c) => c.n > 0)
-    .map((c) => `${c.n} ${severityLabel(c.s).toLowerCase()}`)
-  const noun = hazards.length === 1 ? 'hazard' : 'hazards'
-  return `${hazards.length} ${noun}: ${parts.join(', ')}`
+    .map((c) => t(`route.count.${c.s}`, { count: c.n }))
+  return t('route.hazardsHeader', { count: hazards.length, parts: parts.join(', ') })
 }

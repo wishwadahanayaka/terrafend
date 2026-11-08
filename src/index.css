@@ -14,3 +14,42 @@ body,
   max-width: var(--popup-content-max, 300px);
   overflow-wrap: anywhere;
 }
+
+/* Sinhala and Tamil. The phone's own fonts are used first (Noto on Android, Sangam on iPhone,
+   Nirmala UI on Windows). Only if none of them has the letters does the browser download the
+   small Noto file below, and only for those letters, so English readers never fetch it.
+   Latin letters and digits keep coming from the normal system font. */
+@font-face {
+  font-family: 'Noto Sans Sinhala Fallback';
+  src: url('/fonts/noto-sans-sinhala.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0964-0965, U+0D81-0DF4, U+200C-200D, U+25CC;
+}
+
+@font-face {
+  font-family: 'Noto Sans Tamil Fallback';
+  src: url('/fonts/noto-sans-tamil.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0964-0965, U+0B82-0BFA, U+200C-200D, U+20B9, U+25CC;
+}
+
+:lang(si),
+:lang(si) .leaflet-container {
+  font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Sinhala',
+    'Nirmala UI', 'Iskoola Pota', 'Sinhala Sangam MN', 'Noto Sans Sinhala Fallback', sans-serif;
+}
+
+:lang(ta),
+:lang(ta) .leaflet-container {
+  font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Tamil',
+    'Nirmala UI', 'Latha', 'Tamil Sangam MN', 'Noto Sans Tamil Fallback', sans-serif;
+}
+
+/* Sinhala and Tamil letters are taller than Latin ones and have marks above and below, so
+   tight line heights would cut them off */
+:lang(si) .leading-tight,
+:lang(ta) .leading-tight {
+  line-height: 1.45;
+}

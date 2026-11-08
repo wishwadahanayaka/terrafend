@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { CloudRain, Droplet, Droplets, Globe, Info, Layers, Mountain, TriangleAlert } from 'lucide-react'
+import { CloudRain, Droplet, Droplets, Globe, Info, Languages, Layers, Mountain, TriangleAlert } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Map as LeafletMap } from 'leaflet'
 import type { LayerSettings } from '../lib/layerSettings'
 import {
@@ -11,6 +12,8 @@ import {
   RAIN_CREDIT_URL,
   RAIN_LABEL,
 } from '../lib/rainForecast'
+import { LANGUAGES } from '../i18n/languages'
+import { setLanguage } from '../i18n'
 import { RIVER_CREDIT, STEP_COLOR, type RiverStep } from '../lib/riverGauges'
 import { GAUGE_RAIN_CREDIT, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
 import { GDACS_CREDIT, GDACS_LEVEL_COLOR, type GdacsLevel } from '../lib/gdacs'
@@ -30,16 +33,17 @@ type Props = {
 }
 
 // Shown in this order, with a plain-words meaning for each
-const RIVER_LEGEND: { step: RiverStep; meaning: string }[] = [
-  { step: 'normal', meaning: 'Normal, below the alert level' },
-  { step: 'alert', meaning: 'Alert' },
-  { step: 'minor', meaning: 'Minor flood' },
-  { step: 'major', meaning: 'Major flood' },
-  { step: 'none', meaning: 'No official flood levels for this gauge' },
-  { step: 'stale', meaning: 'Not reporting' },
+const RIVER_LEGEND: { step: RiverStep; key: string }[] = [
+  { step: 'normal', key: 'legend.riverNormal' },
+  { step: 'alert', key: 'legend.riverAlert' },
+  { step: 'minor', key: 'legend.riverMinor' },
+  { step: 'major', key: 'legend.riverMajor' },
+  { step: 'none', key: 'legend.riverNone' },
+  { step: 'stale', key: 'legend.riverStale' },
 ]
 
-const RAIN_LEGEND: { color: string; meaning: string }[] = [
+// The names are looked up when read, so build the list when drawing
+const rainLegend = (): { color: string; meaning: string }[] => [
   { color: RAIN_COLOR.thunder, meaning: RAIN_LABEL.thunder },
   { color: RAIN_COLOR.veryHeavy, meaning: RAIN_LABEL.veryHeavy },
   { color: RAIN_COLOR.heavy, meaning: RAIN_LABEL.heavy },
@@ -47,15 +51,16 @@ const RAIN_LEGEND: { color: string; meaning: string }[] = [
   { color: MILD_COLOR.light, meaning: MILD_LABEL.light },
 ]
 
-const GDACS_LEGEND: { level: GdacsLevel; meaning: string }[] = [
-  { level: 'Red', meaning: 'Red alert, the most serious' },
-  { level: 'Orange', meaning: 'Orange alert' },
-  { level: 'Green', meaning: 'Green alert, a lower level' },
+const GDACS_LEGEND: { level: GdacsLevel; key: string }[] = [
+  { level: 'Red', key: 'legend.alertRed' },
+  { level: 'Orange', key: 'legend.alertOrange' },
+  { level: 'Green', key: 'legend.alertGreen' },
 ]
 
-type Open = 'none' | 'layers' | 'legend'
+type Open = 'none' | 'layers' | 'legend' | 'language'
 
 export default function LayerControls({ map, settings, onChange }: Props) {
+  const { t, i18n } = useTranslation()
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
   const measured = useMeasuredRain()
@@ -67,9 +72,7 @@ export default function LayerControls({ map, settings, onChange }: Props) {
   const storms = possible.includes('thunderPossible')
   const showers = possible.includes('heavyShowers')
   const possibleNote =
-    storms || showers
-      ? `${storms && showers ? 'Thunderstorms and heavy showers' : storms ? 'Thunderstorms' : 'Heavy showers'} possible in parts of the island over the next 3 hours (forecast, low confidence)`
-      : null
+    storms || showers ? t(storms && showers ? 'layers.possibleBoth' : storms ? 'layers.possibleStorms' : 'layers.possibleShowers') : null
   const [open, setOpen] = useState<Open>('none')
 
   // A map card opening, or a tap on the map, closes the panel so it can't cover anything
@@ -87,8 +90,20 @@ export default function LayerControls({ map, settings, onChange }: Props) {
   const toggle = (which: Exclude<Open, 'none'>) => setOpen((current) => (current === which ? 'none' : which))
 
   return (
-    <div className="absolute right-4 top-[4.5rem] z-[1000] flex flex-col items-end gap-2">
+    <div className="absolute right-4 top-[calc(var(--banner-bottom,56px)+1rem)] z-[1000] flex flex-col items-end gap-2">
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => toggle('language')}
+          aria-expanded={open === 'language'}
+          aria-label={t('language.button')}
+          className={`flex h-11 min-w-11 items-center justify-center gap-1 rounded-full px-3 text-sm font-semibold shadow-lg ${
+            open === 'language' ? 'bg-sky-600 text-white active:bg-sky-700' : 'bg-white text-slate-700 active:bg-slate-100'
+          }`}
+        >
+          <Languages className="h-5 w-5 shrink-0" aria-hidden="true" />
+          {LANGUAGES.find((l) => l.code === i18n.language)?.short ?? 'EN'}
+        </button>
         <button
           type="button"
           onClick={() => toggle('layers')}
@@ -97,14 +112,14 @@ export default function LayerControls({ map, settings, onChange }: Props) {
             open === 'layers' ? 'bg-sky-600 text-white active:bg-sky-700' : 'bg-white text-slate-700 active:bg-slate-100'
           }`}
         >
-          <Layers className="h-5 w-5" aria-hidden="true" />
-          Layers
+          <Layers className="h-5 w-5 shrink-0" aria-hidden="true" />
+          {t('layers.button')}
         </button>
         <button
           type="button"
           onClick={() => toggle('legend')}
           aria-expanded={open === 'legend'}
-          aria-label="What the colours mean"
+          aria-label={t('layers.legendLabel')}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg active:bg-slate-100"
         >
           <Info className="h-5 w-5" />
@@ -113,7 +128,7 @@ export default function LayerControls({ map, settings, onChange }: Props) {
 
       {riverStatus === 'error' && (
         <p role="status" className="max-w-[14rem] rounded-lg bg-white/95 px-3 py-2 text-xs text-slate-700 shadow">
-          River levels unavailable right now
+          {t('layers.riversUnavailable')}
         </p>
       )}
 
@@ -121,29 +136,53 @@ export default function LayerControls({ map, settings, onChange }: Props) {
         <ThreatChip map={map} onMore={() => setOpen('layers')} />
       </Suspense>
 
+      {open === 'language' && (
+        <div role="menu" aria-label={t('language.menu')} className="w-56 rounded-xl bg-white p-1 text-slate-800 shadow-lg">
+          {LANGUAGES.map(({ code, name }) => (
+            <button
+              key={code}
+              type="button"
+              role="menuitemradio"
+              aria-checked={i18n.language === code}
+              lang={code}
+              onClick={() => {
+                void setLanguage(code)
+                setOpen('none')
+              }}
+              className={`flex min-h-12 w-full items-center justify-between rounded-lg px-3 py-2 text-left text-base active:bg-slate-100 ${
+                i18n.language === code ? 'font-semibold text-sky-700' : ''
+              }`}
+            >
+              {name}
+              {i18n.language === code && <span aria-hidden="true">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
       {open === 'layers' && (
-        <div className="max-h-[max(12rem,calc(100dvh-26.5rem))] w-72 overflow-y-auto rounded-xl bg-white p-2 text-slate-800 shadow-lg">
+        <div className="max-h-[max(12rem,calc(100dvh-26.5rem-var(--banner-extra,0px)))] w-72 overflow-y-auto rounded-xl bg-white p-2 text-slate-800 shadow-lg">
           <Suspense fallback={null}>
             <ThreatList />
           </Suspense>
           <Toggle
             icon={<TriangleAlert className="h-5 w-5" aria-hidden="true" />}
-            label="Reports"
-            hint="Blocked and restricted roads always show. Switch on to add passable ones."
+            label={t('layers.reports')}
+            hint={t('layers.reportsHint')}
             checked={settings.passableReports}
             onChange={(value) => onChange('passableReports', value)}
           />
           <Toggle
             icon={<Droplets className="h-5 w-5" aria-hidden="true" />}
-            label="Rivers"
-            hint="Gauges at Alert or above always show. Switch on to add the rest."
+            label={t('layers.rivers')}
+            hint={t('layers.riversHint')}
             checked={settings.normalRivers}
             onChange={(value) => onChange('normalRivers', value)}
           />
           <Toggle
             icon={<CloudRain className="h-5 w-5" aria-hidden="true" />}
-            label="Rain"
-            hint="Heavy rain and thunderstorms always show. Switch on to add light and moderate rain."
+            label={t('layers.rain')}
+            hint={t('layers.rainHint')}
             checked={settings.mildRain}
             onChange={(value) => onChange('mildRain', value)}
           />
@@ -152,40 +191,40 @@ export default function LayerControls({ map, settings, onChange }: Props) {
           )}
           {rain.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
-              Rain forecast unavailable right now
+              {t('layers.forecastUnavailable')}
             </p>
           )}
           {/* The map carries on with the forecast alone, so this is only a quiet note */}
           {measured.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
-              Measured rain unavailable right now
+              {t('layers.measuredUnavailable')}
             </p>
           )}
 
           <Toggle
             icon={<Globe className="h-5 w-5" aria-hidden="true" />}
-            label="Global alerts"
-            hint="Orange and Red alerts for Sri Lanka and nearby (GDACS) always show. Switch on to add Green ones."
+            label={t('layers.globalAlerts')}
+            hint={t('layers.globalAlertsHint')}
             checked={settings.greenAlerts}
             onChange={(value) => onChange('greenAlerts', value)}
           />
           {alerts.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
-              Global alerts unavailable right now
+              {t('layers.alertsUnavailable')}
             </p>
           )}
 
           <div className="mt-1 border-t border-slate-200 pt-1">
-            <ComingSoon icon={<Mountain className="h-5 w-5" aria-hidden="true" />} label="Landslide warnings" />
+            <ComingSoon icon={<Mountain className="h-5 w-5" aria-hidden="true" />} label={t('layers.landslides')} soon={t('layers.comingSoon')} />
           </div>
         </div>
       )}
 
       {open === 'legend' && (
-        <div className="max-h-[max(12rem,calc(100dvh-26.5rem))] w-64 overflow-y-auto rounded-xl bg-white p-3 text-slate-800 shadow-lg">
-          <p className="text-sm font-semibold">River gauge colours</p>
+        <div className="max-h-[max(12rem,calc(100dvh-26.5rem-var(--banner-extra,0px)))] w-64 overflow-y-auto rounded-xl bg-white p-3 text-slate-800 shadow-lg">
+          <p className="text-sm font-semibold">{t('legend.riverTitle')}</p>
           <ul className="mt-2 space-y-1.5">
-            {RIVER_LEGEND.map(({ step, meaning }) => (
+            {RIVER_LEGEND.map(({ step, key }) => (
               <li key={step} className="flex items-center gap-2 text-xs">
                 <Droplet
                   className="h-5 w-5 shrink-0"
@@ -196,19 +235,16 @@ export default function LayerControls({ map, settings, onChange }: Props) {
                   style={{ opacity: step === 'stale' ? 0.75 : 1, filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.6))' }}
                   aria-hidden="true"
                 />
-                <span>{meaning}</span>
+                <span>{t(key)}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-slate-600">
-            Alert, Minor flood and Major flood are the official steps set by the Department of Irrigation. Gauges at
-            those levels always show. The Layers menu adds all the others.
-          </p>
+          <p className="mt-3 text-xs text-slate-600">{t('legend.riverNote')}</p>
           <p className="mt-2 text-[11px] leading-tight text-slate-500">{RIVER_CREDIT}</p>
 
-          <p className="mt-4 text-sm font-semibold">Rain forecast colours</p>
+          <p className="mt-4 text-sm font-semibold">{t('legend.rainTitle')}</p>
           <ul className="mt-2 space-y-1.5">
-            {RAIN_LEGEND.map(({ color, meaning }) => (
+            {rainLegend().map(({ color, meaning }) => (
               <li key={meaning} className="flex items-center gap-2 text-xs">
                 <span
                   className="h-4 w-5 shrink-0 rounded-md border border-black/10"
@@ -220,13 +256,7 @@ export default function LayerControls({ map, settings, onChange }: Props) {
             ))}
           </ul>
           <p className="mt-3 text-xs text-slate-600">
-            Each square shows the worse of two things: the rain the satellite estimated over the past 3 hours, and
-            the forecast for the next 3 hours. Tap a square to see which. The small rain badges beside river gauges
-            show rain the gauge measured. Heavy rain, very heavy rain and thunderstorms always show. A forecast only
-            counts as a warning when the model gives at least a {FORECAST_MIN_PROBABILITY}% chance of rain, and for a
-            thunderstorm at least {THUNDER_MIN_MM} mm in the hour too. Weaker forecasts of storms and heavy showers are
-            not drawn: they get a line under Rain in the Layers menu. Moderate and light rain show when Rain is
-            switched on. Estimates and forecasts, not official warnings.
+            {t('legend.rainNote', { chance: FORECAST_MIN_PROBABILITY, mm: THUNDER_MIN_MM })}
           </p>
           <p className="mt-2 text-[11px] leading-tight text-slate-500">{GAUGE_RAIN_CREDIT}</p>
           <p className="mt-1 text-[11px] leading-tight text-slate-500">{SATELLITE_RAIN_CREDIT}</p>
@@ -237,24 +267,20 @@ export default function LayerControls({ map, settings, onChange }: Props) {
             </a>
           </p>
 
-          <p className="mt-4 text-sm font-semibold">Global alert colours</p>
+          <p className="mt-4 text-sm font-semibold">{t('legend.alertsTitle')}</p>
           <ul className="mt-2 space-y-1.5">
-            {GDACS_LEGEND.map(({ level, meaning }) => (
+            {GDACS_LEGEND.map(({ level, key }) => (
               <li key={level} className="flex items-center gap-2 text-xs">
                 <span
                   className="ml-1 h-3.5 w-3.5 shrink-0 rotate-45 rounded-[3px] border border-white shadow"
                   style={{ backgroundColor: GDACS_LEVEL_COLOR[level] }}
                   aria-hidden="true"
                 />
-                <span className="ml-1">{meaning}</span>
+                <span className="ml-1">{t(key)}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-slate-600">
-            Diamonds are alerts from GDACS about cyclones, earthquakes, floods, volcanoes, droughts and wildfires that
-            affect Sri Lanka or are within about 500 km of it. Orange and Red always show. Green shows when Global
-            alerts is switched on. A cyclone also shows its track and forecast area.
-          </p>
+          <p className="mt-3 text-xs text-slate-600">{t('legend.alertsNote')}</p>
           <p className="mt-2 text-[11px] leading-tight text-slate-500">{GDACS_CREDIT}</p>
         </div>
       )}
@@ -297,12 +323,12 @@ function Toggle({ icon, label, hint, checked, onChange }: ToggleProps) {
   )
 }
 
-function ComingSoon({ icon, label }: { icon: ReactNode; label: string }) {
+function ComingSoon({ icon, label, soon }: { icon: ReactNode; label: string; soon: string }) {
   return (
     <div aria-disabled="true" className="flex min-h-12 items-center gap-3 px-2 py-2 text-slate-400">
       {icon}
       <span className="flex-1 text-sm font-semibold">{label}</span>
-      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Coming soon</span>
+      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{soon}</span>
     </div>
   )
 }

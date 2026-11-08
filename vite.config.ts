@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import {
+  FONT_CACHE_NAME,
+  FONT_PATH_PREFIX,
   TILE_CACHE_DAYS,
   TILE_CACHE_MAX_ENTRIES,
   TILE_CACHE_NAME,
@@ -50,10 +52,11 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/waterlevels-api\//],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        // The map tiles are the only thing the service worker keeps besides the app
-        // itself. Supabase (sign-in, reports, votes), the routing function and every data
-        // source have no rule here, so they always go straight to the network. The data
-        // shown offline is saved by the app itself (see offline.ts), with its time.
+        // The map tiles and the two fallback fonts are the only things the service worker
+        // keeps besides the app itself (the Sinhala and Tamil text files are part of the app).
+        // Supabase (sign-in, reports, votes), the routing function and every data source have
+        // no rule here, so they always go straight to the network. The data shown offline is
+        // saved by the app itself (see offline.ts), with its time.
         runtimeCaching: [
           {
             urlPattern: TILE_URL_PATTERN,
@@ -66,6 +69,17 @@ export default defineConfig({
                 purgeOnQuotaError: true,
               },
               // Only proper answers: an error page must never be kept as a tile
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            // Our own files only, so no other site's address can ever match
+            urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+              sameOrigin && url.pathname.startsWith(FONT_PATH_PREFIX) && url.pathname.endsWith('.woff2'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: FONT_CACHE_NAME,
+              expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [200] },
             },
           },

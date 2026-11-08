@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { LatLngTuple } from 'leaflet'
 import { RAIN_COLOR, worstRain } from './rainForecast'
 import { warningAreas } from './rainMap'
@@ -12,8 +13,6 @@ import { useSeriousReports } from './useSeriousReports'
 
 const REPORT_COLOR = '#dc2626'
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
-
 export type ThreatPart = { text: string; color: string }
 
 // 'threats': there is something serious. 'clear': every source loaded and found nothing.
@@ -25,6 +24,7 @@ export type ThreatState = 'threats' | 'clear' | 'partial' | 'loading'
 // list and the Layers panel shows all of it. Its own file, because the report data
 // comes from Supabase, which loads after the map.
 export function useThreats(): { parts: ThreatPart[]; points: LatLngTuple[]; state: ThreatState } {
+  const { t } = useTranslation()
   const rivers = useRiverGauges()
   const reports = useSeriousReports()
   const forecast = useRainMap()
@@ -46,26 +46,26 @@ export function useThreats(): { parts: ThreatPart[]; points: LatLngTuple[]; stat
   const parts: ThreatPart[] = []
   const riverWorst = worstStep(floods)
   if (riverWorst) {
-    parts.push({ text: `${plural(floods.length, 'river', 'rivers')} at flood level`, color: STEP_COLOR[riverWorst] })
+    parts.push({ text: t('chip.river', { count: floods.length }), color: STEP_COLOR[riverWorst] })
   }
   if (roadReports.length > 0) {
-    parts.push({ text: plural(roadReports.length, 'serious report', 'serious reports'), color: REPORT_COLOR })
+    parts.push({ text: t('chip.report', { count: roadReports.length }), color: REPORT_COLOR })
   }
   if (globalAlerts.length > 0) {
     const worst = globalAlerts.some((e) => e.level === 'Red') ? 'Red' : 'Orange'
-    parts.push({ text: plural(globalAlerts.length, 'global alert', 'global alerts'), color: GDACS_LEVEL_COLOR[worst] })
+    parts.push({ text: t('chip.alert', { count: globalAlerts.length }), color: GDACS_LEVEL_COLOR[worst] })
   }
   if (stormAreas.length > 0) {
-    parts.push({ text: `thunderstorms in ${plural(stormAreas.length, 'area', 'areas')}`, color: RAIN_COLOR.thunder })
+    parts.push({ text: t('chip.storm', { count: stormAreas.length }), color: RAIN_COLOR.thunder })
   }
   if (heavyAreas.length > 0) {
     const worst = worstRain(heavyAreas.flat().map((c) => c.level ?? 'heavy')) ?? 'heavy'
-    parts.push({ text: `heavy rain in ${plural(heavyAreas.length, 'area', 'areas')}`, color: RAIN_COLOR[worst] })
+    parts.push({ text: t('chip.heavy', { count: heavyAreas.length }), color: RAIN_COLOR[worst] })
   }
   const gaugeWorst = worstRain(gaugesHeavy.map((g) => g.level ?? 'heavy'))
   if (gaugeWorst) {
     parts.push({
-      text: `heavy rain measured at ${plural(gaugesHeavy.length, 'gauge', 'gauges')}`,
+      text: t('chip.gauge', { count: gaugesHeavy.length }),
       color: RAIN_COLOR[gaugeWorst],
     })
   }

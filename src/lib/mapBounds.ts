@@ -14,6 +14,12 @@ export const SRI_LANKA_LIMITS: LatLngBoundsLiteral = [
   [10.2, 82.25],
 ]
 
+// The Locate, Report and Route buttons sit in a column down the right edge, about 72 px
+// wide. The map keeps this much room free on the right when it opens and at its furthest
+// zoom-out, and can be dragged this far past the island, so the east coast (a rain gauge
+// near Yala, say) is never stuck under a button.
+export const BUTTON_COLUMN_PX = 80
+
 export type BoxBounds = { minLng: number; minLat: number; maxLng: number; maxLat: number }
 
 // Rounds to 2 decimals (about 1 km), so tiny pans reuse the same cached query. Rounds
