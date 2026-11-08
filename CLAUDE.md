@@ -170,6 +170,7 @@ Work on one step at a time. Do not start the next step until asked.
 - New logic should come with tests. Keep the logic in pure functions (in `src/lib`) where possible, so it can be tested without a browser or network, and add or update its `*.test.ts` file in the same change.
 - When testing, never leave a dev server running after you finish, and only stop processes you started yourself.
 - All new user-facing text must be added to all three translation files (en, si, ta).
+- Never run git add, git commit, git push, git reset, git checkout, git stash or any other git command that changes files, the staging area or history, even if a prompt asks you to. Wishwa does all of that by hand. Read-only commands (git status, git diff, git log, git show) are fine. When work is done, just say it's ready to commit and suggest a commit message.
 
 ## Commands
 
