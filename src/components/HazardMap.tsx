@@ -58,6 +58,13 @@ export default function HazardMap() {
   // The buttons down the right fade out while a card is open, so they can't cover it
   const cardOpen = useCardOpen(map)
 
+  // Opening the route panel closes any open map card, so the two never sit on screen together.
+  // (Collapsing it, or showing a hazard from it, leaves cards alone: showing one opens its card.)
+  function changePanel(next: PanelState) {
+    if (next === 'open') map?.closePopup()
+    setPanel(next)
+  }
+
   function showHazard(hazard: RouteHazard) {
     if (!map) return
     // Out of the way of the map, then jump there. Without animation the marker
@@ -197,7 +204,7 @@ export default function HazardMap() {
                   return
                 }
                 setPlannerOpened(true)
-                setPanel('open')
+                changePanel('open')
               }}
               aria-disabled={!online && !route}
               aria-label={t('route.title')}
@@ -216,7 +223,7 @@ export default function HazardMap() {
                 userLatLng={userLatLng}
                 hidden={picking}
                 panel={panel}
-                onPanelChange={setPanel}
+                onPanelChange={changePanel}
                 route={route}
                 onRouteChange={setRoute}
                 alternative={alternative}

@@ -231,6 +231,11 @@ const en = {
       'Heavy showers possible in parts of the island over the next 3 hours (forecast, low confidence)',
     possibleBoth:
       'Thunderstorms and heavy showers possible in parts of the island over the next 3 hours (forecast, low confidence)',
+    // Used instead of the two above when the map already shows forecast thunderstorm areas
+    possibleStormsAlso:
+      'Thunderstorms may also develop in other parts of the island over the next 3 hours (forecast, low confidence)',
+    possibleBothAlso:
+      'Thunderstorms may also develop in other parts of the island, and heavy showers are possible, over the next 3 hours (forecast, low confidence)',
   },
 
   legend: {

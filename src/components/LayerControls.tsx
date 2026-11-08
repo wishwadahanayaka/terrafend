@@ -19,6 +19,7 @@ import { GAUGE_RAIN_CREDIT, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
 import { GDACS_CREDIT, GDACS_LEVEL_COLOR, type GdacsLevel } from '../lib/gdacs'
 import { useGdacsEvents } from '../lib/useGdacs'
 import { useMeasuredRain } from '../lib/useMeasuredRain'
+import { possibleNoteKey } from '../lib/rainMap'
 import { useRainMap } from '../lib/useRainMap'
 import { sriLankaWhen } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
@@ -71,11 +72,8 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
 
   // Forecast storms and heavy showers that don't pass the tests for a warning are not
   // drawn, because there are often dozens of them. They get this one line instead.
-  const possible = rain.status === 'success' ? rain.data.cells.flatMap((c) => c.possible ?? []) : []
-  const storms = possible.includes('thunderPossible')
-  const showers = possible.includes('heavyShowers')
-  const possibleNote =
-    storms || showers ? t(storms && showers ? 'layers.possibleBoth' : storms ? 'layers.possibleStorms' : 'layers.possibleShowers') : null
+  const possibleKey = rain.status === 'success' ? possibleNoteKey(rain.data.cells) : null
+  const possibleNote = possibleKey ? t(`layers.${possibleKey}`) : null
   const [open, setOpen] = useState<Open>('none')
 
   // A map card opening, or a tap on the map, closes the panel so it can't cover anything
@@ -90,7 +88,13 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
     }
   }, [map])
 
-  const toggle = (which: Exclude<Open, 'none'>) => setOpen((current) => (current === which ? 'none' : which))
+  // Only one thing is open at a time on a small screen: opening a panel closes any map card
+  // (opening a card closes the panel too, above)
+  function show(which: Exclude<Open, 'none'>) {
+    map?.closePopup()
+    setOpen(which)
+  }
+  const toggle = (which: Exclude<Open, 'none'>) => (open === which ? setOpen('none') : show(which))
 
   return (
     <div className="absolute right-4 top-[calc(var(--banner-bottom,56px)+1rem)] z-[1000] flex flex-col items-end gap-2">
@@ -122,6 +126,7 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
         <button
           type="button"
           onClick={() => {
+            map?.closePopup()
             setOpen('none')
             onOpenMyReports()
           }}
@@ -149,7 +154,7 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
       )}
 
       <Suspense fallback={null}>
-        <ThreatChip map={map} onMore={() => setOpen('layers')} />
+        <ThreatChip map={map} onMore={() => show('layers')} />
       </Suspense>
 
       {open === 'language' && (

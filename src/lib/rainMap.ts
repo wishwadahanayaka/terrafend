@@ -184,6 +184,22 @@ export function pickWindow(grid: ForecastGrid, now: number): RainMap | null {
   return { cells, from: grid.fetchedAt, to: ends[ends.length - 1] }
 }
 
+// Which translation key the one "possible" line in the Layers panel uses, or null for none.
+// When the map already shows thunderstorm areas (forecast cells at 'thunder'; the satellite can
+// never produce one, and thunder outranks everything, so those are exactly the ones drawn), the
+// line says storms may also develop in OTHER parts, so it doesn't read as if the drawn areas were
+// the only guess. The key is for t('layers.<key>').
+export type PossibleNoteKey = 'possibleStorms' | 'possibleStormsAlso' | 'possibleShowers' | 'possibleBoth' | 'possibleBothAlso'
+
+export function possibleNoteKey(cells: { level: RainLevel | null; possible: PossibleLevel | null }[]): PossibleNoteKey | null {
+  const storms = cells.some((c) => c.possible === 'thunderPossible')
+  const showers = cells.some((c) => c.possible === 'heavyShowers')
+  const shown = cells.some((c) => c.level === 'thunder')
+  if (storms && showers) return shown ? 'possibleBothAlso' : 'possibleBoth'
+  if (storms) return shown ? 'possibleStormsAlso' : 'possibleStorms'
+  return showers ? 'possibleShowers' : null
+}
+
 export type RainMapState =
   | { status: 'pending' | 'error'; data: null; olderFrom: null }
   // olderFrom: when the forecast on show was loaded, set only when the latest refresh failed

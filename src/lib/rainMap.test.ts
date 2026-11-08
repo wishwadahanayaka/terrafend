@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { HOUR_MS, labelForHourEnd, type Hourly } from './openMeteo'
-import { buildGrid, landGrid, pickWindow, rainMapState, type ForecastGrid } from './rainMap'
+import { buildGrid, landGrid, pickWindow, possibleNoteKey, rainMapState, type ForecastGrid } from './rainMap'
 
 // 4 Nov 2026 is the day. Hour labels are Sri Lanka time, so "14:00" is 08:30 UTC.
 const MIDNIGHT = Date.parse('2026-11-03T18:30:00Z') // 00:00 on the 4th in Sri Lanka
@@ -131,6 +131,37 @@ describe('when the forecast is too old to cover the next 3 hours', () => {
   it('gives nothing for a forecast from a different grid', () => {
     const odd: ForecastGrid = { ...buildGrid(hourly(), at(14)), cells: [] }
     expect(pickWindow(odd, at(14))).toBeNull()
+  })
+})
+
+describe('the "possible" line in the Layers panel', () => {
+  const dry = { level: null, possible: null } as const
+  const storm = { level: null, possible: 'thunderPossible' } as const
+  const showers = { level: null, possible: 'heavyShowers' } as const
+  const shownStorm = { level: 'thunder', possible: null } as const
+
+  it('says nothing when nothing is only possible', () => {
+    expect(possibleNoteKey([])).toBeNull()
+    expect(possibleNoteKey([dry, dry])).toBeNull()
+    // Storm areas on the map alone don't call for a "possible" line
+    expect(possibleNoteKey([shownStorm, dry])).toBeNull()
+  })
+
+  it('keeps the current wording when the map shows no thunderstorm areas', () => {
+    expect(possibleNoteKey([dry, storm])).toBe('possibleStorms')
+    expect(possibleNoteKey([storm, showers])).toBe('possibleBoth')
+    expect(possibleNoteKey([showers, dry])).toBe('possibleShowers')
+    // A heavy rain area is not a thunderstorm area
+    expect(possibleNoteKey([{ level: 'heavy', possible: null }, storm])).toBe('possibleStorms')
+  })
+
+  it('says storms may also develop elsewhere when the map already shows thunderstorm areas', () => {
+    expect(possibleNoteKey([shownStorm, storm])).toBe('possibleStormsAlso')
+    expect(possibleNoteKey([shownStorm, storm, showers])).toBe('possibleBothAlso')
+  })
+
+  it('leaves the heavy showers line alone even with storm areas shown', () => {
+    expect(possibleNoteKey([shownStorm, showers])).toBe('possibleShowers')
   })
 })
 
