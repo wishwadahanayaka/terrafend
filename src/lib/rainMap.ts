@@ -1,5 +1,6 @@
-import { currentHourEnd, fetchHourly, HOUR_MS, labelForHourEnd } from './openMeteo'
+import { currentHourEnd, fetchHourly, HOUR_MS, labelForHourEnd, type Hourly } from './openMeteo'
 import { kmFrom, readFakeRainMap } from './fakeRainMap'
+import { forecastTooOld } from './forecastAge'
 import { forecastHour, RAIN_RANK, type MildLevel, type PossibleLevel, type RainLevel } from './rainForecast'
 
 // How many hours ahead the map looks. Each grid cell shows the worst of them.
@@ -90,8 +91,20 @@ export type RainMap = {
   // Every grid cell in the same order as landGrid(), dry ones included. Which cell is
   // nearest to a place can only be worked out if the dry ones are there too.
   cells: RainCell[]
+  // When the forecast behind it was loaded, and the end of the 3 hours it shows
   from: number
   to: number
+}
+
+// What the one island request brings back, kept as it is: the hourly numbers for every cell,
+// from the hour it was loaded until the end of tomorrow. The "next 3 hours" are picked from
+// it when the map is drawn, so an older forecast stays right as the hours go by.
+export type ForecastGrid = {
+  fetchedAt: number
+  // Sri Lanka hour labels like "2026-11-03T14:00", the same for every cell
+  times: string[]
+  // In the same order as landGrid()
+  cells: { mm: (number | null)[]; code: (number | null)[]; chance: (number | null)[] }[]
 }
 
 // Higher is worse. Any warning beats any quieter level.
@@ -100,18 +113,49 @@ export function rainScore(level: RainLevel | null, mild: MildLevel | null): numb
   return mild === 'moderate' ? 2 : mild === 'light' ? 1 : 0
 }
 
-// One request for the whole island: each cell gets the worst of the next few hours
-export async function fetchRainMap(): Promise<RainMap> {
-  const { cells: points } = landGrid()
-  const forecasts = await fetchHourly(points)
+// Keeps the hours from the current one onward (earlier ones are of no use to anyone), and
+// checks every cell came back with the same hours, since they are stored once for all of them.
+export function buildGrid(forecasts: Hourly[], now: number): ForecastGrid {
+  const times = forecasts[0]?.time
+  if (!times || forecasts.some((f) => f.time.length !== times.length || f.time.some((t, i) => t !== times[i]))) {
+    throw new Error('Rain forecast: unexpected answer')
+  }
+  const first = times.indexOf(labelForHourEnd(currentHourEnd(now)))
+  const from = first === -1 ? 0 : first
+  return {
+    fetchedAt: now,
+    times: times.slice(from),
+    cells: forecasts.map((f) => ({
+      mm: f.precipitation.slice(from),
+      code: f.weather_code.slice(from),
+      chance: f.probability.slice(from),
+    })),
+  }
+}
 
-  const now = Date.now()
+// One request for the whole island
+export async function fetchForecastGrid(): Promise<ForecastGrid> {
+  const forecasts = await fetchHourly(landGrid().cells)
+  const grid = buildGrid(forecasts, Date.now())
+  if (pickWindow(grid, grid.fetchedAt) === null) throw new Error('Rain forecast: no hours covered')
+  return grid
+}
+
+// The next 3 hours as they are at `now`: each cell gets the worst of them. Null when the
+// forecast doesn't reach all 3 hours any more, or was fetched more than 6 hours ago (forecastAge.ts).
+// The screens redraw this once an hour, so useRainMap also checks the age on its own timer.
+export function pickWindow(grid: ForecastGrid, now: number): RainMap | null {
+  if (forecastTooOld(grid.fetchedAt, now)) return null
   const firstEnd = currentHourEnd(now)
   const ends = Array.from({ length: WINDOW_HOURS }, (_, i) => firstEnd + i * HOUR_MS)
-  const labels = ends.map(labelForHourEnd)
+  const at = ends.map((end) => grid.times.indexOf(labelForHourEnd(end)))
+  if (at.includes(-1)) return null
 
-  let covered = false
-  const all: RainCell[] = points.map((point, i) => {
+  const points = landGrid().cells
+  if (grid.cells.length !== points.length) return null
+
+  const cells: RainCell[] = points.map((point, i) => {
+    const hours = grid.cells[i]
     const cell: RainCell = {
       ...point,
       level: null,
@@ -122,13 +166,10 @@ export async function fetchRainMap(): Promise<RainMap> {
       hourStart: ends[0] - HOUR_MS,
     }
     let best = 0
-    for (const [h, label] of labels.entries()) {
-      const index = forecasts[i].time.indexOf(label)
-      if (index === -1) continue
-      covered = true
-      const mm = forecasts[i].precipitation[index]
-      const probability = forecasts[i].probability[index]
-      const { level, mild, possible } = forecastHour(mm, forecasts[i].weather_code[index], probability)
+    for (const [h, index] of at.entries()) {
+      const mm = hours.mm[index]
+      const probability = hours.chance[index]
+      const { level, mild, possible } = forecastHour(mm, hours.code[index], probability)
       // A thunderstorm note beats a heavy showers one
       if (possible && (!cell.possible || possible === 'thunderPossible')) cell.possible = possible
       // Strictly worse only, so a tie keeps the earlier hour
@@ -139,15 +180,34 @@ export async function fetchRainMap(): Promise<RainMap> {
     }
     return cell
   })
-  if (!covered) throw new Error('Rain forecast: no hours covered')
 
-  if (import.meta.env.DEV) applyTestRain(all, ends[0] - HOUR_MS)
+  return { cells, from: grid.fetchedAt, to: ends[ends.length - 1] }
+}
 
-  return {
-    cells: all,
-    from: now,
-    to: ends[ends.length - 1],
-  }
+export type RainMapState =
+  | { status: 'pending' | 'error'; data: null; olderFrom: null }
+  // olderFrom: when the forecast on show was loaded, set only when the latest refresh failed
+  // and this is the last one that worked
+  | { status: 'success'; data: RainMap; olderFrom: number | null }
+
+// What the screens are told. The forecast is 'success' as long as it still reaches the next
+// 3 hours, even if the latest refresh failed (then olderFrom says when it is from). Only with
+// nothing usable left is it 'error', or 'pending' while a try is under way.
+export function rainMapState(
+  grid: ForecastGrid | undefined,
+  map: RainMap | null,
+  query: { isError: boolean; isFetching: boolean; isPending: boolean },
+): RainMapState {
+  if (grid && map) return { status: 'success', data: map, olderFrom: query.isError ? grid.fetchedAt : null }
+  if (grid ? query.isFetching : query.isPending) return { status: 'pending', data: null, olderFrom: null }
+  return { status: 'error', data: null, olderFrom: null }
+}
+
+// What the map draws: the window at `now`, plus the dev test rain on top
+export function rainMapAt(grid: ForecastGrid, now: number): RainMap | null {
+  const map = pickWindow(grid, now)
+  if (map && import.meta.env.DEV) applyTestRain(map.cells, currentHourEnd(now) - HOUR_MS)
+  return map
 }
 
 type Square = GridCell & { level: RainLevel | null }

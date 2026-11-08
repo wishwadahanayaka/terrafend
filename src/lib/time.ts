@@ -52,6 +52,12 @@ export function sriLankaDay(ms: number): string {
   return t('time.dayMonth', { day, month: t(`time.month.${month}`) })
 }
 
+// The time of day for today, and with the day for any other day, since a bare "2:15 pm"
+// would mislead for something from yesterday
+export function sriLankaWhen(ms: number, now = Date.now()): string {
+  return sriLankaDay(ms) === sriLankaDay(now) ? sriLankaClock(ms) : `${sriLankaDay(ms)}, ${sriLankaClock(ms)}`
+}
+
 // The API sends UTC; people here think in Sri Lanka time wherever their phone is set
 export function sriLankaTime(iso: string): string {
   const ms = new Date(iso).getTime()

@@ -15,7 +15,9 @@ import {
   type RainStretch,
 } from '../lib/rainForecast'
 import { satelliteStretchText, type RecentRain } from '../lib/routeRecentRain'
-import { sriLankaClock } from '../lib/time'
+import { retryAtOf } from '../lib/openMeteoLimit'
+import { sriLankaClock, sriLankaWhen } from '../lib/time'
+import { useWaiting } from '../lib/useWaiting'
 
 function describe(s: RainStretch): string {
   return t(s.fromKm === s.toKm ? 'rain.section.stretch_point' : 'rain.section.stretch_range', {
@@ -49,6 +51,9 @@ function Item({ icon, color, children }: { icon: 'storm' | 'rain'; color: string
 // light and moderate lines, so the section tells one story that matches the map.
 export default function RainSection({ rain, onSelect, recent }: Props) {
   const { t } = useTranslation()
+  // After a 429 the button waits for the time Open-Meteo is being left alone until
+  const retryAt = retryAtOf(rain.error)
+  const waiting = useWaiting(retryAt)
   const stretches = rain.data?.stretches ?? []
   const forecastQuiet = rain.data?.mild ?? null
   const warnings = stretches.length + recent.satellite.length + recent.gauges.length
@@ -61,7 +66,27 @@ export default function RainSection({ rain, onSelect, recent }: Props) {
       <p className="text-sm font-semibold text-slate-900">{t('rain.section.title')}</p>
 
       {rain.isPending && <p className="mt-1 text-sm text-slate-600">{t('rain.section.checking')}</p>}
-      {rain.isError && <p className="mt-1 text-sm text-slate-600">{t('rain.section.unavailable')}</p>}
+      {rain.isError && (
+        <div className="mt-1">
+          {/* A refresh can fail while the answer from before is still here. It stays on show, with its time. */}
+          <p className="text-sm text-slate-600">
+            {rain.data
+              ? t('rain.section.forecastFrom', { when: sriLankaWhen(rain.dataUpdatedAt) })
+              : t('rain.section.unavailable')}
+          </p>
+          {waiting && retryAt !== null && (
+            <p className="mt-1 text-xs text-slate-600">{t('rain.section.waitUntil', { when: sriLankaClock(retryAt) })}</p>
+          )}
+          <button
+            type="button"
+            onClick={() => rain.refetch()}
+            disabled={waiting || rain.isFetching}
+            className="mt-1 h-11 rounded-lg px-2 text-sm font-medium text-blue-700 disabled:text-slate-400"
+          >
+            {rain.isFetching ? t('rain.section.checking') : t('common.tryAgain')}
+          </button>
+        </div>
+      )}
 
       {/* Only said when every source looked and found less than light rain. If the measured
           rain couldn't be loaded, it's only the forecast that was checked. */}

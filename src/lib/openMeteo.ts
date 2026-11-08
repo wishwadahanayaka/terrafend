@@ -1,6 +1,15 @@
 // The hourly rain request shared by the route check and the island-wide rain map.
 // No key is needed, but the credit has to stay visible wherever the data is shown.
 
+import {
+  limitReason,
+  OpenMeteoError,
+  parseRetryAfter,
+  rateLimitedUntil,
+  rateLimitWait,
+  rememberRateLimit,
+} from './openMeteoLimit'
+
 const API_URL = 'https://api.open-meteo.com/v1/forecast'
 const FETCH_TIMEOUT_MS = 10_000
 
@@ -56,9 +65,44 @@ function parseHourly(entry: unknown): Hourly {
   return { time, precipitation, weather_code, probability }
 }
 
+// A 429 is remembered, so nothing asks again until the wait is over. `waitMs` is only given
+// by the dev fake, which cuts the wait short.
+function rateLimited(reason: string | null, retryAfterMs: number | null, waitMs?: number): OpenMeteoError {
+  const now = Date.now()
+  const retryAt = now + (waitMs ?? rateLimitWait(reason, retryAfterMs))
+  // The dev fake keeps the wait in memory only, so it can't leave anything behind
+  rememberRateLimit(retryAt, waitMs === undefined)
+  console.warn(
+    `Open-Meteo is limiting requests (429): ${reason ?? 'no reason given'}. ` +
+      `Waiting until ${new Date(retryAt).toLocaleTimeString()} before asking again.`,
+  )
+  return new OpenMeteoError(`Rain forecast: HTTP 429${reason ? `: ${reason}` : ''}`, 429, reason, retryAt)
+}
+
+async function failureOf(res: Response): Promise<OpenMeteoError> {
+  let reason: string | null = null
+  try {
+    reason = limitReason(await res.json())
+  } catch {
+    // no readable reason
+  }
+  if (res.status === 429) return rateLimited(reason, parseRetryAfter(res.headers.get('Retry-After'), Date.now()))
+  return new OpenMeteoError(`Rain forecast: HTTP ${res.status}${reason ? `: ${reason}` : ''}`, res.status, reason, null)
+}
+
 // One request for all the places, answered in the same order. Hours are in Sri Lanka
 // time, today and tomorrow, so a trip or a 3-hour window can cross midnight.
 export async function fetchHourly(places: { lat: number; lng: number }[]): Promise<Hourly[]> {
+  // After a 429 nothing is sent until the wait is over
+  const waiting = rateLimitedUntil()
+  if (waiting !== null) {
+    throw new OpenMeteoError('Rain forecast: waiting after a 429', 429, null, waiting)
+  }
+  if (import.meta.env.DEV) {
+    const fake = await import('./fakeForecast')
+    if (fake.fakeForecastFails()) throw rateLimited(fake.FAKE_REASON, null, fake.FAKE_WAIT_MS)
+  }
+
   // Two decimals is about 1 km, finer than the forecast's own grid
   const lat = places.map((p) => p.lat.toFixed(2)).join(',')
   const lng = places.map((p) => p.lng.toFixed(2)).join(',')
@@ -66,7 +110,7 @@ export async function fetchHourly(places: { lat: number; lng: number }[]): Promi
     `${API_URL}?latitude=${lat}&longitude=${lng}&hourly=precipitation,weather_code,precipitation_probability` +
     `&timezone=Asia%2FColombo&forecast_days=2`
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
-  if (!res.ok) throw new Error(`Rain forecast: HTTP ${res.status}`)
+  if (!res.ok) throw await failureOf(res)
 
   // One place comes back as an object, several as a list
   const json: unknown = await res.json()

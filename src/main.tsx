@@ -6,7 +6,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import './index.css'
 import App from './App.tsx'
 import { startI18n } from './i18n'
-import { dropOldQueries, SAVED_MAX_AGE_MS, shouldSave } from './lib/offline'
+import { dropOldQueries, SAVED_MAX_AGE_MS, shouldSaveQuery } from './lib/offline'
 
 const queryClient = new QueryClient()
 
@@ -15,22 +15,26 @@ const queryClient = new QueryClient()
 onlineManager.setOnline(navigator.onLine)
 
 // The dev switches (?fakeRiver=, ?fakeRainMap=, ...) change the data after it is loaded,
-// so with any of them on, nothing is saved or restored: test data must never be kept
-// and turn up later in a normal session.
+// so with any of them on, only the island forecast is saved and restored, in a file of its own
+// (the normal one is left alone). It is safe because the fake rain is put on top of the forecast
+// when it is drawn, so reloads while testing reuse it instead of asking Open-Meteo every time.
+// Everything else stays unsaved, so test data never turns up later in a normal session.
 const usingFakes = import.meta.env.DEV && [...new URLSearchParams(location.search).keys()].some((k) => k.startsWith('fake'))
 
 // Where the last loaded data is kept on the phone. Null if the browser won't allow it
 // (some private windows), in which case the app just works without saved data.
 function makePersister(): Persister | null {
-  if (usingFakes) return null
   try {
-    const saver = createSyncStoragePersister({ storage: window.localStorage, key: 'terrafend:saved-data' })
+    const saver = createSyncStoragePersister({
+      storage: window.localStorage,
+      key: usingFakes ? 'terrafend:saved-data-dev' : 'terrafend:saved-data',
+    })
     return {
       persistClient: saver.persistClient,
       removeClient: saver.removeClient,
       restoreClient: async () => {
         const saved = await saver.restoreClient()
-        return saved && dropOldQueries(saved, Date.now())
+        return saved && dropOldQueries(saved, Date.now(), usingFakes)
       },
     }
   } catch {
@@ -68,7 +72,7 @@ createRoot(document.getElementById('root')!).render(
         persister,
         maxAge: SAVED_MAX_AGE_MS,
         buster: __BUILD_ID__,
-        dehydrateOptions: { shouldDehydrateQuery: (query) => query.state.status === 'success' && shouldSave(query.queryKey) },
+        dehydrateOptions: { shouldDehydrateQuery: (query) => shouldSaveQuery(query.queryKey, query.state, usingFakes) },
       }}
     >
       {app}

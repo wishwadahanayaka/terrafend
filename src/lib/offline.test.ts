@@ -10,6 +10,7 @@ import {
   reportsInBox,
   SAVED_MAX_AGE_MS,
   shouldSave,
+  shouldSaveQuery,
   sourceOf,
 } from './offline'
 import { TILE_CACHE_MAX_ENTRIES, TILE_URL_PATTERN } from './tileCache'
@@ -38,6 +39,39 @@ describe('what is saved', () => {
     expect(shouldSave(['reports', { minLng: 79, minLat: 5, maxLng: 82, maxLat: 10 }])).toBe(false)
     expect(shouldSave(['route-rain'])).toBe(false)
     expect(shouldSave([])).toBe(false)
+  })
+
+  it('with the dev test switches on, saves and restores only the forecast', () => {
+    expect(shouldSave(['rain-map'], true)).toBe(true)
+    for (const key of [['river-gauges'], ['rain-measured'], ['gdacs', 'core'], ['reports', 'island']]) {
+      expect(shouldSave(key, true)).toBe(false)
+      expect(shouldSave(key)).toBe(true)
+    }
+    expect(isSavedDataUsable(['rain-map'], NOW - HOUR, NOW, true)).toBe(true)
+    expect(isSavedDataUsable(['river-gauges'], NOW - HOUR, NOW, true)).toBe(false)
+  })
+
+  it('keeps only the forecast out of the saved file when the switches are on', () => {
+    const query = (key: unknown[]) => ({ queryKey: key, queryHash: JSON.stringify(key), state: { dataUpdatedAt: NOW - HOUR } })
+    const saved = {
+      timestamp: NOW,
+      buster: 'b',
+      clientState: { mutations: [], queries: [query(['river-gauges']), query(['rain-map']), query(['gdacs', 'core'])] },
+    } as unknown as PersistedClient
+    expect(dropOldQueries(saved, NOW, true).clientState.queries.map((q) => q.queryKey[0])).toEqual(['rain-map'])
+    expect(dropOldQueries(saved, NOW).clientState.queries).toHaveLength(3)
+  })
+
+  it('keeps the forecast in the saved file after a failed refresh, but not other data', () => {
+    const failed = { status: 'error', data: { fetchedAt: NOW } }
+    const failedWithNothing = { status: 'error', data: undefined }
+    expect(shouldSaveQuery(['rain-map'], { status: 'success', data: {} })).toBe(true)
+    expect(shouldSaveQuery(['rain-map'], failed)).toBe(true)
+    expect(shouldSaveQuery(['rain-map'], failedWithNothing)).toBe(false)
+    expect(shouldSaveQuery(['river-gauges'], failed)).toBe(false)
+    expect(shouldSaveQuery(['my-vote', 'x'], { status: 'success', data: {} })).toBe(false)
+    expect(shouldSaveQuery(['river-gauges'], { status: 'success', data: {} }, true)).toBe(false)
+    expect(shouldSaveQuery(['rain-map'], failed, true)).toBe(true)
   })
 
   it('drops saved data past its age, and the forecast sooner', () => {

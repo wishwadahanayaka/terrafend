@@ -1,5 +1,5 @@
 import { t } from '../i18n'
-import { fetchHourly, hourLabel } from './openMeteo'
+import { fetchHourly, hourLabel, type Hourly } from './openMeteo'
 import { cumulativeMetres, positionAt, sliceRoute } from './routeGeometry'
 import type { RouteResult } from './routing'
 
@@ -225,21 +225,37 @@ export type RainResult = {
   partial: boolean
 }
 
-export async function fetchRain(route: RouteResult): Promise<RainResult> {
+// What the route request brings back, as it is: the points along the route with the time the
+// driver would be at each, and the hourly numbers for each point. The warnings are worked out
+// from it when the panel is drawn (buildRain). "Leaving now" is the moment the route was checked.
+export type RouteForecast = {
+  departure: number
+  samples: Sample[]
+  hourly: Hourly[]
+}
+
+export async function fetchRouteForecast(route: RouteResult): Promise<RouteForecast> {
   const departure = Date.now()
   const samples = samplePoints(route, departure)
   if (samples.length === 0) throw new Error('Rain forecast: route too short')
 
-  const forecasts = await fetchHourly(samples)
+  const hourly = await fetchHourly(samples)
+  if (!samples.some((s, i) => hourly[i].time.includes(hourLabel(s.at)))) throw new Error('Rain forecast: no hours covered')
+  return { departure, samples, hourly }
+}
 
-  const readings: Reading[] = forecasts.map((hourly, i) => {
-    const index = hourly.time.indexOf(hourLabel(samples[i].at))
+// The same list of points, with the dev test rain applied to it (see applyTestRain)
+type Tweak = (samples: Sample[], readings: Reading[]) => void
+
+export function buildRain({ departure, samples, hourly }: RouteForecast, tweak?: Tweak): RainResult {
+  const readings: Reading[] = hourly.map((hours, i) => {
+    const index = hours.time.indexOf(hourLabel(samples[i].at))
     if (index === -1) return null
-    const mm = hourly.precipitation[index]
-    const probability = hourly.probability[index]
-    return { ...forecastHour(mm, hourly.weather_code[index], probability), mm, probability }
+    const mm = hours.precipitation[index]
+    const probability = hours.probability[index]
+    return { ...forecastHour(mm, hours.weather_code[index], probability), mm, probability }
   })
-  if (import.meta.env.DEV) applyTestRain(samples, readings)
+  tweak?.(samples, readings)
 
   const known = samples.filter((_, i) => readings[i] !== null)
   if (known.length === 0) throw new Error('Rain forecast: no hours covered')
@@ -281,6 +297,11 @@ export async function fetchRain(route: RouteResult): Promise<RainResult> {
     partial: known.length < samples.length,
   }
 }
+
+// The one function the route query uses to turn its saved answer into warnings. It stays
+// the same function between renders so the result is only worked out when the data changes.
+export const routeRainFrom = (forecast: RouteForecast): RainResult =>
+  buildRain(forecast, import.meta.env.DEV ? applyTestRain : undefined)
 
 // Rain this close to either end of the route is described as being at that end
 const END_ZONE_KM = 5

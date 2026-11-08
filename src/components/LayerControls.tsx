@@ -20,6 +20,7 @@ import { GDACS_CREDIT, GDACS_LEVEL_COLOR, type GdacsLevel } from '../lib/gdacs'
 import { useGdacsEvents } from '../lib/useGdacs'
 import { useMeasuredRain } from '../lib/useMeasuredRain'
 import { useRainMap } from '../lib/useRainMap'
+import { sriLankaWhen } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
 
 // Counts reports from Supabase, so it loads after the map like the other data code
@@ -207,6 +208,12 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
           {rain.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
               {t('layers.forecastUnavailable')}
+            </p>
+          )}
+          {/* A refresh failed, but the older forecast still reaches the next 3 hours, so it stays on the map */}
+          {rain.status === 'success' && rain.olderFrom !== null && (
+            <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
+              {t('layers.forecastFrom', { when: sriLankaWhen(rain.olderFrom) })}
             </p>
           )}
           {/* The map carries on with the forecast alone, so this is only a quiet note */}

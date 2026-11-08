@@ -222,6 +222,7 @@ const en = {
     comingSoon: 'Coming soon',
     riversUnavailable: 'River levels unavailable right now',
     forecastUnavailable: 'Rain forecast unavailable right now',
+    forecastFrom: 'Rain forecast from {{when}}. It could not be refreshed just now.',
     measuredUnavailable: 'Measured rain unavailable right now',
     alertsUnavailable: 'Global alerts unavailable right now',
     possibleStorms:
@@ -314,6 +315,8 @@ const en = {
       title: 'Rain along the route',
       checking: 'Checking the rain forecast…',
       unavailable: 'Rain forecast unavailable right now',
+      forecastFrom: 'Forecast from {{when}}. It could not be refreshed just now.',
+      waitUntil: 'The forecast service is limiting requests. You can try again at {{when}}.',
       noneRecent: 'No rain likely or recently measured along the route',
       noneLikely: 'No rain likely along the route',
       stretch_point: '{{label}} likely {{where}} (about {{time}})',

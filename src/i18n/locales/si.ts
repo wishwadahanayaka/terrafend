@@ -223,6 +223,7 @@ const si: Translations = {
     comingSoon: 'ඉක්මනින්',
     riversUnavailable: 'ගංගා මට්ටම් දැනට නොමැත',
     forecastUnavailable: 'වැසි අනාවැකිය දැනට නොමැත',
+    forecastFrom: '{{when}} වේලාවේ වැසි අනාවැකිය. එය දැන් අලුත් කිරීමට නොහැකි විය.',
     measuredUnavailable: 'මනින ලද වැසි දත්ත දැනට නොමැත',
     alertsUnavailable: 'ගෝලීය අනතුරු ඇඟවීම් දැනට නොමැත',
     possibleStorms:
@@ -315,6 +316,8 @@ const si: Translations = {
       title: 'ගමන් මාර්ගය දිගේ වැසි',
       checking: 'වැසි අනාවැකිය පරීක්ෂා කරමින්…',
       unavailable: 'වැසි අනාවැකිය දැනට නොමැත',
+      forecastFrom: '{{when}} වේලාවේ අනාවැකිය. එය දැන් අලුත් කිරීමට නොහැකි විය.',
+      waitUntil: 'අනාවැකි සේවාව ඉල්ලීම් සීමා කරමින් සිටී. ඔබට {{when}} ට නැවත උත්සාහ කළ හැක.',
       noneRecent: 'ගමන් මාර්ගය දිගේ වැසි ඇතිවීමට ඉඩක් නැත, මෑතදී වැසි මැනී ද නැත',
       noneLikely: 'ගමන් මාර්ගය දිගේ වැසි ඇතිවීමට ඉඩක් නැත',
       stretch_point: '{{where}} {{label}} ඇතිවීමට ඉඩ ඇත (ආසන්න වශයෙන් {{time}})',

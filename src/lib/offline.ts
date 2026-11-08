@@ -1,14 +1,15 @@
 import type { PersistedClient } from '@tanstack/react-query-persist-client'
 import { REPORTS_KEY } from './queryKeys'
 import { t } from '../i18n'
-import { sriLankaClock, sriLankaDay } from './time'
+import { sriLankaWhen } from './time'
 
 const HOUR_MS = 3_600_000
 
 // Saved data older than this is thrown away when the app opens. Six hours matches how
 // long a report lives and how long a gauge reading counts as current.
 export const SAVED_MAX_AGE_MS = 6 * HOUR_MS
-// A rain forecast only covers the next 3 hours, so an older one describes weather that has passed
+// A saved forecast is dropped sooner than the rest: the map shows the next 3 hours, and the
+// older a forecast is, the less it can be trusted for them
 export const FORECAST_SAVED_MAX_AGE_MS = 3 * HOUR_MS
 
 export type Source = 'rivers' | 'measured-rain' | 'forecast' | 'alerts' | 'reports'
@@ -34,19 +35,37 @@ export function sourceOf(key: readonly unknown[]): Source | null {
   }
 }
 
-export const shouldSave = (key: readonly unknown[]) => sourceOf(key) !== null
-
-export function isSavedDataUsable(key: readonly unknown[], updatedAt: number, now: number): boolean {
+// With the dev test switches on (?fakeRiver= and so on) only the forecast is kept. The
+// switches change the other data as it loads, and test data must never be saved. The forecast
+// is safe because the fake rain is put on top of it when it is drawn, not into what is saved.
+export function shouldSave(key: readonly unknown[], forecastOnly = false): boolean {
   const source = sourceOf(key)
-  if (!source) return false
+  return forecastOnly ? source === 'forecast' : source !== null
+}
+
+// Whether a query goes into the saved file right now. Only answers that loaded, except the
+// forecast: after a failed refresh its older numbers are still good for the next few hours
+// and must stay in the file, or a reload during an outage would lose them.
+export function shouldSaveQuery(
+  key: readonly unknown[],
+  state: { status: string; data: unknown },
+  forecastOnly = false,
+): boolean {
+  if (!shouldSave(key, forecastOnly)) return false
+  return state.status === 'success' || (sourceOf(key) === 'forecast' && state.data !== undefined)
+}
+
+export function isSavedDataUsable(key: readonly unknown[], updatedAt: number, now: number, forecastOnly = false): boolean {
+  const source = sourceOf(key)
+  if (!source || !shouldSave(key, forecastOnly)) return false
   const maxAge = source === 'forecast' ? FORECAST_SAVED_MAX_AGE_MS : SAVED_MAX_AGE_MS
   return now - updatedAt <= maxAge
 }
 
 // Run on what was saved, when the app opens. The library only checks the age of the whole
 // file, which is renewed every time anything is saved, so each query's own age is checked here.
-export function dropOldQueries(client: PersistedClient, now: number): PersistedClient {
-  const queries = client.clientState.queries.filter((q) => isSavedDataUsable(q.queryKey, q.state.dataUpdatedAt, now))
+export function dropOldQueries(client: PersistedClient, now: number, forecastOnly = false): PersistedClient {
+  const queries = client.clientState.queries.filter((q) => isSavedDataUsable(q.queryKey, q.state.dataUpdatedAt, now, forecastOnly))
   return { ...client, clientState: { ...client.clientState, queries } }
 }
 
@@ -67,9 +86,7 @@ export function dataFrom(entries: CacheEntry[]): number | null {
 
 export function offlineMessage(from: number | null, now = Date.now()): string {
   if (from === null) return t('offline.bannerNoData')
-  // The time of day alone would be misleading for data from another day
-  const when = sriLankaDay(from) === sriLankaDay(now) ? sriLankaClock(from) : `${sriLankaDay(from)}, ${sriLankaClock(from)}`
-  return t('offline.banner', { when })
+  return t('offline.banner', { when: sriLankaWhen(from, now) })
 }
 
 type Timed = { expires_at: string }
