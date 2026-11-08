@@ -156,6 +156,25 @@ How to read it:
 - `net._http_response` shows the function's answer. `skipped` means a run came within 30 minutes of the
   last one (that is the guard working). `rate_limited` or `failed` keep the old row.
 
+## How to test it
+
+Check that a phone really reads the cache and doesn't ask Open-Meteo:
+
+1. Open a **fresh Incognito (private) window**. It starts with no saved data.
+2. Open the browser's developer tools and the **Network** tab **before** loading the site.
+3. Type `forecast` in the Network filter box (it matches `island_forecast` and also `forecast-refresh`).
+4. Load https://terrafend.vercel.app.
+5. Expect one `island_forecast` request with status **200** (about 16 kB transferred), and **no** request to
+   `api.open-meteo.com`. The `api.open-meteo.com` host appears under the name `forecast?latitude=...`, so
+   it would show in the same filter. A CORS preflight `OPTIONS` row for `island_forecast` may come first.
+
+If you see an `api.open-meteo.com` request instead, the cache had nothing usable (no row yet, a row older
+than 150 minutes, or the read failed), and the app asked Open-Meteo itself. Run the health check above.
+
+**Clearing site data with the tab still open does not work for this.** The app saves its data again
+(`terrafend:saved-data`) right after it is cleared, so the next reload uses that saved copy and sends
+neither request. Use a fresh Incognito window, or close the tab before clearing the site data.
+
 ## If the grid changes
 
 The function reads its list of places from `supabase/functions/forecast-refresh/grid.json`, which is made
