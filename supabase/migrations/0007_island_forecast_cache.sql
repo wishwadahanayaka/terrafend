@@ -5,7 +5,7 @@
 -- (see docs/forecast-cache.md for the steps).
 --
 -- Builds on 0003, which turned on pg_cron, pg_net and Vault and stored the project_url secret.
--- Not run yet. Run it by hand in the SQL Editor after checking it. Everything is in one transaction,
+-- Run by hand in the SQL Editor. Everything is in one transaction,
 -- so it either all applies or none of it does.
 
 begin;

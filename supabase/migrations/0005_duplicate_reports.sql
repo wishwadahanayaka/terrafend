@@ -9,7 +9,7 @@
 --   5. report_confirmations(): how many people said "still there", and nothing else
 --   6. reports_in_view() and reports_along_route() now also return severity_updated_at
 --
--- Not run yet. Run it by hand in the SQL Editor after checking it.
+-- Run by hand in the SQL Editor.
 -- Everything is in one transaction, so it either all applies or none of it does.
 
 begin;

@@ -11,7 +11,7 @@
 --      active report of the caller's
 --
 -- Builds on 0005: edit_my_report sets reports.severity_updated_at, which 0005 adds. Run 0005
--- first. Not run yet. Run it by hand in the SQL Editor after checking it. Everything is in
+-- first. Run by hand in the SQL Editor. Everything is in
 -- one transaction, so it either all applies or none of it does.
 
 begin;

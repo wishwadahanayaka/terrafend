@@ -1,4 +1,5 @@
 import { t } from '../i18n'
+import { newPhotoPath } from './photoName'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
 
@@ -27,17 +28,14 @@ export async function uploadPhoto(file: File): Promise<UploadResult> {
     error: t('errors.uploadPhoto'),
   } as const
 
+  // Still needs a session: the upload rule is for signed-in users
   try {
     await ensureAnonymousSession()
   } catch {
     return failed
   }
-  const { data } = await supabase.auth.getSession()
-  const userId = data.session?.user.id
-  if (!userId) return failed
 
-  // The storage rules only allow <user id>/<file>, and no updates, so each upload gets a new name
-  const path = `${userId}/${crypto.randomUUID()}.jpg`
+  const path = newPhotoPath()
   const { error } = await supabase.storage
     .from(PHOTO_BUCKET)
     .upload(path, file, { upsert: false, contentType: 'image/jpeg' })

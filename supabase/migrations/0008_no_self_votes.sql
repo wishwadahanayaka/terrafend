@@ -28,7 +28,7 @@
 --    where v.user_id = r.created_by;
 --
 -- Builds on 0001 (the table report_votes, the trigger report_votes_apply and apply_vote()).
--- Not run yet. Run it by hand in the SQL Editor after checking it. Everything is in one
+-- Run by hand in the SQL Editor. Everything is in one
 -- transaction, so it either all applies or none of it does.
 
 begin;
