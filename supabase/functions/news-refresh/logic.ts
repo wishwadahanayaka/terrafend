@@ -5,7 +5,10 @@
 // Imports only the two lists next to it, and nothing Deno-only, so it loads in Deno and in the tests.
 
 import { HAZARDS, KEYWORDS, WORLD_SECTIONS, type Hazard } from './keywords.ts'
+import { cleanTitle, decodeEntities, normaliseUrl, unwrapCdata } from './shared.ts'
 import type { Lang, Source } from './sources.ts'
+
+export { cleanTitle, decodeEntities, isOwnHost, isOwnLink, MAX_TITLE, MAX_URL, normaliseUrl, tidyTitle } from './shared.ts'
 
 export const USER_AGENT =
   'TerraFend/1.0 (+https://terrafend.vercel.app; free Sri Lanka hazard map; contact: https://github.com/wishwadahanayaka/terrafend)'
@@ -38,8 +41,6 @@ export const BACKOFF_MIN = 60
 // After a 403 or 410 (blocked, or gone), once a day. Nothing tries to get round a block.
 export const BLOCKED_MIN = 24 * 60
 export const ROBOTS_MAX_AGE_MS = DAY
-export const MAX_TITLE = 300
-export const MAX_URL = 2048
 export const KEEP_SCORE = 2
 
 const SRI_LANKA_OFFSET = '+05:30'
@@ -72,73 +73,12 @@ export async function isAuthorised(sent: string | null, expected: string | undef
 
 // ---- Text ----
 
-const NAMED: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
-
-function decodeOnce(s: string): string {
-  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, name: string) => {
-    if (name[0] === '#') {
-      const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
-      const valid = Number.isFinite(code) && code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff)
-      return valid ? String.fromCodePoint(code) : ''
-    }
-    return NAMED[name.toLowerCase()] ?? whole
-  })
-}
-
-// Feeds often escape their HTML twice (&amp;#8217;), so this decodes twice
-export function decodeEntities(s: string): string {
-  return decodeOnce(decodeOnce(s))
-}
-
-const unwrapCdata = (s: string) => s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-
-// A headline as it is stored: no tags, no control or text-direction characters, single spaces, at
-// most 300 characters. The joiners Sinhala needs inside letters (U+200C, U+200D) are kept.
-export function cleanTitle(raw: string): string {
-  const text = decodeEntities(unwrapCdata(raw))
-    .replace(/<[^>]*>/g, ' ')
-    // Matching control characters is the point here: they are removed
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  const chars = Array.from(text)
-  return chars.length <= MAX_TITLE ? text : chars.slice(0, MAX_TITLE - 1).join('') + '…'
-}
-
 // Counts the letters of each script: Sinhala, then Tamil, else English
 export function detectLanguage(text: string): Lang {
   const si = text.match(/[඀-෿]/g)?.length ?? 0
   const ta = text.match(/[஀-௿]/g)?.length ?? 0
   if (si === 0 && ta === 0) return 'en'
   return si >= ta ? 'si' : 'ta'
-}
-
-// ---- Links ----
-
-export function isOwnHost(host: string, domains: string[]): boolean {
-  const h = host.toLowerCase()
-  return domains.some((d) => h === d || h === `www.${d}`)
-}
-
-// A link as it is stored: https only (http on the source's own site is moved up to https), on the
-// source's own site, no login part or port, no #part, no tracking parameters. null if it fails.
-// This is what stops a hacked feed from adding a link to somewhere else.
-export function normaliseUrl(raw: string, base: string, domains: string[]): string | null {
-  let u: URL
-  try {
-    u = new URL(raw.trim(), base)
-  } catch {
-    return null
-  }
-  if (u.protocol === 'http:') u.protocol = 'https:'
-  if (u.protocol !== 'https:' || u.username || u.password || u.port) return null
-  if (!isOwnHost(u.hostname, domains)) return null
-  u.hash = ''
-  for (const key of [...u.searchParams.keys()]) {
-    if (/^utm_/i.test(key) || key === 'fbclid' || key === 'gclid') u.searchParams.delete(key)
-  }
-  return u.href.length <= MAX_URL ? u.href : null
 }
 
 // ---- Times ----

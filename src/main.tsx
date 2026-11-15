@@ -6,7 +6,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import './index.css'
 import App from './App.tsx'
 import { startI18n } from './i18n'
-import { dropOldQueries, SAVED_MAX_AGE_MS, shouldSaveQuery } from './lib/offline'
+import { dropOldQueries, SAVED_FILE_MAX_AGE_MS, shouldSaveQuery } from './lib/offline'
 
 const queryClient = new QueryClient()
 
@@ -72,7 +72,9 @@ createRoot(document.getElementById('root')!).render(
       client={queryClient}
       persistOptions={{
         persister,
-        maxAge: SAVED_MAX_AGE_MS,
+        // The longest any query is kept (the news, 24 hours). Each query's own limit is applied by
+        // dropOldQueries above, so the 6-hour data is still dropped after 6 hours.
+        maxAge: SAVED_FILE_MAX_AGE_MS,
         buster: __BUILD_ID__,
         dehydrateOptions: { shouldDehydrateQuery: (query) => shouldSaveQuery(query.queryKey, query.state, usingFakes) },
       }}

@@ -66,10 +66,17 @@ describe('what the app asks the database for', () => {
     expect(everything).not.toMatch(/select=\*/)
   })
 
-  it('reads the REST API directly only for the forecast cache', () => {
+  it('reads the REST API directly only for the forecast cache and the news headlines', () => {
     const paths = [...everything.matchAll(/\/rest\/v1\/([a-z_]+)/g)].map((m) => m[1])
     expect(paths.length).toBeGreaterThan(0)
-    expect(new Set(paths)).toEqual(new Set(['island_forecast']))
+    expect(new Set(paths)).toEqual(new Set(['island_forecast', 'news_items']))
+  })
+
+  it('only reads the news table, and never asks for the private columns of it', () => {
+    const news = files.find((f) => f.name.endsWith('newsFetch.ts'))
+    expect(news?.code).toContain('/rest/v1/news_items')
+    expect(news?.code).not.toMatch(/method:\s*'(POST|PUT|PATCH|DELETE)'|\.insert\(|\.upsert\(|\.update\(|\.delete\(/)
+    expect(news?.code).not.toMatch(/item_key|\bscore\b|\bmatched\b/)
   })
 
   it('only calls functions that exist in the migrations', () => {

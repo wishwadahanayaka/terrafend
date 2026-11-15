@@ -337,6 +337,37 @@ const si: Translations = {
       'දියමන්ති හැඩති සලකුණු යනු ශ්‍රී ලංකාවට බලපාන හෝ එයට කි.මී. 500ක් පමණ ඇතුළත ඇති සුළි කුණාටු, භූමි කම්පා, ගංවතුර, ගිනිකඳු, නියඟ සහ කැලෑ ගිනි පිළිබඳ GDACS අනතුරු ඇඟවීම් ය. තැඹිලි සහ රතු ඒවා සැමවිටම පෙන්වයි. “ගෝලීය අනතුරු ඇඟවීම්” ක්‍රියාත්මක කළ විට කොළ ඒවාද පෙන්වයි. සුළි කුණාටුවක මාර්ගය සහ අනාවැකි ප්‍රදේශයද පෙන්වයි.',
   },
 
+  // NEEDS REVIEW BY A NATIVE SPEAKER: the names of the news sources and official notices. The outlets'
+  // names are written the way they sound in Sinhala, which may not be how each outlet writes itself.
+  news: {
+    source: {
+      dmc_warnings: 'ආපදා කළමනාකරණ මධ්‍යස්ථානය',
+      dmc_news: 'ආපදා කළමනාකරණ මධ්‍යස්ථානය',
+      dmc_situation: 'ආපදා කළමනාකරණ මධ්‍යස්ථානය',
+      dmc_landslide: 'ආපදා කළමනාකරණ මධ්‍යස්ථානය',
+      dmc_flood: 'ආපදා කළමනාකරණ මධ්‍යස්ථානය',
+      meteo_advisory: 'කාලගුණ විද්‍යා දෙපාර්තමේන්තුව',
+      adaderana_en: 'අද දෙරණ (ඉංග්‍රීසි)',
+      adaderana_si: 'අද දෙරණ (සිංහල)',
+      adaderana_ta: 'අද දෙරණ (දමිළ)',
+      dailymirror: 'ඩේලි මිරර්',
+      lankadeepa: 'ලංකාදීප',
+      tamilmirror: 'ටමිල් මිරර්',
+      divaina: 'දිවයින',
+      thinakaran: 'දිනකරන්',
+    },
+    channel: {
+      dmc_situation: 'තත්ත්ව වාර්තාව',
+      dmc_landslide: 'නායයෑමේ අනතුරු ඇඟවීම',
+      dmc_flood: 'ජල මට්ටම් සහ වර්ෂාපතන වාර්තාව',
+      meteo_land: 'දරුණු කාලගුණ උපදෙස: ගොඩබිම් ප්‍රදේශ',
+      meteo_sea: 'දරුණු කාලගුණ උපදෙස: මුහුදු ප්‍රදේශ',
+      meteo_lightning: 'අකුණු පිළිබඳ උපදෙස',
+      meteo_tsunami: 'සුනාමි අනතුරු ඇඟවීම',
+      meteo_heat: 'අධික උෂ්ණත්ව පිළිබඳ උපදෙස',
+    },
+  },
+
   // NEEDS REVIEW BY A NATIVE SPEAKER: the Past 3 h / Next 3 h switch and the label on the map.
   rainView: {
     title: 'සිතියමේ වැසි',

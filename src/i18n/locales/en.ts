@@ -339,6 +339,39 @@ const en = {
       'Diamonds are alerts from GDACS about cyclones, earthquakes, floods, volcanoes, droughts and wildfires that affect Sri Lanka or are within about 500 km of it. Orange and Red always show. Green shows when Global alerts is switched on. A cyclone also shows its track and forecast area.',
   },
 
+  // The names of the disaster news sources, shown beside each headline (lib/news.ts). The ids are in
+  // supabase/functions/news-refresh/sources.ts; a test checks every one has a name. The outlets'
+  // own names are kept as they are known; the DMC and Met Department are named in full.
+  news: {
+    source: {
+      dmc_warnings: 'Disaster Management Centre',
+      dmc_news: 'Disaster Management Centre',
+      dmc_situation: 'Disaster Management Centre',
+      dmc_landslide: 'Disaster Management Centre',
+      dmc_flood: 'Disaster Management Centre',
+      meteo_advisory: 'Department of Meteorology',
+      adaderana_en: 'Ada Derana',
+      adaderana_si: 'Ada Derana (Sinhala)',
+      adaderana_ta: 'Ada Derana (Tamil)',
+      dailymirror: 'Daily Mirror',
+      lankadeepa: 'Lankadeepa',
+      tamilmirror: 'Tamil Mirror',
+      divaina: 'Divaina',
+      thinakaran: 'Thinakaran',
+    },
+    // The fixed official notices that keep coming (the newest of each is shown)
+    channel: {
+      dmc_situation: 'Situation report',
+      dmc_landslide: 'Landslide warning',
+      dmc_flood: 'Water level and rainfall report',
+      meteo_land: 'Severe weather advisory: land areas',
+      meteo_sea: 'Severe weather advisory: sea areas',
+      meteo_lightning: 'Lightning advisory',
+      meteo_tsunami: 'Tsunami warning',
+      meteo_heat: 'Heat advisory',
+    },
+  },
+
   // The switch under Rain in the Layers menu, and the label on the map
   rainView: {
     title: 'Rain on the map',

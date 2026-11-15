@@ -22,34 +22,10 @@
 // Tamil stems stop before a final ் or vowel sign where an ending changes it: கடல் (sea) becomes
 // கடலுக்கு, so the stem is கடல; புயல் (storm) becomes புயலால், so it is புயல.
 
-export type Hazard =
-  | 'flood'
-  | 'landslide'
-  | 'cyclone'
-  | 'rain'
-  | 'wind_sea'
-  | 'tsunami'
-  | 'earthquake'
-  | 'elephant'
-  | 'road'
-  | 'drought'
-  | 'other'
+import { HAZARDS, type Hazard } from './hazards.ts'
 
-// When a headline names several hazards, the first one in this list is the one it is filed under.
-// The database's check on news_items.hazard allows exactly these (a test compares them).
-export const HAZARDS: Hazard[] = [
-  'tsunami',
-  'cyclone',
-  'landslide',
-  'flood',
-  'earthquake',
-  'wind_sea',
-  'rain',
-  'elephant',
-  'road',
-  'drought',
-  'other',
-]
+// The list lives in hazards.ts, which the app downloads too; this file (the big word lists) is not.
+export { HAZARDS, type Hazard }
 
 export type Term = readonly [term: string, hazard: Hazard]
 

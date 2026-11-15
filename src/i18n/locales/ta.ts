@@ -341,6 +341,37 @@ const ta: Translations = {
       'வைர வடிவக் குறிகள், இலங்கையைப் பாதிக்கும் அல்லது அதற்கு சுமார் 500 கி.மீ. தொலைவுக்குள் உள்ள சூறாவளிகள், நிலநடுக்கங்கள், வெள்ளங்கள், எரிமலைகள், வறட்சிகள், காட்டுத்தீ பற்றிய GDACS எச்சரிக்கைகள். ஆரஞ்சு, சிவப்பு எப்போதும் காட்டப்படும். “உலகளாவிய எச்சரிக்கைகள்” இயக்கப்பட்டால் பச்சையும் காட்டப்படும். சூறாவளியின் பாதையும் முன்னறிவிப்புப் பகுதியும் காட்டப்படும்.',
   },
 
+  // NEEDS REVIEW BY A NATIVE SPEAKER: the names of the news sources and official notices. The outlets'
+  // names are written the way they sound in Tamil, which may not be how each outlet writes itself.
+  news: {
+    source: {
+      dmc_warnings: 'அனர்த்த முகாமைத்துவ நிலையம்',
+      dmc_news: 'அனர்த்த முகாமைத்துவ நிலையம்',
+      dmc_situation: 'அனர்த்த முகாமைத்துவ நிலையம்',
+      dmc_landslide: 'அனர்த்த முகாமைத்துவ நிலையம்',
+      dmc_flood: 'அனர்த்த முகாமைத்துவ நிலையம்',
+      meteo_advisory: 'வளிமண்டலவியல் திணைக்களம்',
+      adaderana_en: 'அத தெரண (ஆங்கிலம்)',
+      adaderana_si: 'அத தெரண (சிங்களம்)',
+      adaderana_ta: 'அத தெரண (தமிழ்)',
+      dailymirror: 'டெய்லி மிரர்',
+      lankadeepa: 'லங்காதீப',
+      tamilmirror: 'தமிழ் மிரர்',
+      divaina: 'திவயின',
+      thinakaran: 'தினகரன்',
+    },
+    channel: {
+      dmc_situation: 'நிலைமை அறிக்கை',
+      dmc_landslide: 'மண்சரிவு எச்சரிக்கை',
+      dmc_flood: 'நீர்மட்டம் மற்றும் மழைவீழ்ச்சி அறிக்கை',
+      meteo_land: 'கடும் வானிலை ஆலோசனை: நிலப்பகுதிகள்',
+      meteo_sea: 'கடும் வானிலை ஆலோசனை: கடற்பகுதிகள்',
+      meteo_lightning: 'மின்னல் குறித்த ஆலோசனை',
+      meteo_tsunami: 'சுனாமி எச்சரிக்கை',
+      meteo_heat: 'வெப்பம் குறித்த ஆலோசனை',
+    },
+  },
+
   // NEEDS REVIEW BY A NATIVE SPEAKER: the Past 3 h / Next 3 h switch and the label on the map.
   rainView: {
     title: 'வரைபடத்தில் மழை',

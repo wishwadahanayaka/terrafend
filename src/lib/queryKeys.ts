@@ -6,3 +6,6 @@ export const SIMILAR_KEY = 'similar-reports'
 
 // The caller's own reports, for the My reports panel. Never saved offline.
 export const MY_REPORTS_KEY = 'my-reports'
+
+// Disaster news headlines. Saved offline for 24 hours, but not counted in the offline banner.
+export const NEWS_KEY = 'news'

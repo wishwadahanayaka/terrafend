@@ -20,7 +20,8 @@ Approved 15 Nov 2026, with these changes to the first draft:
 | 2 | Function logic and tests (`supabase/functions/news-refresh/`) | **built**, not deployed |
 | 3 | Migration 0010, `supabase/checks/0010_check.sql`, privacy checks 6 and 17, `docs/news-feed.md` | **built**, not run |
 | 4 | Run 0010, deploy, set the secrets, dry run, watch for 2 to 3 days, tune the keywords | **in progress**: 0010 run, deployed, cron running from 15 Nov 2026. Two sources are switched off (`enabled: false`, 15 Nov 2026): `meteo_advisory` (meteo.gov.lk times out from Supabase even at 25 s) and `thinakaran` (403 to Supabase), leaving 12 read; code and tests kept. Owner reviews the Sinhala headlines with the command in `docs/news-feed.md` (Sinhala sources kept 0 on the first run). |
-| 5 | App: sheet and chip behind `?news=1`, offline, en/si/ta text | not built |
+| 5a | App logic: reading the table, the query hook, grouping, chip numbers, source names, `?fakeNews=`, offline (24 h, not in the banner), tests | **built** (`news.ts`, `newsFetch.ts`, `useNews.ts`, `fakeNews.ts`); no UI |
+| 5b | App screens: the sheet and the chip behind `?news=1`, UI text in en/si/ta | not built |
 | 6 | Switch on, README credits, CLAUDE.md | not built |
 | 7 | Later: Lankapuvath when it's back, NBRO with the landslide layer, news pins | not planned in detail |
 
@@ -154,7 +155,22 @@ at once; iOS closes websockets of a backgrounded web app, so it would refetch on
 table would have to join the Realtime publication. A plain `fetch` with only the `apikey` header (like
 `forecastCache.ts`), named columns, the last 48 hours, at most 100 items.
 
-## 5. App (step 5, not built)
+## 5. App (5a, the logic, is built; 5b, the screens, is not)
+
+Decided while building the logic (5a):
+
+- The official block always shows in full: the language filter applies to the news reports only, since
+  the official notices are the ones that matter and are mostly English PDFs.
+- Official items without a channel (DMC's warnings and news) all show, not only the newest; only the
+  fixed channels show their newest notice.
+- Duplicates: same language, same hazard, within 36 hours, at least half the words of the shorter
+  headline and at least 3 shared words, compared with the story's newest headline only. Sinhala and
+  Tamil words are cut to five letters first. Two headlines that differ only in a place name can still
+  merge; the numbers are named constants in `news.ts`.
+- The chip counts stories and notices of the last 24 hours in every language, the same story once.
+- The read asks for official rows first (`order=kind.desc,...`), so the 100-row limit can't push them out.
+- The saved news is kept 24 hours; the saved file's age limit is raised to match, and every other query
+  keeps its own 6-hour (forecast 3-hour) limit.
 
 - Entry: a "News" part at the end of the threats chip ("No active threats · News 4"), newspaper icon,
   a red dot when an official item came in within 24 hours. An outlined pill so it doesn't read as a

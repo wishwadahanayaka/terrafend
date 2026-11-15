@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { PersistedClient } from '@tanstack/react-query-persist-client'
 import { describe, expect, it } from 'vitest'
 import {
@@ -6,8 +8,10 @@ import {
   FORECAST_SAVED_MAX_AGE_MS,
   isSavedDataUsable,
   liveReports,
+  NEWS_SAVED_MAX_AGE_MS,
   offlineMessage,
   reportsInBox,
+  SAVED_FILE_MAX_AGE_MS,
   SAVED_MAX_AGE_MS,
   shouldSave,
   shouldSaveQuery,
@@ -98,6 +102,61 @@ describe('what is saved', () => {
     } as unknown as PersistedClient
     const kept = dropOldQueries(saved, NOW).clientState.queries.map((q) => q.queryKey[0])
     expect(kept).toEqual(['river-gauges'])
+  })
+})
+
+describe('the news headlines, offline', () => {
+  const query = (key: unknown[], age: number) => ({ queryKey: key, queryHash: JSON.stringify(key), state: { dataUpdatedAt: NOW - age } })
+  const file = (queries: ReturnType<typeof query>[]) =>
+    ({ timestamp: NOW, buster: 'b', clientState: { mutations: [], queries } }) as unknown as PersistedClient
+
+  it('are saved, as their own source', () => {
+    expect(sourceOf(['news'])).toBe('news')
+    expect(shouldSave(['news'])).toBe(true)
+    expect(shouldSaveQuery(['news'], { status: 'success', data: [] })).toBe(true)
+  })
+
+  it('are saved for 24 hours, where the rest is saved for 6 and the forecast for 3', () => {
+    expect(NEWS_SAVED_MAX_AGE_MS).toBe(24 * HOUR)
+    expect(isSavedDataUsable(['news'], NOW - 23 * HOUR, NOW)).toBe(true)
+    expect(isSavedDataUsable(['news'], NOW - 25 * HOUR, NOW)).toBe(false)
+    // the rest is unchanged
+    expect(isSavedDataUsable(['river-gauges'], NOW - 7 * HOUR, NOW)).toBe(false)
+    expect(isSavedDataUsable(['rain-map'], NOW - 4 * HOUR, NOW)).toBe(false)
+  })
+
+  it('stay in the saved file after a failed refresh, which would otherwise drop them', () => {
+    expect(shouldSaveQuery(['news'], { status: 'error', data: [{ id: 1 }] })).toBe(true)
+    expect(shouldSaveQuery(['news'], { status: 'error', data: undefined })).toBe(false)
+    expect(shouldSaveQuery(['news'], { status: 'pending', data: undefined })).toBe(false)
+  })
+
+  it('are not counted in the offline banner, whether or not they are the oldest or the newest', () => {
+    const entry = (key: unknown[], at: number) => ({ queryKey: key, dataUpdatedAt: at })
+    expect(dataFrom([entry(['river-gauges'], NOW - 2 * HOUR), entry(['news'], NOW - 20 * HOUR)])).toBe(NOW - 2 * HOUR)
+    expect(dataFrom([entry(['river-gauges'], NOW - 2 * HOUR), entry(['news'], NOW)])).toBe(NOW - 2 * HOUR)
+    expect(dataFrom([entry(['news'], NOW)])).toBeNull()
+  })
+
+  it('are not saved while a dev test switch is on, like everything but the forecast', () => {
+    expect(shouldSave(['news'], true)).toBe(false)
+    expect(shouldSaveQuery(['news'], { status: 'success', data: [] }, true)).toBe(false)
+    expect(isSavedDataUsable(['news'], NOW, NOW, true)).toBe(false)
+  })
+
+  it('survive a file that is older than 6 hours, while the 6-hour data in it does not', () => {
+    // the library throws a whole file away past this age, so it must be the longest of the limits
+    expect(SAVED_FILE_MAX_AGE_MS).toBe(NEWS_SAVED_MAX_AGE_MS)
+    expect(SAVED_FILE_MAX_AGE_MS).toBeGreaterThanOrEqual(SAVED_MAX_AGE_MS)
+    const saved = file([query(['news'], 10 * HOUR), query(['river-gauges'], 10 * HOUR), query(['rain-map'], 10 * HOUR)])
+    expect(dropOldQueries(saved, NOW).clientState.queries.map((q) => q.queryKey[0])).toEqual(['news'])
+    expect(dropOldQueries(file([query(['news'], 30 * HOUR)]), NOW).clientState.queries).toEqual([])
+  })
+
+  it('make main.tsx keep the file as long as the news', () => {
+    const main = readFileSync(join(__dirname, '..', 'main.tsx'), 'utf8')
+    expect(main).toContain('maxAge: SAVED_FILE_MAX_AGE_MS')
+    expect(main).not.toMatch(/maxAge: SAVED_MAX_AGE_MS/)
   })
 })
 
