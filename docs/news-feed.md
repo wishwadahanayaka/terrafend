@@ -23,16 +23,17 @@ sources are listed in `supabase/functions/news-refresh/sources.ts`, the keyword 
 - Identifies itself as `TerraFend/1.0 (+https://terrafend.vercel.app; free Sri Lanka hazard map;
   contact: https://github.com/wishwadahanayaka/terrafend)`.
 - Sends `If-None-Match` / `If-Modified-Since` from the last answer, so an unchanged feed costs a 304.
-- Gives each request 10 seconds (25 for the Met Department's robots.txt and content.json, which timed
-  out at 10 from Supabase's servers) and reads at most 1 MB. Follows at most 3 redirects, and only within
+- Gives each request 10 seconds (the Met Department's source has its own 25, though it is switched off
+  now, see "Sources that are switched off") and reads at most 1 MB. Follows at most 3 redirects, and only within
   the source's own site. Stops starting new sources after 45 seconds, and cuts any request short so the
   whole run is over by 52 seconds, because the cron job gives the call 60 and a run that is cut off
   saves nothing for any source.
 - Reads 4 sources at a time. One failing never stops the others; its error goes in `news_source_state`.
   After 3 failures in a row a source is asked at most hourly, and after a 403 or 410 once a day.
 - Keeps a link only if it is https and on the source's own site.
-- Official warning channels (DMC Emergency Warnings, DMC's report tables, the Met Department's
-  advisories) are kept whole. DMC News and the news sites go through the keyword filter.
+- Official warning channels (DMC Emergency Warnings, DMC's report tables, and the Met Department's
+  advisories while that source is on) are kept whole. DMC News and the news sites go through the keyword
+  filter.
 
 ## Setup (once)
 
@@ -206,31 +207,38 @@ How to read it:
   row. Before the 15 Nov evening fix, an unreadable robots.txt looked exactly like this, with no reason kept.
 - `dmc_warnings` usually has nothing: DMC's Emergency Warnings category is empty between emergencies.
 
-## If `meteo_advisory` keeps timing out
+## Sources that are switched off
 
-On 15 Nov 2026 the Met Department's robots.txt timed out at 10 seconds when read from Supabase
-(`robots.txt: TimeoutError: Signal timed out.`), though it answers in under a second from a home PC. So
-that one source has its own 25-second wait (`timeoutMs` in `sources.ts`); every other source keeps 10.
+Two of the 14 sources are off (`enabled: false` in `supabase/functions/news-refresh/sources.ts`), so 12
+are read. The function skips a disabled source before any request, even when it is named with `?only=`,
+and lists it under `skipped` with the reason `disabled`. Their code and tests stay, so they can be
+switched back on.
 
-- If it still times out, nothing special happens: it stays in the normal backoff (every 15 minutes for
-  three failures in a row, then hourly). The function never changes how it asks, never uses another
-  address or a proxy, and never sends a browser's User-Agent. A site that drops requests from Supabase's
-  servers is a block, and it is left alone.
-- **If it is still timing out after 2 days**, turn it off: in `supabase/functions/news-refresh/sources.ts`
-  set `enabled: false` on the `meteo_advisory` source and redeploy
-  (`npx supabase functions deploy news-refresh --no-verify-jwt`). Met warnings still reach the feed through
-  DMC's reports and the news headlines. To check how long it has been failing:
+| Source | Off since | Why |
+|---|---|---|
+| `meteo_advisory` (the Met Department's severe weather advisories) | 15 Nov 2026 | `meteo.gov.lk` times out from Supabase even with a 25-second wait (the first run showed `robots.txt: TimeoutError: Signal timed out.`), though it answers in under a second from a home PC. |
+| `thinakaran` (Tamil newspaper) | 15 Nov 2026 | `thinakaran.lk` returns 403 to Supabase. |
+
+Both are blocks or limits on the site's side, and they are left alone: no proxy, no other address, no
+browser User-Agent. Met warnings still reach the feed through DMC's reports (the landslide warnings,
+situation reports and water level reports) and the news headlines. The other Tamil sources are Ada
+Derana Tamil and Tamil Mirror.
+
+- **Their old rows.** The first runs left a row for each in `news_source_state`, with the last error. A
+  disabled source's row is no longer updated, so it shows up in the health check's problem list for ever.
+  To tidy it (and to start clean if one is switched back on), run this in the SQL Editor when you like:
 
 ```sql
-select source, last_fetch_at, failures, last_error
-from public.news_source_state
-where source = 'meteo_advisory';
+delete from public.news_source_state where source in ('meteo_advisory', 'thinakaran');
 ```
 
-  `failures` counts the tries in a row that failed (it goes back to 0 at the first success), and
-  `last_error` is the latest reason. Two days of hourly tries is about 48 failures.
-- Where it runs: the project's database is in Mumbai (AWS `ap-south-1`, from `CLAUDE.md` and the CLI's
-  link files). The repo doesn't say where Edge Functions run, so that isn't known from here.
+  Neither source ever stored a headline, so there is nothing to remove from `news_items`.
+- **Switching one back on.** Set `enabled: true` in `sources.ts` and redeploy
+  (`npx supabase functions deploy news-refresh --no-verify-jwt`). Try it first with a dry run
+  (`?dry_run=true&force=true&only=meteo_advisory`, see the commands above): `status : ok` means the site
+  answers Supabase now; an `error` says why not. `meteo_advisory` keeps its own `timeoutMs` of 25 seconds.
+- Where the function runs: the project's database is in Mumbai (AWS `ap-south-1`, from `CLAUDE.md` and
+  the CLI's link files). The repo doesn't say where Edge Functions run, so that isn't known from here.
 
 ## Review Sinhala/Tamil headlines
 
@@ -246,7 +254,7 @@ if (-not $secret) {
   $secret = [System.Net.NetworkCredential]::new('', $entered).Password
 }
 
-# Which source to review. adaderana_si, adaderana_ta, lankadeepa, divaina, tamilmirror, thinakaran...
+# Which source to review. adaderana_si, adaderana_ta, lankadeepa, divaina, tamilmirror...
 $only = 'adaderana_si'
 $url = 'https://ktwdmwiaodtirrcitlgb.supabase.co/functions/v1/news-refresh'
 

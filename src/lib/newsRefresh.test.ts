@@ -54,7 +54,9 @@ const DMC_WARN = source('dmc_warnings')
 const DMC_NEWS = source('dmc_news')
 const DMC_LAND = source('dmc_landslide')
 const DMC_SIT = source('dmc_situation')
-const METEO = source('meteo_advisory')
+// Switched on here only: in the real list it is off (it times out from Supabase), but its code and
+// tests stay, so it can be turned back on in sources.ts
+const METEO: Source = { ...source('meteo_advisory'), enabled: true }
 
 // ---- Stand-in answers ----
 
@@ -832,7 +834,8 @@ describe('one run', () => {
   })
 
   describe('a source that answers 403 (thinakaran)', () => {
-    const THINA = source('thinakaran')
+    // Switched on here only: in the real list it is off (403 from Supabase), but its code and tests stay
+    const THINA: Source = { ...source('thinakaran'), enabled: true }
     const HOUR = 60 * MIN
 
     // Runs at a different time and keeps the stored state between runs, like the real cron job does
@@ -1105,6 +1108,43 @@ describe('the source list', () => {
       if (s.filter === 'none') expect(s.kind, s.id).toBe('official')
       if (s.channel) expect(s.channel).toMatch(/^[a-z0-9_]{2,40}$/)
     }
+  })
+
+  describe('the two sources that are switched off', () => {
+    const OFF = ['meteo_advisory', 'thinakaran']
+
+    it('are the only ones off, and are still in the list, ready to be switched back on', () => {
+      expect(SOURCES.filter((s) => !s.enabled).map((s) => s.id)).toEqual(OFF)
+      expect(source('meteo_advisory')).toMatchObject({ parser: 'meteoJson', timeoutMs: 25_000, enabled: false })
+      expect(source('thinakaran')).toMatchObject({ parser: 'rss', enabled: false })
+    })
+
+    it('say why in a comment beside them', () => {
+      const file = readFileSync(join(__dirname, '..', '..', 'supabase', 'functions', 'news-refresh', 'sources.ts'), 'utf8')
+      expect(file).toMatch(/Off \(15 Nov 2026\): meteo\.gov\.lk times out from Supabase even at 25 s/)
+      expect(file).toMatch(/Off \(15 Nov 2026\): thinakaran\.lk returns 403 to Supabase/)
+    })
+
+    it('are never asked by a whole run, which says they are disabled', async () => {
+      const routes: Record<string, Reply> = {}
+      for (const s of SOURCES) routes[s.url] = ok(s.parser === 'rss' ? rss([]) : '{}')
+      const { deps, calls } = setup(routes, SOURCES)
+      const out = await refresh(deps, { force: true })
+      expect(out.skipped.filter((s) => s.reason === 'disabled').map((s) => s.id)).toEqual(OFF)
+      const hosts = new Set(calls.map((c) => new URL(c.url).host))
+      expect([...hosts].some((h) => h.includes('meteo.gov.lk') || h.includes('thinakaran.lk'))).toBe(false)
+      expect(out.sources.map((s) => s.id)).not.toContain('meteo_advisory')
+      expect(out.sources.map((s) => s.id)).not.toContain('thinakaran')
+    })
+
+    it('are skipped even when named, so a stray ?only= cannot wake them', async () => {
+      const { deps, fetch } = setup({}, SOURCES)
+      for (const id of OFF) {
+        const out = await refresh(deps, { only: id, force: true })
+        expect(out.skipped).toEqual([{ id, reason: 'disabled' }])
+      }
+      expect(fetch).not.toHaveBeenCalled()
+    })
   })
 
   it('leaves out the sites that block us or are not usable', () => {

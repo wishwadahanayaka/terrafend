@@ -108,9 +108,7 @@ export const SOURCES: Source[] = [
     enabled: true,
   },
   {
-    // From Supabase's servers this site's robots.txt timed out at 10 s (15 Nov 2026), though it answers
-    // in under a second from a home PC. It may just be slow for foreign addresses, so it gets 25 s.
-    // If it keeps timing out, set enabled: false (docs/news-feed.md). It is not to be got round.
+    // Off (15 Nov 2026): meteo.gov.lk times out from Supabase even at 25 s. Not to be got round.
     id: 'meteo_advisory',
     url: 'https://meteo.gov.lk/content.json',
     kind: 'official',
@@ -121,7 +119,7 @@ export const SOURCES: Source[] = [
     timeoutMs: 25_000,
     ownDomains: ['meteo.gov.lk'],
     filter: 'none',
-    enabled: true,
+    enabled: false,
   },
 
   // News sites
@@ -214,6 +212,7 @@ export const SOURCES: Source[] = [
     enabled: true,
   },
   {
+    // Off (15 Nov 2026): thinakaran.lk returns 403 to Supabase. Not to be got round.
     id: 'thinakaran',
     url: 'https://www.thinakaran.lk/feed/',
     kind: 'media',
@@ -223,7 +222,7 @@ export const SOURCES: Source[] = [
     crawlDelayMin: 0,
     ownDomains: ['thinakaran.lk'],
     filter: 'keywords',
-    enabled: true,
+    enabled: false,
   },
 ]
 
