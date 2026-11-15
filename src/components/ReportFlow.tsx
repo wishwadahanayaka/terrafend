@@ -26,6 +26,8 @@ type Props = {
   onOfflineTap: () => void
   // The Reports layer switch, to tell when a new report will be left off the map
   showPassable: boolean
+  // The form's "Update it in My reports": opens My reports at that report
+  onManage: (id: string) => void
 }
 
 const TOAST_MS = 3500
@@ -42,6 +44,7 @@ export default function ReportFlow({
   offline,
   onOfflineTap,
   showPassable,
+  onManage,
 }: Props) {
   const { t } = useTranslation()
   const [spot, setSpot] = useState<LatLng | null>(null)
@@ -122,6 +125,10 @@ export default function ReportFlow({
             lat={spot.lat}
             lng={spot.lng}
             onClose={() => onModeChange('idle')}
+            onManage={(id) => {
+              onModeChange('idle')
+              onManage(id)
+            }}
             onSent={(what) => {
               queryClient.invalidateQueries({ queryKey: [REPORTS_KEY] })
               onModeChange('idle')

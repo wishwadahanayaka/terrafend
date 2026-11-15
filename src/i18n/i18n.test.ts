@@ -168,6 +168,10 @@ describe('the app text in each language', () => {
         const text = t(`report.dup.question.${value}`)
         expect(text, `${lang}: ${value}`).not.toContain('report.dup')
         expect(text.trim()).not.toBe('')
+        // The "you already reported this" sentence, for a nearby report this browser sent
+        const own = t(`report.dup.own.${value}`, { ago: '20 min ago' })
+        expect(own, `${lang}: own ${value}`).not.toContain('report.dup')
+        expect(own, `${lang}: own ${value}`).toContain('20 min ago')
       }
     }
   })

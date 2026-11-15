@@ -23,6 +23,18 @@ export function severityChoices(current: Severity): SeverityChoice[] {
     .map((severity) => ({ severity, direction: RANK[severity] > RANK[current] ? 'worse' : 'better' }))
 }
 
+// What the report form's duplicate question should show for the matches found nearby (nearest
+// first). 'ask' is the normal question about someone else's report. 'mine' is for when every
+// match is one this browser sent: it can't be voted on, so the person is pointed to My reports.
+export type DuplicateChoice<T> = { kind: 'ask' | 'mine'; match: T } | null
+
+export function chooseDuplicate<T extends { id: string }>(matches: T[], mine: ReadonlySet<string>): DuplicateChoice<T> {
+  // Someone else's report wins even when it is further away, since only that one can be confirmed
+  const others = matches.find((m) => !mine.has(m.id))
+  if (others) return { kind: 'ask', match: others }
+  return matches.length > 0 ? { kind: 'mine', match: matches[0] } : null
+}
+
 type Placed = { id: string; hazard_type: HazardType; lat: number; lng: number; expires_at: string }
 
 // Active reports of the same type within radiusM of a spot, nearest first. Hazards of a

@@ -205,6 +205,7 @@ export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => 
             offline={!online}
             onOfflineTap={() => showNotice(t('offline.report'))}
             showPassable={layers.passableReports}
+            onManage={manageReport}
           />
 
           {panel === 'closed' && !picking && (

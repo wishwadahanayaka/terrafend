@@ -2,21 +2,26 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Camera, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { hazardLabel, HAZARD_TYPES, severityLabel, SEVERITIES, type HazardType, type Severity } from '../lib/hazards'
+import { chooseDuplicate } from '../lib/duplicates'
+import { loadMyReportIds } from '../lib/myReports'
 import { shrinkPhoto, uploadPhoto } from '../lib/photos'
 import { NOTE_MAX_LENGTH, submitReport } from '../lib/reports'
 import { useOnline } from '../lib/useOnline'
 import { useSimilarReports } from '../lib/useSimilarReports'
 import DuplicateQuestion, { type Confirmed } from './DuplicateQuestion'
+import OwnReportNotice from './OwnReportNotice'
 
 type Props = {
   lat: number
   lng: number
   onClose: () => void
+  // "Update it in My reports" on a nearby report this browser sent: closes the form
+  onManage: (id: string) => void
   // A new report went in, or the person confirmed (or updated) one that was already there
   onSent: (what: { kind: 'report'; severity: Severity } | Confirmed) => void
 }
 
-export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
+export default function ReportSheet({ lat, lng, onClose, onManage, onSent }: Props) {
   const [hazardType, setHazardType] = useState<HazardType | null>(null)
   const [severity, setSeverity] = useState<Severity | null>(null)
   const [note, setNote] = useState('')
@@ -36,7 +41,10 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
   // An active report of the same type within 100 m. The person has to answer the question
   // before sending a new report. If the lookup fails there is no question and nothing blocks.
   const similar = useSimilarReports(lat, lng, hazardType)
-  const match = similar.data?.[0] ?? null
+  // Someone else's report is asked about even if it is further away than one of mine. Only when
+  // every match is mine does the form say "you already reported this" instead.
+  const choice = chooseDuplicate(similar.data ?? [], loadMyReportIds())
+  const match = choice?.match ?? null
   const checking = hazardType !== null && similar.isPending && similar.fetchStatus === 'fetching'
   // The report this person said is a different one, so it isn't asked about again
   const [differentFrom, setDifferentFrom] = useState<string | null>(null)
@@ -151,7 +159,15 @@ export default function ReportSheet({ lat, lng, onClose, onSent }: Props) {
           </div>
 
           <div ref={question}>
-            {match && differentFrom !== match.id && (
+            {match && choice?.kind === 'mine' && differentFrom !== match.id && (
+              <OwnReportNotice
+                key={match.id}
+                match={match}
+                onUpdate={() => onManage(match.id)}
+                onDifferent={() => setDifferentFrom(match.id)}
+              />
+            )}
+            {match && choice?.kind === 'ask' && differentFrom !== match.id && (
               <DuplicateQuestion
                 key={match.id}
                 match={match}

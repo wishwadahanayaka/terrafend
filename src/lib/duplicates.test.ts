@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  chooseDuplicate,
   DUPLICATE_RADIUS_M,
   findSimilar,
   GROUP_RADIUS_M,
@@ -35,6 +36,32 @@ function report(
 }
 
 const SPOT = { lat: 7, lng: 80 }
+
+describe('which duplicate to ask about (mine or someone else\'s)', () => {
+  // Nearest first, as findSimilar gives them
+  const near = { id: 'near' }
+  const far = { id: 'far' }
+
+  it('only my own reports: "you already reported this", about the nearest', () => {
+    expect(chooseDuplicate([near, far], new Set(['near', 'far']))).toEqual({ kind: 'mine', match: near })
+  })
+
+  it('only other people\'s reports: the normal question about the nearest', () => {
+    expect(chooseDuplicate([near, far], new Set())).toEqual({ kind: 'ask', match: near })
+  })
+
+  it('mixed, mine nearest: the normal question about the other person\'s further one', () => {
+    expect(chooseDuplicate([near, far], new Set(['near']))).toEqual({ kind: 'ask', match: far })
+  })
+
+  it('mixed, theirs nearest: the nearest one, as before', () => {
+    expect(chooseDuplicate([near, far], new Set(['far']))).toEqual({ kind: 'ask', match: near })
+  })
+
+  it('nothing nearby: nothing to ask', () => {
+    expect(chooseDuplicate([], new Set(['near']))).toBeNull()
+  })
+})
 
 describe('is it the same report? (100 m)', () => {
   it('uses 100 m and 150 m', () => {
