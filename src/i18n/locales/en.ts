@@ -288,6 +288,8 @@ const en = {
     riversHint: 'Gauges at Alert or above always show. Switch on to add the rest.',
     rain: 'Rain',
     rainHint: 'Heavy rain and thunderstorms always show. Switch on to add light and moderate rain.',
+    // Shown while the Rain switch is off, because light and moderate rain then never appear
+    rainOffHint: 'Light and moderate rain are hidden. Switch Rain on to see them.',
     globalAlerts: 'Global alerts',
     globalAlertsHint:
       'Orange and Red alerts for Sri Lanka and nearby (GDACS) always show. Switch on to add Green ones.',
@@ -297,6 +299,7 @@ const en = {
     forecastUnavailable: 'Rain forecast unavailable right now',
     forecastFrom: 'Rain forecast from {{when}}. It could not be refreshed just now.',
     measuredUnavailable: 'Measured rain unavailable right now',
+    satelliteUnavailable: 'Satellite rain unavailable right now',
     alertsUnavailable: 'Global alerts unavailable right now',
     possibleStorms:
       'Thunderstorms possible in parts of the island over the next 3 hours (forecast, low confidence)',
@@ -323,13 +326,31 @@ const en = {
       'Alert, Minor flood and Major flood are the official steps set by the Department of Irrigation. Gauges at those levels always show. The Layers menu adds all the others.',
     rainTitle: 'Rain forecast colours',
     rainNote:
-      'Each square shows the worse of two things: the rain the satellite estimated over the past 3 hours, and the forecast for the next 3 hours. Tap a square to see which. The small rain badges beside river gauges show rain the gauge measured. Heavy rain, very heavy rain and thunderstorms always show. A forecast only counts as a warning when the model gives at least a {{chance}}% chance of rain, and for a thunderstorm at least {{mm}} mm in the hour too. Weaker forecasts of storms and heavy showers are not drawn: they get a line under Rain in the Layers menu. Moderate and light rain show when Rain is switched on. Estimates and forecasts, not official warnings.',
+      'The squares show one thing at a time, set by the Past 3 h / Next 3 h switch under Rain in the Layers menu: rain the satellite measured over the past 3 hours, or the forecast for the next 3 hours. Tap a square for details. The small rain badges beside river gauges show rain the gauge measured. Heavy rain, very heavy rain and thunderstorms always show. A forecast only counts as a warning when the model gives at least a {{chance}}% chance of rain, and for a thunderstorm at least {{mm}} mm in the hour too. Weaker forecasts of storms and heavy showers are not drawn: they get a line under Rain in the Layers menu. Moderate and light rain show when Rain is switched on. Estimates and forecasts, not official warnings.',
+    rainTimes:
+      'Measured and forecast rain cover different times: measured is the past 3 hours (the satellite’s newest hour is often 1 to 3 hours old), forecast is the next 3 hours. So they won’t always match. A gauge can also measure rain the satellite squares don’t show, because a gauge reads one spot and the satellite averages about 11 km.',
+    satelliteLight:
+      'Light satellite rain is drawn only when something backs it up: it showed in at least {{hours}} of the 3 hours, or there is rain in a square next to it, or a rain gauge within {{km}} km measured some. A gauge within {{vetoKm}} km that measured no rain hides it.',
     alertsTitle: 'Global alert colours',
     alertRed: 'Red alert, the most serious',
     alertOrange: 'Orange alert',
     alertGreen: 'Green alert, a lower level',
     alertsNote:
       'Diamonds are alerts from GDACS about cyclones, earthquakes, floods, volcanoes, droughts and wildfires that affect Sri Lanka or are within about 500 km of it. Orange and Red always show. Green shows when Global alerts is switched on. A cyclone also shows its track and forecast area.',
+  },
+
+  // The switch under Rain in the Layers menu, and the label on the map
+  rainView: {
+    title: 'Rain on the map',
+    past: 'Past 3 h',
+    pastKind: 'measured',
+    next: 'Next 3 h',
+    nextKind: 'forecast',
+    // On the half of the switch that isn't showing: how many serious things it holds
+    serious: '{{count}} serious',
+    labelPast: 'Rain: past 3 h (measured)',
+    labelNext: 'Rain: next 3 h (forecast)',
+    tapToSwitch: 'Tap to switch between measured and forecast rain',
   },
 
   chip: {
@@ -339,10 +360,13 @@ const en = {
     report_other: '{{count}} serious reports',
     alert_one: '{{count}} global alert',
     alert_other: '{{count}} global alerts',
-    storm_one: 'thunderstorms in {{count}} area',
-    storm_other: 'thunderstorms in {{count}} areas',
-    heavy_one: 'heavy rain in {{count}} area',
-    heavy_other: 'heavy rain in {{count}} areas',
+    // Forecast parts say "likely" and measured ones say "measured", so the chip never mixes the two
+    storm_one: 'thunderstorms likely in {{count}} area',
+    storm_other: 'thunderstorms likely in {{count}} areas',
+    heavy_one: 'heavy rain likely in {{count}} area',
+    heavy_other: 'heavy rain likely in {{count}} areas',
+    heavyMeasured_one: 'heavy rain measured in {{count}} area',
+    heavyMeasured_other: 'heavy rain measured in {{count}} areas',
     gauge_one: 'heavy rain measured at {{count}} gauge',
     gauge_other: 'heavy rain measured at {{count}} gauges',
     more: '+{{count}} more',
@@ -423,8 +447,10 @@ const en = {
       chanceSome: '{{pct}}% chance of some rain in this area (about 11 km across)',
       forecastWrong: 'Rain forecasts are often wrong for a specific spot.',
       upTo: 'Up to {{mm}} mm an hour in the worst hour',
-      satelliteWindow: 'Satellite estimate for {{from}} to {{to}} (Sri Lanka time)',
-      forecastWindow: 'Open-Meteo forecast, next 3 hours (Sri Lanka time)',
+      // The tag at the top of a card: rain that was measured, or rain the forecast says is coming
+      tagMeasured: 'MEASURED',
+      tagForecast: 'FORECAST',
+      window: '{{from}} to {{to}} (Sri Lanka time)',
       satelliteHigh: 'Satellite estimates can read high in the dry zone.',
       satelliteNotOfficial: 'Estimate from space, not an official warning',
     },

@@ -4,7 +4,7 @@ import { forecastTooOld } from './forecastAge'
 import { forecastHour, RAIN_RANK, type MildLevel, type PossibleLevel, type RainLevel } from './rainForecast'
 
 // How many hours ahead the map looks. Each grid cell shows the worst of them.
-const WINDOW_HOURS = 3
+export const WINDOW_HOURS = 3
 
 // The grid starts at this spacing and widens until it fits in MAX_POINTS. Sri Lanka
 // is about 65,000 km², so 150 points ends up roughly 21 km apart.

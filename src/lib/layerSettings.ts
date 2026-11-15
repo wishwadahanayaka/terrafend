@@ -1,3 +1,5 @@
+import { parseRainView, type RainView } from './rainView'
+
 // What each Layers toggle adds on top of the serious items, which always show
 export type LayerSettings = {
   // Passable reports
@@ -39,6 +41,25 @@ export function loadLayerSettings(): LayerSettings {
 export function saveLayerSetting(name: keyof LayerSettings, value: boolean) {
   try {
     localStorage.setItem(KEYS[name], value ? '1' : '0')
+  } catch {
+    // not saved, the choice still works until the page is closed
+  }
+}
+
+// Past 3 h or Next 3 h. It isn't a yes/no switch, so it is kept apart from the ones above.
+export const RAIN_VIEW_KEY = 'terrafend:rainView'
+
+export function loadRainView(): RainView {
+  try {
+    return parseRainView(localStorage.getItem(RAIN_VIEW_KEY))
+  } catch {
+    return parseRainView(null)
+  }
+}
+
+export function saveRainView(view: RainView) {
+  try {
+    localStorage.setItem(RAIN_VIEW_KEY, view)
   } catch {
     // not saved, the choice still works until the page is closed
   }

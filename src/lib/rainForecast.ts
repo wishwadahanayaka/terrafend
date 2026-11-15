@@ -80,7 +80,8 @@ export const MILD_BORDER: Record<MildLevel, string> = {
 // and one in the route panel.
 export type PossibleLevel = 'heavyShowers' | 'thunderPossible'
 
-const LIGHT_MM = 0.5
+// mm in an hour. The satellite's light-rain rule (lightRain.ts) counts hours at this level too.
+export const LIGHT_MM = 0.5
 const MODERATE_MM = 2.5
 
 // Light and moderate rain by amount alone. Used for measured rain, which needs nothing else.

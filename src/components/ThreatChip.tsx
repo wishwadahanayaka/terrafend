@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { latLngBounds, type Map as LeafletMap } from 'leaflet'
 import { useTranslation } from 'react-i18next'
+import type { RainView } from '../lib/rainView'
 import { useOnline } from '../lib/useOnline'
 import { useThreats, type ThreatPart } from '../lib/useThreats'
 
@@ -58,13 +59,15 @@ type Props = {
   map: LeafletMap | null
   // Opens the Layers panel, where the whole list is
   onMore: () => void
+  // A tap on a rain part switches the map to the rain it is about (past or next 3 hours)
+  onRainView: (view: RainView) => void
 }
 
 // One chip for everything serious right now: rivers at Alert or above, blocked or
 // restricted road reports, and heavy rain or thunderstorms. It is never more than two
 // lines: what doesn't fit becomes "+N more", which opens the Layers panel with the full
 // list. Tapping the rest of it zooms the map out to show all of them.
-export default function ThreatChip({ map, onMore }: Props) {
+export default function ThreatChip({ map, onMore, onRainView }: Props) {
   const { parts, points, state } = useThreats()
   const { t } = useTranslation()
   const online = useOnline()
@@ -110,12 +113,16 @@ export default function ThreatChip({ map, onMore }: Props) {
           <span className={partClass}>{t('chip.more', { count: parts.length })}</span>
         </div>
         <div className="flex max-h-[3.75rem] flex-wrap items-center gap-x-1.5 gap-y-0.5 overflow-hidden px-3 py-2 text-left text-[13px] font-semibold text-slate-900">
-          {/* Every part zooms to the threats, like tapping the chip always has */}
+          {/* Every part zooms to the threats, like tapping the chip always has. A rain part also
+              switches the map to its rain view, so the squares it counted are the ones on screen. */}
           {parts.slice(0, shown).map((part, i) => (
             <button
               key={part.text}
               type="button"
-              onClick={showThreats}
+              onClick={() => {
+                if (part.view) onRainView(part.view)
+                showThreats()
+              }}
               className={`${partClass} text-left active:opacity-60`}
             >
               {dot(part.color)}

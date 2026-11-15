@@ -11,6 +11,13 @@ import type { MildLevel, PossibleLevel, RainLevel } from './rainForecast'
 // Levels: light, moderate, heavy, veryheavy, thunder (forecast only, since satellite
 // and gauges can't see thunder), and showers and stormpossible, the two quiet forecast
 // notes ("Heavy showers possible", "Thunderstorms possible"), also forecast only.
+// Two more are for trying the satellite's light-rain rule: sat-lightlone is a single cell of
+// light rain for one hour with nothing beside it (the rule hides it), and gauge-dry is a gauge
+// that measured exactly 0 mm (it hides light satellite rain within 10 km). gauge-light near
+// sat-lightlone backs it up and the square shows. Example:
+//   ?fakeRainMap=sat-lightlone:galle              hidden
+//   ?fakeRainMap=sat-lightlone:galle,gauge-light:galle    shown
+//   ?fakeRainMap=sat-light:galle,gauge-dry:galle          hidden (the gauge says it was dry)
 // The warning levels get a high chance of rain, so they count as warnings like a real
 // forecast would. Example:
 //   ?fakeRainMap=thunder:kandy,sat-heavy:colombo,gauge-veryheavy:glencourse
@@ -28,10 +35,18 @@ export type FakeLevel = {
   // Chance of rain in percent, which only means something for the forecast
   probability: number
   forecastOnly?: boolean
+  satelliteOnly?: boolean
+  gaugeOnly?: boolean
+  // One cell for one hour, with nothing beside it (satellite only)
+  lone?: boolean
 }
 
 const LEVELS: Record<string, FakeLevel> = {
   light: { level: null, mild: 'light', possible: null, mm: 1, probability: 70 },
+  // Light rain the satellite's rule should hide: one cell, one hour, nothing next to it
+  lightlone: { level: null, mild: 'light', possible: null, mm: 1, probability: 0, satelliteOnly: true, lone: true },
+  // A gauge that measured exactly 0 mm, which hides light satellite rain within 10 km
+  dry: { level: null, mild: null, possible: null, mm: 0, probability: 0, gaugeOnly: true },
   moderate: { level: null, mild: 'moderate', possible: null, mm: 4, probability: 70 },
   heavy: { level: 'heavy', mild: null, possible: null, mm: 9, probability: 80 },
   veryheavy: { level: 'veryHeavy', mild: null, possible: null, mm: 18, probability: 90 },
@@ -88,7 +103,11 @@ export function readFakeRainMap(kind: FakeKind): Fake[] {
     const place = normalise(where)
     const spot = TEST_PLACES[place] ?? null
 
-    const okLevel = fake && (!fake.forecastOnly || partKind === 'forecast')
+    const okLevel =
+      fake &&
+      (!fake.forecastOnly || partKind === 'forecast') &&
+      (!fake.satelliteOnly || partKind === 'satellite') &&
+      (!fake.gaugeOnly || partKind === 'gauge')
     const okPlace = spot !== null || partKind === 'gauge'
     if (!okLevel || !okPlace) {
       // Every kind reads the same list, so only one of them reports the mistake

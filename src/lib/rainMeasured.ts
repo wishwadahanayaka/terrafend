@@ -1,7 +1,7 @@
 import { t } from '../i18n'
 import { kmFrom, normalise, readFakeRainMap } from './fakeRainMap'
 import { HOUR_MS } from './openMeteo'
-import { mildRain, rainLevel, RAIN_RANK, type MildLevel, type RainLevel } from './rainForecast'
+import { LIGHT_MM, mildRain, rainLevel, RAIN_RANK, type MildLevel, type RainLevel } from './rainForecast'
 import { sriLankaClock } from './time'
 import { WATER_LEVELS_TIMEOUT_MS } from './waterLevelsQuery'
 
@@ -105,6 +105,9 @@ export type SatelliteRain = {
   // For each grid cell, the heaviest hour of the window in mm per hour. null means the
   // satellite reported nothing for that cell.
   mm: (number | null)[]
+  // For each grid cell, in how many hours of the window it read light rain or more (0 to 3).
+  // The light-rain rule (lightRain.ts) needs this, and `mm` alone has lost it.
+  lightHours: number[]
   // The window the numbers cover: the last 3 hours the satellite has reported
   from: number
   to: number
@@ -177,7 +180,7 @@ function sameGrid(grid: unknown): boolean {
 // millimetre (checked against the gauges: summed over 24 hours the raw numbers are
 // about 10 times what the gauges measured). A blank cell is one with no rain
 // reported. An hour that isn't in the list yet is not the same as a dry hour.
-function parseSatellite(json: Record<string, unknown>, now: number): SatelliteRain | null {
+export function parseSatellite(json: Record<string, unknown>, now: number): SatelliteRain | null {
   const satellite = json.satellite
   if (!isObject(satellite) || !Array.isArray(satellite.hours) || !sameGrid(json.grid)) return null
 
@@ -211,7 +214,10 @@ function parseSatellite(json: Record<string, unknown>, now: number): SatelliteRa
     }
     return worst
   })
-  return { mm, from: window[0].start, to }
+  const lightHours = Array.from({ length: CELLS }, (_, i) =>
+    window.filter((hour) => (hour.mm[i] ?? 0) >= LIGHT_MM).length,
+  )
+  return { mm, lightHours, from: window[0].start, to }
 }
 
 export async function fetchMeasuredRain(): Promise<MeasuredRain> {
@@ -274,6 +280,7 @@ function applyTestRain(measured: MeasuredRain, now: number) {
   if (satelliteFakes.length === 0) return
   const satellite: SatelliteRain = measured.satellite ?? {
     mm: Array.from({ length: CELLS }, () => null),
+    lightHours: Array.from({ length: CELLS }, () => 0),
     from: now - SATELLITE_WINDOW_HOURS * HOUR_MS,
     to: now,
   }
@@ -288,9 +295,12 @@ function applyTestRain(measured: MeasuredRain, now: number) {
     }
     for (let i = 0; i < CELLS; i++) {
       const [lat, lng] = satelliteCentre(i)
-      if (i === nearest || kmFrom(lat, lng, spot) <= TEST_RADIUS_KM) {
-        satellite.mm[i] = Math.max(satellite.mm[i] ?? 0, fake.mm)
-      }
+      // A "lone" fake is one cell that read light rain for one hour only, with nothing beside it:
+      // the case the light-rain rule is there to hide. Other fakes are a patch that lasted.
+      const inside = fake.lone ? i === nearest : i === nearest || kmFrom(lat, lng, spot) <= TEST_RADIUS_KM
+      if (!inside) continue
+      satellite.mm[i] = Math.max(satellite.mm[i] ?? 0, fake.mm)
+      satellite.lightHours[i] = Math.max(satellite.lightHours[i], fake.lone ? 1 : SATELLITE_WINDOW_HOURS)
     }
   }
 }

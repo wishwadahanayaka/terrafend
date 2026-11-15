@@ -16,6 +16,7 @@ import {
 } from '../lib/rainForecast'
 import { formatMm, satelliteIndexAt, satelliteWhen, SATELLITE_GRID, SATELLITE_RAIN_CREDIT } from '../lib/rainMeasured'
 import type { RainSquare } from '../lib/rainSquares'
+import { squaresOf, type RainView } from '../lib/rainView'
 import { sriLankaClock } from '../lib/time'
 import { useRainSquares } from '../lib/useRainSquares'
 
@@ -23,6 +24,8 @@ type Props = {
   hidden: boolean
   // Heavy rain and thunderstorms always show. This adds light and moderate rain.
   showMild: boolean
+  // The past 3 hours (satellite) or the next 3 (forecast). Only one is drawn at a time.
+  view: RainView
 }
 
 const keyOf = (s: RainSquare) => s.level ?? s.mild ?? 'light'
@@ -84,13 +87,19 @@ function outsideEdges(squares: RainSquare[], drawn: Set<number>): LatLngTuple[][
 type Selected = { square: RainSquare; at: LatLngTuple }
 
 // The rain over the island as soft coloured squares on one 0.1 degree grid: what the
-// satellite saw in the past 3 hours or what the forecast says is likely in the next 3,
-// whichever is worse. The panes sit under the route line and all the markers, so rain
-// never hides a report or a river. Each pane is faded as a whole, so nothing gets darker
-// where shapes meet.
-export default function RainMapOverlay({ hidden, showMild }: Props) {
-  const squares = useRainSquares()
+// satellite measured in the past 3 hours, or what the forecast says is likely in the next 3,
+// by the view that is switched on. They are never drawn together, because they cover different
+// times. The panes sit under the route line and all the markers, so rain never hides a report
+// or a river. Each pane is faded as a whole, so nothing gets darker where shapes meet.
+export default function RainMapOverlay({ hidden, showMild, view }: Props) {
+  const squares = squaresOf(useRainSquares(), view)
   const [selected, setSelected] = useState<Selected | null>(null)
+  // A card belongs to the view it was opened in, so switching view closes it
+  const [shownView, setShownView] = useState(view)
+  if (shownView !== view) {
+    setShownView(view)
+    setSelected(null)
+  }
 
   // Built only when the rain data or the switch changes, not each time a card opens
   const layers = useMemo(() => {
@@ -194,6 +203,17 @@ function RainSquareCard({ square }: { square: RainSquare }) {
   const mildForecast = !satellite && square.level === null
   return (
     <div>
+      {/* Says at a glance whether this is rain that fell (measured) or rain that may come (forecast) */}
+      <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span
+          className={`rounded px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-white ${satellite ? 'bg-slate-700' : 'bg-indigo-700'}`}
+        >
+          {t(satellite ? 'rain.mapCard.tagMeasured' : 'rain.mapCard.tagForecast')}
+        </span>
+        <span className="text-xs text-slate-700">
+          {t('rain.mapCard.window', { from: sriLankaClock(square.windowFrom), to: sriLankaClock(square.windowTo) })}
+        </span>
+      </div>
       <div className="flex items-start gap-2">
         <Icon className="mt-0.5 h-5 w-5 shrink-0" style={{ color: colorOf(square) }} aria-hidden="true" />
         <span className="text-base font-semibold text-slate-900">{headline(square, now)}</span>
@@ -211,11 +231,6 @@ function RainSquareCard({ square }: { square: RainSquare }) {
           {t('rain.mapCard.upTo', { mm: formatMm(square.mm) })}
         </div>
       )}
-      <div className="mt-1 text-xs text-slate-600">
-        {satellite
-          ? t('rain.mapCard.satelliteWindow', { from: sriLankaClock(square.from), to: sriLankaClock(square.to) })
-          : t('rain.mapCard.forecastWindow')}
-      </div>
       {satellite && (
         <div className="mt-1 text-xs text-slate-600">{t('rain.mapCard.satelliteHigh')}</div>
       )}

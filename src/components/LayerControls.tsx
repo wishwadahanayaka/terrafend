@@ -12,6 +12,8 @@ import {
   RAIN_CREDIT_URL,
   RAIN_LABEL,
 } from '../lib/rainForecast'
+import { LIGHT_CONFIRM_HOURS, LIGHT_CONFIRM_KM, LIGHT_VETO_KM } from '../lib/lightRain'
+import type { RainView } from '../lib/rainView'
 import { LANGUAGES } from '../i18n/languages'
 import { setLanguage } from '../i18n'
 import { RIVER_CREDIT, STEP_COLOR, type RiverStep } from '../lib/riverGauges'
@@ -23,6 +25,8 @@ import { possibleNoteKey } from '../lib/rainMap'
 import { useRainMap } from '../lib/useRainMap'
 import { sriLankaWhen } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
+
+import RainViewSwitch from './RainViewSwitch'
 
 // Counts reports from Supabase, so it loads after the map like the other data code
 const ThreatChip = lazy(() => import('./ThreatChip'))
@@ -37,6 +41,9 @@ type Props = {
   onOpenEmergency: () => void
   // Opens the "How to help" screen
   onOpenHelp: () => void
+  // Which rain the map shows: the past 3 hours (measured) or the next 3 (forecast)
+  rainView: RainView
+  onRainView: (view: RainView) => void
 }
 
 // Shown in this order, with a plain-words meaning for each
@@ -66,7 +73,16 @@ const GDACS_LEGEND: { level: GdacsLevel; key: string }[] = [
 
 type Open = 'none' | 'layers' | 'legend' | 'language'
 
-export default function LayerControls({ map, settings, onChange, onOpenMyReports, onOpenEmergency, onOpenHelp }: Props) {
+export default function LayerControls({
+  map,
+  settings,
+  onChange,
+  onOpenMyReports,
+  onOpenEmergency,
+  onOpenHelp,
+  rainView,
+  onRainView,
+}: Props) {
   const { t, i18n } = useTranslation()
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
@@ -157,7 +173,7 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
       )}
 
       <Suspense fallback={null}>
-        <ThreatChip map={map} onMore={() => show('layers')} />
+        <ThreatChip map={map} onMore={() => show('layers')} onRainView={onRainView} />
       </Suspense>
 
       {open === 'language' && (
@@ -210,6 +226,13 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
             checked={settings.mildRain}
             onChange={(value) => onChange('mildRain', value)}
           />
+          {/* Light and moderate rain are hidden until the switch is on, which is easy to miss */}
+          {!settings.mildRain && (
+            <p className="mx-2 mb-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {t('layers.rainOffHint')}
+            </p>
+          )}
+          <RainViewSwitch view={rainView} onChange={onRainView} />
           {possibleNote && (
             <p className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">{possibleNote}</p>
           )}
@@ -228,6 +251,12 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
           {measured.status === 'error' && (
             <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
               {t('layers.measuredUnavailable')}
+            </p>
+          )}
+          {/* The gauges loaded but the satellite part of the answer is missing, so the Past view has no squares */}
+          {measured.status === 'success' && measured.data.satellite === null && (
+            <p role="status" className="mx-2 mb-1 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
+              {t('layers.satelliteUnavailable')}
             </p>
           )}
 
@@ -311,6 +340,11 @@ export default function LayerControls({ map, settings, onChange, onOpenMyReports
           </ul>
           <p className="mt-3 text-xs text-slate-600">
             {t('legend.rainNote', { chance: FORECAST_MIN_PROBABILITY, mm: THUNDER_MIN_MM })}
+          </p>
+          {/* Why the squares, the forecast and the gauge badges don't always agree */}
+          <p className="mt-2 text-xs text-slate-600">{t('legend.rainTimes')}</p>
+          <p className="mt-2 text-xs text-slate-600">
+            {t('legend.satelliteLight', { hours: LIGHT_CONFIRM_HOURS, km: LIGHT_CONFIRM_KM, vetoKm: LIGHT_VETO_KM })}
           </p>
           <p className="mt-2 text-[11px] leading-tight text-slate-500">{GAUGE_RAIN_CREDIT}</p>
           <p className="mt-1 text-[11px] leading-tight text-slate-500">{SATELLITE_RAIN_CREDIT}</p>

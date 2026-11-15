@@ -7,7 +7,8 @@ import { BUTTON_COLUMN_PX, SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/map
 import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
 import { useNotice } from '../lib/useNotice'
 import { useOnline } from '../lib/useOnline'
-import { loadLayerSettings, saveLayerSetting, type LayerSettings } from '../lib/layerSettings'
+import { loadLayerSettings, loadRainView, saveLayerSetting, saveRainView, type LayerSettings } from '../lib/layerSettings'
+import type { RainView } from '../lib/rainView'
 import type { RouteHazard } from '../lib/useRoute'
 import { reportStatus, type MyReportRow } from '../lib/myReportsList'
 import { rainPath, type RainStretch } from '../lib/rainForecast'
@@ -17,6 +18,7 @@ import MapLimits from './MapLimits'
 import ReportFlow, { type ReportMode } from './ReportFlow'
 import LayerControls from './LayerControls'
 import Notice from './Notice'
+import RainViewLabel from './RainViewLabel'
 import type { PanelState } from './RoutePlanner'
 
 // The data code (Supabase, hazards, the route planner) loads after the map
@@ -57,6 +59,12 @@ export default function HazardMap({
   const [routeStale, setRouteStale] = useState(false)
   // Serious items always show. These switches only add the less serious ones.
   const [layers, setLayers] = useState(loadLayerSettings)
+  // The rain on the map: the past 3 hours (measured) or the next 3 (forecast), remembered
+  const [rainView, setRainViewState] = useState(loadRainView)
+  const setRainView = (view: RainView) => {
+    setRainViewState(view)
+    saveRainView(view)
+  }
 
   const { t } = useTranslation()
   const online = useOnline()
@@ -130,7 +138,7 @@ export default function HazardMap({
         />
         <MapLimits island={SRI_LANKA_BOUNDS} limits={SRI_LANKA_LIMITS} />
         <Suspense fallback={null}>
-          <RainMapOverlay hidden={picking} showMild={layers.mildRain} />
+          <RainMapOverlay hidden={picking} showMild={layers.mildRain} view={rainView} />
         </Suspense>
         <Suspense fallback={null}>
           <ReportMarkers
@@ -165,7 +173,8 @@ export default function HazardMap({
         )}
         {!picking && (
           <Suspense fallback={null}>
-            <MeasuredRainMarkers showMild={layers.mildRain} />
+            {/* Heavy gauge badges show in both views. The lighter ones are measured rain, so only in Past. */}
+            <MeasuredRainMarkers showMild={layers.mildRain && rainView === 'past'} />
           </Suspense>
         )}
         <LocateButton
@@ -185,10 +194,22 @@ export default function HazardMap({
           }}
           onOpenEmergency={onOpenEmergency}
           onOpenHelp={onOpenHelp}
+          rainView={rainView}
+          onRainView={setRainView}
           onChange={(name: keyof LayerSettings, value) => {
             setLayers((current) => ({ ...current, [name]: value }))
             saveLayerSetting(name, value)
           }}
+        />
+      )}
+
+      {/* Level with the locate button on the other side. Hidden while the route panel is fully open. */}
+      {!picking && panel !== 'open' && (
+        <RainViewLabel
+          view={rainView}
+          onChange={setRainView}
+          bottomClass={panel === 'collapsed' ? 'bottom-20' : 'bottom-6'}
+          cardOpen={cardOpen}
         />
       )}
 
