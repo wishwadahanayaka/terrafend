@@ -182,7 +182,7 @@ describe('0009: photos', () => {
     }
   })
 
-  it('lets a signed-in user upload a random name or (until 0010) the old own folder, and nothing else', () => {
+  it('lets a signed-in user upload a random name or (until 0011) the old own folder, and nothing else', () => {
     expect(m0009Code).toMatch(/create policy "Signed-in users upload photos"\s+on storage\.objects for insert\s+to authenticated/)
     expect(m0009Code).toContain("(storage.foldername(name))[1] = auth.uid()::text")
     expect(m0009Code).toMatch(/drop policy if exists "Users upload photos into their own folder" on storage\.objects;/)
@@ -258,9 +258,110 @@ describe('the dry run file', () => {
   })
 })
 
+describe('0010: news feed', () => {
+  const m0010 = migration('0010_news_feed').sql
+  const c0010 = code(m0010)
+  const PUBLIC_COLUMNS = ['id', 'url', 'title', 'source', 'kind', 'channel', 'language', 'hazard', 'published_at', 'fetched_at', 'ended_at', 'place_name', 'location']
+
+  function newsColumns(): string[] {
+    const block = /create table public\.news_items \(([\s\S]*?)\n\);/.exec(c0010)?.[1] ?? ''
+    return [...block.matchAll(/^ {2}([a-z_]+) +\S/gm)].map((m) => m[1]).filter((c) => c !== 'constraint')
+  }
+
+  it('is one transaction', () => {
+    expect(c0010.trim().startsWith('begin;')).toBe(true)
+    expect(c0010.trim().endsWith('commit;')).toBe(true)
+  })
+
+  it('lets the app read the public columns only: every column except item_key, score and matched', () => {
+    const list = /grant select \(([^)]*)\)\s+on public\.news_items to anon, authenticated;/.exec(c0010)?.[1] ?? ''
+    const granted = list.split(',').map((c) => c.trim())
+    expect(granted).toEqual(PUBLIC_COLUMNS)
+    expect(newsColumns().filter((c) => !['item_key', 'score', 'matched'].includes(c)).sort()).toEqual([...PUBLIC_COLUMNS].sort())
+  })
+
+  it('takes everything else away from the app, on both tables', () => {
+    expect(c0010).toMatch(/revoke all on public\.news_items from public, anon, authenticated;/)
+    expect(c0010).toMatch(/revoke all on public\.news_source_state from public, anon, authenticated;/)
+    expect(c0010).not.toMatch(/grant [^;]*(insert|update|delete)[^;]*to [^;]*(anon|authenticated)/)
+    expect(c0010).not.toMatch(/grant [^;]*on public\.news_source_state to [^;]*(anon|authenticated)/)
+    expect(c0010).not.toMatch(/create policy [^;]*on public\.news_source_state/)
+  })
+
+  it('has one policy on news_items, and it only reads', () => {
+    const policies = [...c0010.matchAll(/create policy [^;]*on public\.news_items[^;]*;/g)].map((m) => m[0])
+    expect(policies).toHaveLength(1)
+    expect(policies[0]).toMatch(/for select to anon, authenticated using \(true\)/)
+  })
+
+  it('turns on row level security for both tables', () => {
+    expect(c0010).toContain('alter table public.news_items enable row level security;')
+    expect(c0010).toContain('alter table public.news_source_state enable row level security;')
+  })
+
+  it('lets only the function (service_role) write', () => {
+    expect(c0010).toContain('grant select, insert, update, delete on public.news_items to service_role;')
+    expect(c0010).toContain('grant select, insert, update on public.news_source_state to service_role;')
+  })
+
+  it('keeps run_news_refresh() locked down, and sends the header the function checks', () => {
+    const def = latestFunction('run_news_refresh')
+    expect(def).toMatch(/security definer/)
+    expect(def).toContain("set search_path = ''")
+    expect(def).toContain("name = 'news_secret'")
+    expect(def).toContain("'x-news-secret', secret")
+    expect(c0010).toMatch(/revoke all on function public\.run_news_refresh\(\) from public, anon, authenticated;/)
+    const index = readFileSync(join(SUPABASE, 'functions', 'news-refresh', 'index.ts'), 'utf8')
+    expect(index).toContain("req.headers.get('x-news-secret')")
+  })
+
+  it('runs every 15 minutes, away from the cleanup (minute 0) and forecast (minute 23) jobs', () => {
+    const schedule = /cron\.schedule\('news-refresh', '([^']+)'/.exec(c0010)?.[1] ?? ''
+    const minutes = schedule.split(' ')[0].split(',').map(Number)
+    expect(minutes).toEqual([4, 19, 34, 49])
+    expect(minutes).not.toContain(0)
+    expect(minutes).not.toContain(23)
+  })
+
+  it('deletes headlines after 7 days', () => {
+    expect(c0010).toMatch(/cron\.schedule\('news-cleanup'[\s\S]*delete from public\.news_items where published_at < now\(\) - interval '7 days'/)
+  })
+
+  it('allows links as long as the function does, and the same Sri Lanka bounds as reports', () => {
+    expect(c0010).toContain("url ~ '^https://' and char_length(url) <= 2048")
+    expect(c0010).toContain('char_length(item_key) <= 2048')
+    expect(c0010).toContain('extensions.st_x(location::extensions.geometry) between 79.4 and 82.1')
+    expect(c0010).toContain('extensions.st_y(location::extensions.geometry) between 5.7 and 10.0')
+  })
+
+  it('does not add the table to Realtime (the app refetches instead)', () => {
+    expect(c0010).not.toMatch(/supabase_realtime/)
+  })
+})
+
+describe('the privacy checks know about the news feed', () => {
+  const privacy = code(read('checks', 'privacy.sql'))
+
+  it('lists news_items among the tables the API may read (check 6)', () => {
+    expect(privacy).toMatch(/select 6,[\s\S]*?'island_forecast', 'news_items'/)
+  })
+
+  it('checks that news_items is read-only with score and matched private, and news_source_state closed (check 17)', () => {
+    const check = /select 17,[\s\S]*?news_source_state'\)/.exec(privacy)?.[0] ?? ''
+    for (const text of ["'score', 'select'", "'matched', 'select'", "'insert'", "'update'", "'delete'", 'relrowsecurity']) {
+      expect(check, text).toContain(text)
+    }
+  })
+
+  it('no longer says 0010 is the photo-path cleanup', () => {
+    expect(read('checks', 'privacy.sql')).not.toMatch(/0010 can go ahead/)
+    expect(read('migrations', '0009_hide_user_ids.sql')).not.toMatch(/Migration 0010 removes/)
+  })
+})
+
 describe('the check scripts', () => {
   it('only read: the SQL checks change nothing', () => {
-    for (const file of ['privacy.sql', '0009_live_definitions.sql']) {
+    for (const file of ['privacy.sql', '0009_live_definitions.sql', '0010_check.sql']) {
       expect(bare(read('checks', file)), file).not.toMatch(/\b(insert|update|delete|drop|alter|grant|revoke|create|truncate)\b/i)
     }
   })

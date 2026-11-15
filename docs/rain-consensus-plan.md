@@ -173,7 +173,7 @@ extra calls, but coarser).
   MET Norway would add a second credit, a second parser and a second set of rules. Revisit only if
   Open-Meteo outages turn out to be a real problem.
 
-## Migration (steps 2 to 4; the next free number when built, 0010 is reserved for the photo paths)
+## Migration (steps 2 to 4; the next free number when built: 0010 is the news feed and 0011 the photo-path cleanup)
 
 ```sql
 alter table public.island_forecast

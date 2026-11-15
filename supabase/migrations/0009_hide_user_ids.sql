@@ -15,8 +15,8 @@
 --     is read from the owner Storage records on the object (owner_id), through owns_report_photo(),
 --     so a report can still only point at a photo its own author uploaded.
 --   * The OLD <your id>/<name> paths are still accepted for now, because an installed copy of the
---     app only updates when its owner taps "New version available". Migration 0010 removes the old
---     style after a grace period of about two weeks.
+--     app only updates when its owner taps "New version available". Migration 0011 removes the old
+--     style after a grace period of about two weeks (planned for 29 Nov 2026; 0010 is the news feed).
 --
 -- Carried over unchanged in the reports insert policy: created_by = auth.uid(), the 10 reports an
 -- hour limit (recent_report_count() < 10) and the old photo_path pattern. The Sri Lanka bounds check
@@ -168,7 +168,7 @@ revoke all on function public.owns_report_photo(text) from public, anon;
 grant execute on function public.owns_report_photo(text) to authenticated;
 
 
--- Uploads: a random <uuid>.jpg at the top of the bucket, or (until 0010) the old folder named after
+-- Uploads: a random <uuid>.jpg at the top of the bucket, or (until 0011) the old folder named after
 -- the caller's own id. There are still no select, update or delete policies, so nobody can list
 -- the bucket or replace a file that is already there.
 drop policy if exists "Users upload photos into their own folder" on storage.objects;

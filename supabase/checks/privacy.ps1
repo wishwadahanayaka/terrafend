@@ -6,7 +6,7 @@
 #   powershell -ExecutionPolicy Bypass -File supabase\checks\privacy.ps1
 #   powershell -ExecutionPolicy Bypass -File supabase\checks\privacy.ps1 -IncludeSignedIn
 #
-# Every line should say PASS. Run it after 0009, and again after 0010.
+# Every line should say PASS. Run it after 0009, and again after 0011 (the photo-path cleanup).
 
 param([switch]$IncludeSignedIn)
 

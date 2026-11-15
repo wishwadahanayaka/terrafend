@@ -1,6 +1,7 @@
 -- Privacy checks, to run AFTER 0009 is live. Read-only: it changes nothing.
 -- Run it in the SQL Editor. One result table, one line per check. Every line should say PASS.
--- Run it again after 0010, and any time a table, column or policy is added.
+-- Run it again after 0010 (news feed) and 0011 (photo-path cleanup), and any time a table, column or
+-- policy is added. Check 17 says FAIL until 0010 has been run.
 --
 -- Not covered here, because SQL can't do it: the real API with the public key (see privacy.ps1),
 -- and a real photo upload (see the last line).
@@ -50,7 +51,7 @@ select ord, check_name, case when ok then 'PASS' else 'FAIL' end as result, deta
     union all
     -- Tables the API can read at all. Anything unexpected here is worth a look.
     select 6, 'API-readable tables in public are only the expected ones',
-           coalesce(bool_and(c.relname in ('reports', 'report_votes', 'island_forecast')), true),
+           coalesce(bool_and(c.relname in ('reports', 'report_votes', 'island_forecast', 'news_items')), true),
            'readable: ' || coalesce(string_agg(c.relname, ', ' order by c.relname), 'none')
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v', 'm', 'p')
@@ -111,7 +112,7 @@ select ord, check_name, case when ok then 'PASS' else 'FAIL' end as result, deta
            and not has_function_privilege('anon', 'public.owns_report_photo(text)', 'execute'), ''
 
     union all
-    -- Shows how many photos are still on the old <user id>/<name> paths. 0010 can go ahead at 0.
+    -- Shows how many photos are still on the old <user id>/<name> paths. 0011 can go ahead at 0.
     select 15, 'photos still on old <user id>/ paths (info: this should fall to 0 on its own)',
            true,
            'old style=' || count(*) filter (where name like '%/%') || ', flat=' || count(*) filter (where name not like '%/%')
@@ -123,6 +124,29 @@ select ord, check_name, case when ok then 'PASS' else 'FAIL' end as result, deta
            coalesce(bool_and(owner_id is not null), false),
            'checked ' || count(*) || ' newest objects'
       from (select owner_id from storage.objects where bucket_id = 'report-photos' order by created_at desc limit 5) s
+
+    union all
+    -- The news feed (0010). The app may only read news_items, and only through the column grant, which
+    -- leaves out score and matched. news_source_state (caching headers and errors) has no grants at all.
+    select 17, 'news_items is read-only for the app with score/matched private, and news_source_state is closed',
+           count(*) = 2 and coalesce(bool_and(c.relrowsecurity and case c.relname
+             when 'news_items' then
+               not has_table_privilege('anon', c.oid, 'select') and not has_table_privilege('authenticated', c.oid, 'select')
+               and has_column_privilege('anon', c.oid, 'title', 'select') and has_column_privilege('authenticated', c.oid, 'title', 'select')
+               and not has_column_privilege('anon', c.oid, 'score', 'select') and not has_column_privilege('authenticated', c.oid, 'score', 'select')
+               and not has_column_privilege('anon', c.oid, 'matched', 'select') and not has_column_privilege('authenticated', c.oid, 'matched', 'select')
+               and not has_any_column_privilege('anon', c.oid, 'insert') and not has_any_column_privilege('authenticated', c.oid, 'insert')
+               and not has_any_column_privilege('anon', c.oid, 'update') and not has_any_column_privilege('authenticated', c.oid, 'update')
+               and not has_table_privilege('anon', c.oid, 'delete') and not has_table_privilege('authenticated', c.oid, 'delete')
+             else
+               not has_any_column_privilege('anon', c.oid, 'select') and not has_any_column_privilege('authenticated', c.oid, 'select')
+               and not has_any_column_privilege('anon', c.oid, 'insert') and not has_any_column_privilege('authenticated', c.oid, 'insert')
+               and not has_any_column_privilege('anon', c.oid, 'update') and not has_any_column_privilege('authenticated', c.oid, 'update')
+               and not has_table_privilege('anon', c.oid, 'delete') and not has_table_privilege('authenticated', c.oid, 'delete')
+             end), false),
+           'found: ' || coalesce(string_agg(c.relname, ', ' order by c.relname), 'neither (run 0010 first)')
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relname in ('news_items', 'news_source_state')
 
   ) q
  order by ord;

@@ -401,6 +401,10 @@ verify_jwt = false
 [functions.forecast-refresh]
 verify_jwt = false
 
+# Called by a cron job every 15 minutes, and checks its own secret header (x-news-secret).
+[functions.news-refresh]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
