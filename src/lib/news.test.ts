@@ -12,6 +12,8 @@ import {
   DUPLICATE_WINDOW_MS,
   groupNews,
   isPdfLink,
+  officialAge,
+  OFFICIAL_VALID_MS,
   newsAriaLabel,
   newsChip,
   newsEntryState,
@@ -317,6 +319,70 @@ describe('the official notices', () => {
   })
 })
 
+describe('notices that are only good for 24 hours', () => {
+  const group = (items: NewsItem[]) => groupNews(items, { now: NOW })
+
+  it('are valid for 24 hours from issue, and no longer after that', () => {
+    expect(OFFICIAL_VALID_MS).toBe(24 * HOUR)
+    // the 14 Nov 4:00 pm warning, looked at on 15 Nov at 4:00 pm and a minute after
+    const issued = Date.parse('2026-11-14T10:30:00Z')
+    const landslide = official('dmc_landslide', { publishedAt: issued })
+    expect(officialAge(landslide, issued + 24 * HOUR)).toBe('current')
+    expect(officialAge(landslide, issued + 24 * HOUR + MIN)).toBe('maybeExpired')
+    expect(officialAge(landslide, issued + HOUR)).toBe('current')
+  })
+
+  it('say "may no longer be valid" for a landslide warning, and "older report" for the other two', () => {
+    const old = { publishedAt: NOW - 30 * HOUR }
+    expect(officialAge(official('dmc_landslide', old), NOW)).toBe('maybeExpired')
+    expect(officialAge(official('dmc_situation', old), NOW)).toBe('older')
+    expect(officialAge(official('dmc_flood', old), NOW)).toBe('older')
+  })
+
+  it('leave everything else alone, however old', () => {
+    const old = { publishedAt: NOW - 40 * HOUR }
+    expect(officialAge(official('meteo_sea', old), NOW)).toBe('current')
+    expect(officialAge(official(null, { source: 'dmc_warnings', ...old }), NOW)).toBe('current')
+    expect(officialAge(official(null, { source: 'dmc_news', ...old }), NOW)).toBe('current')
+    expect(officialAge(item({ publishedAt: NOW - 40 * HOUR }), NOW)).toBe('current')
+  })
+
+  it('treat a time in the future (a clock that is off) as current', () => {
+    expect(officialAge(official('dmc_landslide', { publishedAt: NOW + HOUR }), NOW)).toBe('current')
+  })
+
+  it('are hidden when a newer one of the same kind exists', () => {
+    const stale = official('dmc_landslide', { publishedAt: NOW - 30 * HOUR })
+    const fresh = official('dmc_landslide', { publishedAt: NOW - 2 * HOUR })
+    expect(group([stale, fresh]).official.map((i) => i.id)).toEqual([fresh.id])
+    // whatever order the rows came in
+    expect(group([fresh, stale]).official.map((i) => i.id)).toEqual([fresh.id])
+  })
+
+  it('stay on the sheet when they are the newest, so the person still sees there was one', () => {
+    const stale = official('dmc_landslide', { publishedAt: NOW - 30 * HOUR })
+    expect(group([stale]).official.map((i) => i.id)).toEqual([stale.id])
+  })
+
+  it('when two are out of date, only the newer one shows', () => {
+    const a = official('dmc_flood', { publishedAt: NOW - 40 * HOUR })
+    const b = official('dmc_flood', { publishedAt: NOW - 26 * HOUR })
+    expect(group([a, b]).official.map((i) => i.id)).toEqual([b.id])
+  })
+
+  it('go after the current notices, even ones that are usually lower down', () => {
+    const stale = official('dmc_landslide', { publishedAt: NOW - 30 * HOUR })
+    const current = official('dmc_situation', { publishedAt: NOW - HOUR })
+    const news = official(null, { source: 'dmc_news', publishedAt: NOW - 20 * HOUR })
+    expect(group([stale, news, current]).official.map((i) => i.id)).toEqual([current.id, news.id, stale.id])
+  })
+
+  it('are gone after 48 hours like every other notice', () => {
+    const gone = official('dmc_landslide', { publishedAt: NOW - NEWS_WINDOW_MS - MIN })
+    expect(group([gone]).official).toEqual([])
+  })
+})
+
 describe('the same story from several outlets', () => {
   const group = (items: NewsItem[], over = {}) => groupNews(items, { now: NOW, ...over })
   const stories = (items: NewsItem[], over = {}) => group(items, over).groups.flatMap((g) => [...g.visible, ...g.more])
@@ -507,6 +573,24 @@ describe('the chip', () => {
 
   it('is zero and not flagged for nothing', () => {
     expect(chip([])).toEqual({ count: 0, officialRecent: false })
+  })
+
+  it('does not count a landslide warning, situation report or water level report past its 24 hours, nor flag it', () => {
+    for (const channel of ['dmc_landslide', 'dmc_situation', 'dmc_flood']) {
+      const stale = official(channel, { publishedAt: NOW - 24 * HOUR - MIN })
+      expect(groupNews([stale], { now: NOW }).official).toHaveLength(1)
+      expect(chip([stale]), channel).toEqual({ count: 0, officialRecent: false })
+    }
+  })
+
+  it('still counts and flags one that is just inside its 24 hours', () => {
+    const fresh = official('dmc_landslide', { publishedAt: NOW - 24 * HOUR })
+    expect(chip([fresh])).toEqual({ count: 1, officialRecent: true })
+  })
+
+  it('does not let an out-of-date notice light the dot while news reports are counted', () => {
+    const stale = official('dmc_landslide', { publishedAt: NOW - 30 * HOUR })
+    expect(chip([stale, item()])).toEqual({ count: 1, officialRecent: false })
   })
 })
 

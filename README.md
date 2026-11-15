@@ -91,6 +91,8 @@ Global alerts: Data: GDACS (European Commission JRC and UN OCHA). See [gdacs.org
 
 Rain forecast, and the backup place search: Weather data and geocoding by [Open-Meteo.com](https://open-meteo.com/).
 
+Disaster news: News headlines link to their publishers. TerraFend shows only the headline, the source, the time and a link to the publisher's own page, never the article. The headlines come from the [Disaster Management Centre](https://www.dmc.gov.lk) (its warnings, news and reports, shown as official notices), [Ada Derana](https://www.adaderana.lk) (English, Sinhala and Tamil), the [Daily Mirror](https://www.dailymirror.lk), [Lankadeepa](https://www.lankadeepa.lk), the [Tamil Mirror](https://www.tamilmirror.lk) and [Divaina](https://www.divaina.lk). They are picked automatically by keywords, so some may be unrelated and some may be missed, and a news report is not an official warning. The sites' robots.txt files are respected. See `docs/news-feed.md`.
+
 Fonts: Noto Sans Sinhala and Noto Sans Tamil (Noto Project Authors, SIL Open Font License 1.1), used only on phones that have no Sinhala or Tamil font of their own.
 
 The rain map uses a simplified Sri Lanka coastline, derived from [geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0), only to leave sea out of its grid.

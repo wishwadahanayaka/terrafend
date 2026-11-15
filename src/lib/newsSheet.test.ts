@@ -49,6 +49,14 @@ describe('what is on the sheet', () => {
     expect(official).not.toContain('news.notOfficial')
   })
 
+  it('greys a notice that is past its 24 hours and says so, in words and not only in colour', () => {
+    const official = sheet.slice(sheet.indexOf('function OfficialItem'), sheet.indexOf('function StoryItem'))
+    expect(official).toContain('officialAge(item, now)')
+    expect(official).toContain('border-slate-300 bg-slate-100')
+    expect(official).toContain("t('news.issuedMaybeExpired', { when })")
+    expect(official).toContain("t('news.issuedOlder', { when })")
+  })
+
   it('draws a news report with its headline in its own language, a language label, the source, the time ago and the grey line', () => {
     const story = sheet.slice(sheet.indexOf('function StoryItem'))
     expect(story).toContain('lang={main.language}')
@@ -150,6 +158,8 @@ describe('the words', () => {
     expect(news.empty).toBe('No disaster news in the last 2 days.')
     expect(news.unavailable).toBe('News unavailable right now')
     expect(news.offlineSaved).toBe('Offline: showing headlines saved at {{when}}.')
+    expect(news.issuedMaybeExpired).toBe('Issued {{when}} · may no longer be valid')
+    expect(news.issuedOlder).toBe('Issued {{when}} · older report')
     expect(news.showMore_other).toBe('Show {{count}} more')
   })
 

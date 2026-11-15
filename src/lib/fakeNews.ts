@@ -9,6 +9,8 @@
 //   many      six different rain stories, so "Show 3 more" appears (not part of "all")
 //   long      a Tamil headline over 300 characters (it is cut)
 //   ended     two withdrawn official notices (hidden)
+//   stale     a landslide warning (30 h) and a situation report (27 h) past their 24 hours, so they show greyed,
+//             an older landslide warning that a newer one hides, and a current water level report
 //   old       one report 47 hours old (still shown) and others over 48 hours old (hidden)
 //   empty     no headlines at all
 //   fail      the load fails ("News unavailable right now")
@@ -21,7 +23,7 @@
 import { parseNewsRows, type NewsItem } from './news'
 import { SOURCES } from '../../supabase/functions/news-refresh/sources'
 
-export const FAKE_NEWS_MODES = ['official', 'advisory', 'media', 'alllang', 'dupes', 'many', 'long', 'ended', 'old', 'empty', 'fail'] as const
+export const FAKE_NEWS_MODES = ['official', 'advisory', 'media', 'alllang', 'dupes', 'many', 'long', 'ended', 'stale', 'old', 'empty', 'fail'] as const
 export type FakeNewsMode = (typeof FAKE_NEWS_MODES)[number]
 
 const ALL: FakeNewsMode[] = ['official', 'advisory', 'media', 'alllang', 'dupes']
@@ -117,6 +119,12 @@ const SETS: Record<Exclude<FakeNewsMode, 'empty' | 'fail'>, Spec[]> = {
   ended: [
     notice('meteo_advisory', 'meteo_tsunami', 'tsunami', 6 * HOUR, 'Tsunami warning', 60),
     notice('meteo_advisory', 'meteo_heat', 'other', 20 * HOUR, 'Heat advisory', 5 * HOUR),
+  ],
+  stale: [
+    notice('dmc_landslide', 'dmc_landslide', 'landslide', 46 * HOUR, 'Landslide Warning'),
+    notice('dmc_landslide', 'dmc_landslide', 'landslide', 30 * HOUR, 'Landslide Warning'),
+    notice('dmc_situation', 'dmc_situation', 'other', 27 * HOUR, 'Situation Report'),
+    notice('dmc_flood', 'dmc_flood', 'flood', 3 * HOUR, 'Water level & Rainfall'),
   ],
   old: [
     media('adaderana_en', 'en', 'rain', 47 * HOUR, 'Showers ease after a wet weekend, says the weather office'),

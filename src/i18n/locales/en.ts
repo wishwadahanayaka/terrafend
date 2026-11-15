@@ -369,6 +369,8 @@ const en = {
     officialHeading: 'Official notices',
     officialFrom: 'Official: {{source}}',
     issued: 'Issued {{when}}',
+    issuedMaybeExpired: 'Issued {{when}} · may no longer be valid',
+    issuedOlder: 'Issued {{when}} · older report',
     openNotice: 'Open the notice (PDF)',
     readOn: 'Read on {{site}}',
     newTab: '(opens in a new tab)',

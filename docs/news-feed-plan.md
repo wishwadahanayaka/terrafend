@@ -21,8 +21,9 @@ Approved 15 Nov 2026, with these changes to the first draft:
 | 3 | Migration 0010, `supabase/checks/0010_check.sql`, privacy checks 6 and 17, `docs/news-feed.md` | **built**, not run |
 | 4 | Run 0010, deploy, set the secrets, dry run, watch for 2 to 3 days, tune the keywords | **in progress**: 0010 run, deployed, cron running from 15 Nov 2026. Two sources are switched off (`enabled: false`, 15 Nov 2026): `meteo_advisory` (meteo.gov.lk times out from Supabase even at 25 s) and `thinakaran` (403 to Supabase), leaving 12 read; code and tests kept. Owner reviews the Sinhala headlines with the command in `docs/news-feed.md` (Sinhala sources kept 0 on the first run). |
 | 5a | App logic: reading the table, the query hook, grouping, chip numbers, source names, `?fakeNews=`, offline (24 h, not in the banner), tests | **built** (`news.ts`, `newsFetch.ts`, `useNews.ts`, `fakeNews.ts`); no UI |
-| 5b | App screens: the sheet, the chip part and the Layers entry behind `?news=1`, UI text in en/si/ta | **built** (`NewsSheet.tsx`, `NewsEntry.tsx`, `ThreatChip.tsx`, `newsFlag.ts`); shown only with `?news=1` |
-| 6 | Switch on for everyone: set `NEWS_FOR_EVERYONE = true` in `src/lib/newsFlag.ts` (one line), add the README credit, update CLAUDE.md | not done: test on the live site with `?news=1` first |
+| 5b | App screens: the sheet, the chip part and the Layers entry behind `?news=1`, UI text in en/si/ta | **built** (`NewsSheet.tsx`, `NewsEntry.tsx`, `ThreatChip.tsx`, `newsFlag.ts`) |
+| 5c | Notices that are only good for 24 hours: a landslide warning older than 24 hours is greyed ("may no longer be valid") or hidden if a newer one exists; situation and water level reports likewise ("older report"); none of them count in the chip or light its red dot | **built** (`officialAge` in `news.ts`, `?fakeNews=stale`) |
+| 6 | Switch on for everyone: `NEWS_FOR_EVERYONE = true` in `src/lib/newsFlag.ts` (one line), the README credit, CLAUDE.md | **done** (15 Nov 2026): on for everyone. Setting the line back to `false` returns to `?news=1` only. |
 | 7 | Later: Lankapuvath when it's back, NBRO with the landslide layer, news pins | not planned in detail |
 
 Native review of the Sinhala and Tamil keyword lists runs alongside steps 4 and 5.

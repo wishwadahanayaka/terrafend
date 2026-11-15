@@ -369,6 +369,8 @@ const ta: Translations = {
     officialHeading: 'அதிகாரப்பூர்வ அறிவிப்புகள்',
     officialFrom: 'அதிகாரப்பூர்வம்: {{source}}',
     issued: 'வெளியிடப்பட்டது {{when}}',
+    issuedMaybeExpired: 'வெளியிடப்பட்டது {{when}} · இனி செல்லுபடியாகாமல் இருக்கலாம்',
+    issuedOlder: 'வெளியிடப்பட்டது {{when}} · பழைய அறிக்கை',
     openNotice: 'அறிவிப்பைத் திறக்கவும் (PDF)',
     readOn: '{{site}} தளத்தில் படிக்கவும்',
     newTab: '(புதிய தாவலில் திறக்கும்)',

@@ -365,6 +365,8 @@ const si: Translations = {
     officialHeading: 'නිල දැනුම්දීම්',
     officialFrom: 'නිල: {{source}}',
     issued: 'නිකුත් කළේ {{when}}',
+    issuedMaybeExpired: 'නිකුත් කළේ {{when}} · තවදුරටත් වලංගු නොවිය හැක',
+    issuedOlder: 'නිකුත් කළේ {{when}} · පැරණි වාර්තාවකි',
     openNotice: 'දැනුම්දීම විවෘත කරන්න (PDF)',
     readOn: '{{site}} හි කියවන්න',
     newTab: '(නව ටැබයක විවෘත වේ)',

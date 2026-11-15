@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FAKE_NEWS_MODES, fakeNews, fakeNewsModes, type FakeNewsMode } from './fakeNews'
-import { groupNews, newsChip, NEWS_CHIP_WINDOW_MS, NEWS_WINDOW_MS } from './news'
+import { groupNews, newsChip, NEWS_CHIP_WINDOW_MS, NEWS_WINDOW_MS, officialAge } from './news'
 
 const NOW = Date.parse('2026-11-15T10:30:00Z')
 const HOUR = 3_600_000
@@ -29,7 +29,7 @@ describe('the switch in the address', () => {
   })
 
   it('has every value the plan names', () => {
-    expect([...FAKE_NEWS_MODES].sort()).toEqual(['advisory', 'alllang', 'dupes', 'empty', 'ended', 'fail', 'long', 'many', 'media', 'official', 'old'])
+    expect([...FAKE_NEWS_MODES].sort()).toEqual(['advisory', 'alllang', 'dupes', 'empty', 'ended', 'fail', 'long', 'many', 'media', 'official', 'old', 'stale'])
   })
 })
 
@@ -119,6 +119,19 @@ describe('the sample headlines', () => {
     expect(fakeNews(['ended'], NOW)).toHaveLength(2)
     expect(grouped(['ended']).official).toEqual([])
     expect(newsChip(fakeNews(['ended'], NOW), NOW)).toEqual({ count: 0, officialRecent: false })
+  })
+
+  it('stale: two reports past their 24 hours show (greyed), the older landslide warning is hidden, and the chip ignores them', () => {
+    const items = fakeNews(['stale'], NOW)
+    expect(items).toHaveLength(4)
+    const shown = grouped(['stale']).official
+    expect(shown.map((i) => [i.channel, officialAge(i, NOW)])).toEqual([
+      ['dmc_flood', 'current'],
+      ['dmc_landslide', 'maybeExpired'],
+      ['dmc_situation', 'older'],
+    ])
+    expect(shown.find((i) => i.channel === 'dmc_landslide')!.publishedAt).toBe(NOW - 30 * HOUR)
+    expect(newsChip(items, NOW)).toEqual({ count: 1, officialRecent: true })
   })
 
   it('old: a report 47 hours old is shown and the ones past 48 hours are not', () => {

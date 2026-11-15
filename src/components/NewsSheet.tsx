@@ -9,6 +9,7 @@ import {
   groupNews,
   isPdfLink,
   newsHazardName,
+  officialAge,
   siteOf,
   sourceName,
   type NewsItem,
@@ -229,16 +230,31 @@ export default function NewsSheet({ onClose, onOpenEmergency }: Props) {
 function OfficialItem({ item, now }: { item: NewsItem; now: number }) {
   const { t } = useTranslation()
   const label = item.channel ? channelName(item.channel) : item.title
+  // A landslide warning, situation report or water level report more than 24 hours old is shown
+  // greyed, so it doesn't look like today's
+  const age = officialAge(item, now)
+  const when = sriLankaWhen(item.publishedAt, now)
   return (
-    <li className="rounded-lg border-l-4 border-blue-600 bg-blue-50 p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-blue-900">
+    <li
+      className={`rounded-lg border-l-4 p-3 ${age === 'current' ? 'border-blue-600 bg-blue-50' : 'border-slate-300 bg-slate-100'}`}
+    >
+      <p className={`flex items-center gap-1.5 text-xs font-semibold ${age === 'current' ? 'text-blue-900' : 'text-slate-600'}`}>
         <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="min-w-0">{t('news.officialFrom', { source: sourceName(item.source) })}</span>
       </p>
-      <p lang={item.channel ? undefined : item.language} className="mt-1 text-sm font-semibold leading-snug text-slate-900">
+      <p
+        lang={item.channel ? undefined : item.language}
+        className={`mt-1 text-sm font-semibold leading-snug ${age === 'current' ? 'text-slate-900' : 'text-slate-600'}`}
+      >
         {label}
       </p>
-      <p className="mt-0.5 text-xs text-slate-700">{t('news.issued', { when: sriLankaWhen(item.publishedAt, now) })}</p>
+      <p className={`mt-0.5 text-xs ${age === 'current' ? 'text-slate-700' : 'font-medium text-slate-600'}`}>
+        {age === 'maybeExpired'
+          ? t('news.issuedMaybeExpired', { when })
+          : age === 'older'
+            ? t('news.issuedOlder', { when })
+            : t('news.issued', { when })}
+      </p>
       <a
         href={item.url}
         {...linkProps}

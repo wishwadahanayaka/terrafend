@@ -257,9 +257,33 @@ function officialRank(item: NewsItem): number {
   return 100
 }
 
+// Some official notices are only good for a day. A landslide warning says "Validity Period: From 16:00
+// on 14.11.2026 To 16:00 on 15.11.2026", and the situation and water level reports are a snapshot of
+// that day. Past 24 hours from when they were issued they must not look current.
+export const OFFICIAL_VALID_MS = 24 * HOUR_MS
+
+// 'current'      still good, or a kind of notice with no 24-hour limit (Met advisories end with their own end time)
+// 'maybeExpired' a landslide warning past its 24 hours: it may no longer be valid
+// 'older'        a situation or water level report past 24 hours: an older report
+export type OfficialAge = 'current' | 'maybeExpired' | 'older'
+
+const TIMED_CHANNELS: Record<string, Exclude<OfficialAge, 'current'>> = {
+  dmc_landslide: 'maybeExpired',
+  dmc_situation: 'older',
+  dmc_flood: 'older',
+}
+
+export function officialAge(item: NewsItem, now: number): OfficialAge {
+  if (item.kind !== 'official' || !item.channel) return 'current'
+  const old = TIMED_CHANNELS[item.channel]
+  return old && now - item.publishedAt > OFFICIAL_VALID_MS ? old : 'current'
+}
+
 // Newest notice of each fixed channel (a withdrawn one leaves its channel empty, it doesn't bring an
-// older one back), and every other official item. Withdrawn ones are hidden.
-function pickOfficial(items: NewsItem[]): NewsItem[] {
+// older one back), and every other official item. Withdrawn ones are hidden. Taking only the newest
+// of a channel is also what hides an out-of-date landslide warning when a newer one exists. If the
+// newest is itself past its 24 hours it stays, but goes after the current ones.
+function pickOfficial(items: NewsItem[], now: number): NewsItem[] {
   const channels = new Map<string, NewsItem>()
   const loose: NewsItem[] = []
   for (const item of items) {
@@ -272,7 +296,8 @@ function pickOfficial(items: NewsItem[]): NewsItem[] {
     }
   }
   const picked = [...channels.values()].filter((i) => i.endedAt === null).concat(loose)
-  return picked.sort((a, b) => officialRank(a) - officialRank(b) || newer(b, a))
+  const outOfDate = (i: NewsItem) => (officialAge(i, now) === 'current' ? 0 : 1)
+  return picked.sort((a, b) => outOfDate(a) - outOfDate(b) || officialRank(a) - officialRank(b) || newer(b, a))
 }
 
 function storiesOf(items: NewsItem[]): Story[] {
@@ -304,7 +329,7 @@ function storiesOf(items: NewsItem[]): Story[] {
 // applies to the news reports only.
 export function groupNews(items: NewsItem[], { now, language = 'all', maxAgeMs = NEWS_WINDOW_MS }: GroupOptions): GroupedNews {
   const recent = items.filter((i) => now - i.publishedAt <= maxAgeMs)
-  const official = pickOfficial(recent)
+  const official = pickOfficial(recent, now)
   const media = recent.filter((i) => i.kind === 'media' && (language === 'all' || i.language === language))
   const stories = storiesOf(media)
 
@@ -328,13 +353,15 @@ export type NewsChip = {
   // Official notices and news stories of the last 24 hours, in every language, with the same story
   // from several outlets counted once
   count: number
-  // An official notice came out in the last 24 hours (and has not been withdrawn)
+  // An official notice came out in the last 24 hours (and has not been withdrawn or gone out of date)
   officialRecent: boolean
 }
 
 export function newsChip(items: NewsItem[], now: number): NewsChip {
   const grouped = groupNews(items, { now, language: 'all', maxAgeMs: NEWS_CHIP_WINDOW_MS })
-  return { count: grouped.official.length + grouped.storyCount, officialRecent: grouped.official.length > 0 }
+  // A notice past its 24 hours is on the sheet but not here, and never lights the red dot
+  const live = grouped.official.filter((i) => officialAge(i, now) === 'current')
+  return { count: live.length + grouped.storyCount, officialRecent: live.length > 0 }
 }
 
 // What the News part of the chip and the Layers entry show.

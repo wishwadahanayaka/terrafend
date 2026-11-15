@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { NEWS_FOR_EVERYONE, newsEnabled } from './newsFlag'
+import { NEWS_FOR_EVERYONE, newsEnabled, newsEnabledWith } from './newsFlag'
 
 const SRC = join(__dirname, '..')
 const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8')
@@ -15,26 +15,33 @@ function sourceFiles(dir: string): { name: string; code: string }[] {
 }
 
 describe('who sees the news feed', () => {
-  it('only people with ?news=1 in the address (while it is not on for everyone)', () => {
-    // These are checked for the setting as it is now. When it is switched on for everyone, the first
-    // line of this test is the one that changes.
-    if (NEWS_FOR_EVERYONE) return
-    expect(newsEnabled('?news=1')).toBe(true)
-    expect(newsEnabled('?fakeRouting=1&news=1&x=2')).toBe(true)
-    expect(newsEnabled('')).toBe(false)
-    expect(newsEnabled('?news=0')).toBe(false)
-    expect(newsEnabled('?news')).toBe(false)
-    expect(newsEnabled('?news=true')).toBe(false)
-    expect(newsEnabled('?fakeNews=all')).toBe(false)
-    expect(newsEnabled('?notnews=1')).toBe(false)
+  it('is on for everyone now', () => {
+    expect(NEWS_FOR_EVERYONE).toBe(true)
+    for (const search of ['', '?news=0', '?fakeRouting=1', '?news=1']) expect(newsEnabled(search), search).toBe(true)
   })
 
-  it('is a one-line change to switch it on for everyone', () => {
+  it('goes back to only people with ?news=1 in the address when the setting is false', () => {
+    expect(newsEnabledWith(false, '?news=1')).toBe(true)
+    expect(newsEnabledWith(false, '?fakeRouting=1&news=1&x=2')).toBe(true)
+    expect(newsEnabledWith(false, '')).toBe(false)
+    expect(newsEnabledWith(false, '?news=0')).toBe(false)
+    expect(newsEnabledWith(false, '?news')).toBe(false)
+    expect(newsEnabledWith(false, '?news=true')).toBe(false)
+    expect(newsEnabledWith(false, '?fakeNews=all')).toBe(false)
+    expect(newsEnabledWith(false, '?notnews=1')).toBe(false)
+  })
+
+  it('is a one-line change either way', () => {
     const file = read('lib', 'newsFlag.ts')
     expect(file.split('\n').filter((l) => /^export const NEWS_FOR_EVERYONE = (true|false)$/.test(l))).toHaveLength(1)
-    // and the only other place the name is used is the check that lets everyone in
+    // and the only other place the name is used is where the setting is handed to the rule
     expect(file.match(/NEWS_FOR_EVERYONE/g)?.length).toBe(2)
-    expect(file).toMatch(/if \(NEWS_FOR_EVERYONE\) return true/)
+    expect(file).toContain('newsEnabledWith(NEWS_FOR_EVERYONE, search)')
+  })
+
+  it('keeps ?fakeNews= for the dev server only', () => {
+    const fetcher = read('lib', 'newsFetch.ts')
+    expect(fetcher).toMatch(/import\.meta\.env\.DEV[\s\S]*fakeNews/)
   })
 
   it('works in the production build: it does not depend on the dev server', () => {
