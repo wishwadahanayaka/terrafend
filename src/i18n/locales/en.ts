@@ -34,6 +34,38 @@ const en = {
     },
   },
 
+  // The "How to help" screen. The organisations and their links are in lib/helpOrganisations.ts.
+  help: {
+    title: 'How to help',
+    // The button in the legend panel
+    button: 'How to help',
+    // The link at the bottom of the emergency numbers screen
+    fromEmergency: 'Want to help others? How to help',
+    safety:
+      "Only give through an organisation's own website. Never send money to bank accounts shared on WhatsApp, Facebook or by phone. TerraFend never asks for money.",
+    offline: "You're offline. The links will work once you're back online.",
+    lastChecked: 'Links last checked: {{date}}',
+    donate: 'Donate on their website',
+    volunteer: 'Volunteer',
+    official: 'See the official page',
+    linkLabel: '{{action}}: {{name}}, {{domain}} (opens in a new tab)',
+    org: {
+      redCross: {
+        name: 'Sri Lanka Red Cross Society',
+        what: 'Emergency relief, first aid and cash help for affected families.',
+      },
+      sarvodaya: {
+        name: 'Sarvodaya',
+        what: "Sri Lanka's largest community organisation. Runs disaster relief and rebuilding.",
+      },
+      rebuilding: {
+        name: 'Rebuilding Sri Lanka Fund',
+        what: "The government's official fund, run by the Central Bank of Sri Lanka.",
+        note: 'Set up after Cyclone Ditwah. Check the page for whether it is still open.',
+      },
+    },
+  },
+
   common: {
     sriLanka: 'Sri Lanka',
     tryAgain: 'Try again',

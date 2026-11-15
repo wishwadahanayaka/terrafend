@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Phone, X } from 'lucide-react'
+import { HandHeart, Phone, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { EMERGENCY_LAST_CHECKED, emergencyNumbers, telHref, type EmergencyNumber } from '../lib/emergencyNumbers'
 import { dayMonthYear } from '../lib/time'
 
-type Props = { onClose: () => void }
+type Props = { onClose: () => void; onOpenHelp: () => void }
 
 // One big tap-to-call button. A tap opens the phone's dialler (or its "Call?" prompt) with the
 // number filled in, and nothing is dialled until the person confirms there.
@@ -34,7 +34,7 @@ function CallButton({ item, size }: { item: EmergencyNumber; size: 'main' | 'sho
 
 // Needs no network: the numbers are in the app itself, and this screen is kept for offline use
 // along with the rest of the app's files.
-export default function EmergencyPanel({ onClose }: Props) {
+export default function EmergencyPanel({ onClose, onOpenHelp }: Props) {
   const { t } = useTranslation()
   // Read once, so the dev fake switch can't change the list while it is open
   const [numbers] = useState(emergencyNumbers)
@@ -89,6 +89,17 @@ export default function EmergencyPanel({ onClose }: Props) {
         <p className="mt-6 text-sm text-slate-600">
           {t('emergency.lastChecked', { date: dayMonthYear(EMERGENCY_LAST_CHECKED) })}
         </p>
+
+        {/* Right at the bottom and quiet: this screen is for someone in danger, so nothing here
+            competes with the numbers. Help opens on top and closes back to this screen. */}
+        <button
+          type="button"
+          onClick={onOpenHelp}
+          className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-300 px-3 text-base font-medium text-slate-700 active:bg-slate-100"
+        >
+          <HandHeart className="h-5 w-5 shrink-0" aria-hidden="true" />
+          {t('help.fromEmergency')}
+        </button>
       </div>
     </div>
   )
