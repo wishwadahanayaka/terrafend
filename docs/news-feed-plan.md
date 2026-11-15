@@ -24,7 +24,7 @@ Approved 15 Nov 2026, with these changes to the first draft:
 | 5b | App screens: the sheet, the chip part and the Layers entry behind `?news=1`, UI text in en/si/ta | **built** (`NewsSheet.tsx`, `NewsEntry.tsx`, `ThreatChip.tsx`, `newsFlag.ts`) |
 | 5c | Notices that are only good for 24 hours: a landslide warning older than 24 hours is greyed ("may no longer be valid") or hidden if a newer one exists; situation and water level reports likewise ("older report"); none of them count in the chip or light its red dot | **built** (`officialAge` in `news.ts`, `?fakeNews=stale`) |
 | 6 | Switch on for everyone: `NEWS_FOR_EVERYONE = true` in `src/lib/newsFlag.ts` (one line), the README credit, CLAUDE.md | **done** (15 Nov 2026): on for everyone. Setting the line back to `false` returns to `?news=1` only. |
-| 7 | Later: Lankapuvath when it's back, NBRO with the landslide layer, news pins | not planned in detail |
+| 7 | Later: Lankapuvath when it's back, NBRO with the landslide layer, news pins | NBRO landslide areas and news areas are planned in `docs/news-map-plan.md` (not built) |
 
 Native review of the Sinhala and Tamil keyword lists runs alongside steps 4 and 5.
 
