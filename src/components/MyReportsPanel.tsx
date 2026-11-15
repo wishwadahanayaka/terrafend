@@ -1,4 +1,4 @@
-import { createElement, useState } from 'react'
+import { createElement, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -14,9 +14,11 @@ type Props = {
   onClose: () => void
   // Tapping a report: the map flies to it
   onShow: (row: MyReportRow) => void
+  // Set when opened from a card's Manage button: the list scrolls to this report and marks it
+  focusId?: string | null
 }
 
-export default function MyReportsPanel({ onClose, onShow }: Props) {
+export default function MyReportsPanel({ onClose, onShow, focusId = null }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const online = useOnline()
@@ -25,6 +27,14 @@ export default function MyReportsPanel({ onClose, onShow }: Props) {
   const [done, setDone] = useState<string | null>(null)
 
   const items = query.data ?? []
+  const scroller = useRef<HTMLDivElement>(null)
+
+  // Once the list has loaded, bring the report the person came for into view
+  useEffect(() => {
+    if (!focusId || !query.isSuccess) return
+    const rows = scroller.current?.querySelectorAll<HTMLElement>('[data-report-id]') ?? []
+    ;[...rows].find((row) => row.dataset.reportId === focusId)?.scrollIntoView({ block: 'center' })
+  }, [focusId, query.isSuccess])
 
   // The map shows the change (or the report going) after the next refresh, so both are asked
   // to reload. The panel's own list reloads too, for the new status and times.
@@ -53,7 +63,7 @@ export default function MyReportsPanel({ onClose, onShow }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div ref={scroller} className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <p className="mb-3 text-xs leading-snug text-slate-600">{t('myReports.note')}</p>
 
           {done && (
@@ -94,6 +104,7 @@ export default function MyReportsPanel({ onClose, onShow }: Props) {
                   row={row}
                   active={active}
                   online={online}
+                  highlight={row.id === focusId}
                   onShow={onShow}
                   onChanged={(message) => {
                     setDone(message)
@@ -113,11 +124,13 @@ type ItemProps = {
   row: MyReportRow
   active: boolean
   online: boolean
+  // The report the person came for from a card's Manage button
+  highlight: boolean
   onShow: (row: MyReportRow) => void
   onChanged: (message: string) => void
 }
 
-function MyReportItem({ row, active, online, onShow, onChanged }: ItemProps) {
+function MyReportItem({ row, active, online, highlight, onShow, onChanged }: ItemProps) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm'>('view')
   const [severity, setSeverity] = useState<Severity>(row.severity)
@@ -165,7 +178,10 @@ function MyReportItem({ row, active, online, onShow, onChanged }: ItemProps) {
   }
 
   return (
-    <li className={`rounded-xl border-2 ${active ? 'border-slate-200' : 'border-slate-100 bg-slate-50'}`}>
+    <li
+      data-report-id={row.id}
+      className={`rounded-xl border-2 ${highlight ? 'border-blue-600' : active ? 'border-slate-200' : 'border-slate-100'} ${active ? '' : 'bg-slate-50'}`}
+    >
       <button
         type="button"
         onClick={() => onShow(row)}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { hiddenByLayers, isShownOnMap, type Severity } from './hazards'
-import { addMyReport, parseMyReports } from './myReports'
+import { addMyReport, cardAction, parseMyReports } from './myReports'
 
 const NOW = Date.parse('2026-11-08T06:00:00Z')
 const DAY = 24 * 3_600_000
@@ -65,5 +65,35 @@ describe('remembering my reports', () => {
     expect(parseMyReports('{not json', NOW)).toEqual([])
     expect(parseMyReports('{"id":"a"}', NOW)).toEqual([])
     expect(parseMyReports(JSON.stringify([{ id: 5, at: NOW }, null, { id: 'ok', at: NOW }]), NOW).map((r) => r.id)).toEqual(['ok'])
+  })
+})
+
+describe('what a report card offers underneath', () => {
+  const mine = new Set(['mine-1', 'mine-2'])
+
+  it('offers voting on a report someone else made', () => {
+    expect(cardAction('other', mine)).toBe('vote')
+    expect(cardAction('other', nobody)).toBe('vote')
+  })
+
+  it('offers managing instead of voting on a report this browser sent', () => {
+    expect(cardAction('mine-1', mine)).toBe('manage')
+    expect(cardAction('mine-2', mine)).toBe('manage')
+  })
+
+  it('offers neither on a test report from a dev switch, even if it is in the list', () => {
+    expect(cardAction('fake-3', mine)).toBe('none')
+    expect(cardAction('fake-3', new Set(['fake-3']))).toBe('none')
+  })
+
+  it('matches the whole id, not a part of it', () => {
+    expect(cardAction('mine-', mine)).toBe('vote')
+    expect(cardAction('mine-11', mine)).toBe('vote')
+    expect(cardAction('', mine)).toBe('vote')
+  })
+
+  it('reads the list the phone keeps, so a report just sent gets Manage at once', () => {
+    const list = addMyReport([], 'new-one', NOW)
+    expect(cardAction('new-one', new Set(list.map((r) => r.id)))).toBe('manage')
   })
 })

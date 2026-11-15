@@ -1,6 +1,6 @@
 import { t } from '../i18n'
 import type { HazardType, Severity } from './hazards'
-import { DUPLICATE_RADIUS_M, severityResultFor, type SeverityResult } from './duplicates'
+import { DUPLICATE_RADIUS_M, severityResultFor, voteResultFor, type SeverityResult, type VoteFailure } from './duplicates'
 import { rememberMyReport } from './myReports'
 import { ensureAnonymousSession } from './session'
 import { supabase } from './supabase'
@@ -52,7 +52,7 @@ export async function submitReport(report: NewReport): Promise<string | null> {
   return t('errors.sendReport')
 }
 
-export type VoteResult = 'ok' | 'already_voted' | 'inactive' | 'failed'
+export type VoteResult = 'ok' | VoteFailure
 
 export const VOTE_ERRORS: Record<Exclude<VoteResult, 'ok'>, string> = {
   get already_voted() {
@@ -60,6 +60,9 @@ export const VOTE_ERRORS: Record<Exclude<VoteResult, 'ok'>, string> = {
   },
   get inactive() {
     return t('errors.inactive')
+  },
+  get own_report() {
+    return t('errors.ownReport')
   },
   get failed() {
     return t('errors.sendVote')
@@ -77,10 +80,7 @@ export async function submitVote(reportId: string, vote: Vote): Promise<VoteResu
   const { error } = await supabase.from('report_votes').insert({ report_id: reportId, vote })
 
   if (!error) return 'ok'
-  // 23505 is Postgres' unique violation: one vote per user per report
-  if (error.code === '23505') return 'already_voted'
-  if (error.message.includes('row-level security')) return 'inactive'
-  return 'failed'
+  return voteResultFor(error)
 }
 
 // An active report of the same type close to where the new one would go

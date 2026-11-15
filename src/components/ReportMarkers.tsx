@@ -15,7 +15,7 @@ import {
 import { iconToSvg } from '../lib/iconHtml'
 import { roundOutward } from '../lib/mapBounds'
 import { spreadMarkers } from '../lib/markerSpread'
-import { loadMyReportIds } from '../lib/myReports'
+import { cardAction, loadMyReportIds, type CardAction } from '../lib/myReports'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import type { RouteResult } from '../lib/routing'
 import { expiresIn, timeAgo } from '../lib/time'
@@ -65,9 +65,11 @@ type Props = {
   showPassable: boolean
   // Asks for one report's card to open. The number makes a repeat tap count as new.
   openRequest: { id: string; n: number } | null
+  // The "Manage" button on the card of a report this browser sent: opens My reports at that report
+  onManage: (id: string) => void
 }
 
-export default function ReportMarkers({ hidden, route, alternative, showPassable, openRequest }: Props) {
+export default function ReportMarkers({ hidden, route, alternative, showPassable, openRequest, onManage }: Props) {
   useTranslation() // redraws the marker names when the language changes
   const map = useMap()
   const popupFit = usePopupFit()
@@ -156,7 +158,7 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
           eventHandlers={popupFit}
         >
           <Popup minWidth={220} {...POPUP_PADDING}>
-            <ReportCard report={report} />
+            <ReportCard report={report} action={cardAction(report.id, mine)} onManage={() => onManage(report.id)} />
           </Popup>
         </Marker>
       ))}
@@ -165,7 +167,7 @@ export default function ReportMarkers({ hidden, route, alternative, showPassable
 }
 
 // Uses divs, not <p>, because Leaflet's popup CSS adds margins to paragraphs
-function ReportCard({ report }: { report: Report }) {
+function ReportCard({ report, action, onManage }: { report: Report; action: CardAction; onManage: () => void }) {
   const { t } = useTranslation()
   // How many people said "still there". Left out until it loads, and if it can't.
   const confirmations = useConfirmations(report.id).data ?? 0
@@ -195,8 +197,21 @@ function ReportCard({ report }: { report: Report }) {
         </div>
       )}
       <div className="text-xs text-slate-500">{expiresIn(report.expires_at)}</div>
-      {/* Test reports from ?fakeReport= aren't in the database, so there's nothing to vote on */}
-      {!report.id.startsWith('fake-') && <VoteSection reportId={report.id} />}
+      {/* Test reports from ?fakeReport= aren't in the database ('none'). Your own report can't be
+          voted on, so it gets a way to change or remove it instead ('manage'). */}
+      {action === 'vote' && <VoteSection reportId={report.id} />}
+      {action === 'manage' && (
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
+          <span className="text-sm font-medium text-slate-700">{t('report.yourReport')}</span>
+          <button
+            type="button"
+            onClick={onManage}
+            className="h-11 rounded-lg border-2 border-blue-600 px-4 text-sm font-medium text-blue-700 active:bg-blue-50"
+          >
+            {t('report.manage')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

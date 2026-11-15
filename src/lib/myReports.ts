@@ -41,6 +41,16 @@ export function loadMyReportIds(now = Date.now()): Set<string> {
   }
 }
 
+// What a report's map card offers underneath its details. A person can't vote on their own report
+// (the database refuses it), so those get a way to manage it instead. Test reports from the dev
+// switches (ids starting `fake-`) aren't in the database, so they offer neither.
+export type CardAction = 'vote' | 'manage' | 'none'
+
+export function cardAction(id: string, mine: ReadonlySet<string>): CardAction {
+  if (id.startsWith('fake-')) return 'none'
+  return mine.has(id) ? 'manage' : 'vote'
+}
+
 export function rememberMyReport(id: string, now = Date.now()) {
   try {
     const list = parseMyReports(localStorage.getItem(KEY), now)

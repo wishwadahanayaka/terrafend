@@ -151,6 +151,8 @@ const ta: Translations = {
     usePhoto: 'அந்தப் புகைப்படத்தைப் பயன்படுத்த முடியவில்லை. வேறொன்றை முயலவும்.',
     alreadyVoted: 'இந்த அறிக்கைக்கு நீங்கள் ஏற்கெனவே பதிலளித்துவிட்டீர்கள்.',
     inactive: 'இந்த அறிக்கை இனி செயலில் இல்லை.',
+    // NEEDS REVIEW BY A NATIVE SPEAKER
+    ownReport: 'உங்கள் சொந்த அறிக்கைக்கு வாக்களிக்க முடியாது. அதை மாற்ற அல்லது நீக்க “என் அறிக்கைகள்” ஐத் திறக்கவும்.',
     sendVote: 'உங்கள் பதிலை அனுப்ப முடியவில்லை. மீண்டும் முயலவும்.',
     tooManyEdits: 'நீங்கள் மிக அதிக அறிக்கைகளைத் திருத்திவிட்டீர்கள். ஒரு மணி நேரத்தில் 10 திருத்தங்கள் வரை செய்யலாம், எனவே பின்னர் மீண்டும் முயலவும்.',
     sendEdit: 'உங்கள் மாற்றங்களைச் சேமிக்க முடியவில்லை. மீண்டும் முயலவும்.',
@@ -194,6 +196,9 @@ const ta: Translations = {
     confirmedBy_one: '{{count}} நபர் உறுதிப்படுத்தினார்',
     confirmedBy_other: '{{count}} பேர் உறுதிப்படுத்தினர்',
     updatedTo: '{{ago}} {{severity}} என மாற்றப்பட்டது',
+    // NEEDS REVIEW BY A NATIVE SPEAKER: the two on a report this browser sent, in place of the vote buttons
+    yourReport: 'உங்கள் அறிக்கை',
+    manage: 'நிர்வகி',
     dup: {
       title: 'ஏற்கெனவே அறிக்கையிடப்பட்டதா?',
       question: {

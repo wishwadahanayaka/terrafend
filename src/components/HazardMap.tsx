@@ -36,6 +36,8 @@ export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => 
   const [userLatLng, setUserLatLng] = useState<LatLng | null>(null)
   const [mode, setMode] = useState<ReportMode>('idle')
   const [myReportsOpen, setMyReportsOpen] = useState(false)
+  // The report My reports scrolls to when it was opened from a card's Manage button
+  const [myReportsFocus, setMyReportsFocus] = useState<string | null>(null)
 
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
@@ -57,6 +59,14 @@ export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => 
   const picking = mode === 'picking'
   // The buttons down the right fade out while a card is open, so they can't cover it
   const cardOpen = useCardOpen(map)
+
+  // "Manage" on the card of your own report: the card closes (one thing open at a time) and
+  // My reports opens at that report
+  function manageReport(id: string) {
+    map?.closePopup()
+    setMyReportsFocus(id)
+    setMyReportsOpen(true)
+  }
 
   // Opening the route panel closes any open map card, so the two never sit on screen together.
   // (Collapsing it, or showing a hazard from it, leaves cards alone: showing one opens its card.)
@@ -123,6 +133,7 @@ export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => 
             alternative={alternative}
             showPassable={layers.passableReports}
             openRequest={openRequest}
+            onManage={manageReport}
           />
         </Suspense>
         {route && (
@@ -162,7 +173,10 @@ export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => 
         <LayerControls
           map={map}
           settings={layers}
-          onOpenMyReports={() => setMyReportsOpen(true)}
+          onOpenMyReports={() => {
+            setMyReportsFocus(null)
+            setMyReportsOpen(true)
+          }}
           onOpenEmergency={onOpenEmergency}
           onChange={(name: keyof LayerSettings, value) => {
             setLayers((current) => ({ ...current, [name]: value }))
@@ -175,7 +189,7 @@ export default function HazardMap({ onOpenEmergency }: { onOpenEmergency: () => 
 
       {myReportsOpen && (
         <Suspense fallback={null}>
-          <MyReportsPanel onClose={() => setMyReportsOpen(false)} onShow={showMine} />
+          <MyReportsPanel onClose={() => setMyReportsOpen(false)} onShow={showMine} focusId={myReportsFocus} />
         </Suspense>
       )}
 

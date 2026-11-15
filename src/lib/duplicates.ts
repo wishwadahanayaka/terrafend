@@ -101,6 +101,20 @@ export type SeverityResult =
   | 'inactive'
   | 'failed'
 
+// Why a vote was refused. 'own_report' is the word migration 0008 raises when the voter made the
+// report; the rest are the one-vote-per-person rule and the "report is over" rule from migration 0001.
+export type VoteFailure = 'already_voted' | 'inactive' | 'own_report' | 'failed'
+
+// 23505 is Postgres' unique violation: one vote per user per report. The "row-level security" message
+// means the report is no longer active. 'own_report' comes first because it is a word of ours.
+export function voteResultFor(error: { code?: string; message?: string }): VoteFailure {
+  const message = error.message ?? ''
+  if (message.includes('own_report')) return 'own_report'
+  if (error.code === '23505') return 'already_voted'
+  if (message.includes('row-level security')) return 'inactive'
+  return 'failed'
+}
+
 // The database function answers with one of these words as its error message
 export function severityResultFor(message: string): SeverityResult {
   if (message.includes('already_updated')) return 'already_updated'

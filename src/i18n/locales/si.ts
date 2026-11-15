@@ -147,6 +147,8 @@ const si: Translations = {
     usePhoto: 'එම ඡායාරූපය භාවිතා කළ නොහැකි විය. වෙනත් එකක් උත්සාහ කරන්න.',
     alreadyVoted: 'ඔබ මෙම වාර්තාවට දැනටමත් පිළිතුරු දී ඇත.',
     inactive: 'මෙම වාර්තාව තවදුරටත් සක්‍රීය නැත.',
+    // NEEDS REVIEW BY A NATIVE SPEAKER
+    ownReport: 'ඔබේම වාර්තාවකට ඡන්දය දිය නොහැක. එය වෙනස් කිරීමට හෝ ඉවත් කිරීමට “මගේ වාර්තා” විවෘත කරන්න.',
     sendVote: 'ඔබේ පිළිතුර යැවීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.',
     tooManyEdits: 'ඔබ වාර්තා ඉතා වැඩි ගණනක් සංස්කරණය කර ඇත. පැයකට සංස්කරණ 10ක් දක්වා කළ හැක, එබැවින් පසුව නැවත උත්සාහ කරන්න.',
     sendEdit: 'ඔබේ වෙනස්කම් සුරැකීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.',
@@ -190,6 +192,9 @@ const si: Translations = {
     confirmedBy_one: 'පුද්ගලයින් {{count}}ක් තහවුරු කර ඇත',
     confirmedBy_other: 'පුද්ගලයින් {{count}}ක් තහවුරු කර ඇත',
     updatedTo: '{{ago}} {{severity}} ලෙස යාවත්කාලීන කළා',
+    // NEEDS REVIEW BY A NATIVE SPEAKER: the two on a report this browser sent, in place of the vote buttons
+    yourReport: 'ඔබේ වාර්තාව',
+    manage: 'කළමනාකරණය',
     dup: {
       title: 'දැනටමත් වාර්තා කර ඇතිද?',
       question: {

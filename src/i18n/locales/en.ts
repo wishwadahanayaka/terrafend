@@ -146,6 +146,8 @@ const en = {
     usePhoto: 'Couldn’t use that photo. Try a different one.',
     alreadyVoted: 'You’ve already voted on this report.',
     inactive: 'This report is no longer active.',
+    // Shown if the database refuses a vote on the person's own report (the card normally doesn't offer one)
+    ownReport: 'You can’t vote on your own report. To change or remove it, open My reports.',
     sendVote: 'Couldn’t send your vote. Please try again.',
     tooManyEdits: 'You’ve edited too many reports. You can make up to 10 edits an hour, so please try again later.',
     sendEdit: 'Couldn’t save your changes. Please try again.',
@@ -189,6 +191,9 @@ const en = {
     confirmedBy_one: 'confirmed by {{count}} person',
     confirmedBy_other: 'confirmed by {{count}} people',
     updatedTo: 'Updated to {{severity}} {{ago}}',
+    // On the card of a report this browser sent, in place of the vote buttons
+    yourReport: 'Your report',
+    manage: 'Manage',
     dup: {
       title: 'Already reported?',
       question: {

@@ -7,6 +7,7 @@ import {
   reportTotal,
   severityChoices,
   severityResultFor,
+  voteResultFor,
 } from './duplicates'
 import type { HazardType, Severity } from './hazards'
 
@@ -183,5 +184,26 @@ describe('what the severity function answers', () => {
   it('treats anything else as a failure', () => {
     expect(severityResultFor('not_signed_in')).toBe('failed')
     expect(severityResultFor('')).toBe('failed')
+  })
+})
+
+describe('why a vote was refused', () => {
+  it('reads the own_report word from the database', () => {
+    expect(voteResultFor({ code: 'P0001', message: 'own_report' })).toBe('own_report')
+    expect(voteResultFor({ message: 'something own_report something' })).toBe('own_report')
+  })
+
+  it('still reads the other two reasons', () => {
+    expect(voteResultFor({ code: '23505', message: 'duplicate key value violates unique constraint' })).toBe('already_voted')
+    expect(voteResultFor({ code: '42501', message: 'new row violates row-level security policy for table "report_votes"' })).toBe('inactive')
+  })
+
+  it('does not mistake the generic security message for an own report', () => {
+    expect(voteResultFor({ message: 'new row violates row-level security policy' })).not.toBe('own_report')
+  })
+
+  it('treats anything else as a failure', () => {
+    expect(voteResultFor({ code: '08006', message: 'connection failure' })).toBe('failed')
+    expect(voteResultFor({})).toBe('failed')
   })
 })
