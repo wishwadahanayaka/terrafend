@@ -161,6 +161,12 @@ where fetched_at > now() - interval '1 day'
 group by source, kind
 order by kind, source;
 
+-- Only the sources that have a problem, or have never been read
+select source, last_fetch_at, last_status, failures, last_error, robots_ok, robots_at
+from public.news_source_state
+where last_fetch_at is null or last_error is not null or failures > 0
+order by source;
+
 -- The newest headlines with why they were kept (for tuning the keywords)
 select published_at, source, language, hazard, score, matched, title
 from public.news_items
@@ -186,14 +192,89 @@ How to read it:
 - `last_status` 403 or 410: the site blocks us or the feed is gone. The source is asked once a day.
   Don't try to get round it: check the site by hand, and turn the source off if it stays that way.
 - `robots_ok` false: the site's robots.txt now disallows the feed. It is not read until that changes.
+  `last_error` says `robots.txt does not allow this address`.
+- `last_error` starting with `robots.txt:` means the function could not even read the site's robots.txt,
+  and said why: `HTTP 503` or `HTTP 429` (the site is overloaded or limiting us), `TimeoutError` (no answer
+  in 10 seconds), `connection reset` or `refused` (the site drops connections from Supabase's addresses),
+  or a certificate message. A robots.txt that can't be reached is treated as "not allowed for now", so
+  the source is not read at all; the function tries again, and after 3 failures in a row hourly. Nothing
+  tries to get round it. If it stays like this for a site, turn the source off in `sources.ts`.
+- A source with `last_fetch_at` empty and `last_error` empty was never reached by a run that wrote its
+  row. Before the 15 Nov evening fix, an unreadable robots.txt looked exactly like this, with no reason kept.
 - `dmc_warnings` usually has nothing: DMC's Emergency Warnings category is empty between emergencies.
+
+## Review Sinhala/Tamil headlines
+
+The PowerShell 5.1 window can't show Sinhala and Tamil reliably, so this saves what a dry run kept and
+dropped for **one** source into a text file you open in Notepad, one headline per line with its score.
+It stores nothing in the database.
+
+```powershell
+# The secret. Skip this if $secret is still set in this window; if the window was closed, copy the
+# value from the dashboard's Vault (news_secret) and paste it when asked. Nothing is shown.
+if (-not $secret) {
+  $entered = Read-Host 'NEWS_SECRET' -AsSecureString
+  $secret = [System.Net.NetworkCredential]::new('', $entered).Password
+}
+
+# Which source to review. adaderana_si, adaderana_ta, lankadeepa, divaina, tamilmirror, thinakaran...
+$only = 'adaderana_si'
+$url = 'https://ktwdmwiaodtirrcitlgb.supabase.co/functions/v1/news-refresh'
+
+# A dry run for that one source. force=true asks it now even if it was read a few minutes ago
+# (robots.txt still applies).
+$response = Invoke-WebRequest -UseBasicParsing -Method Post `
+  -Uri "${url}?dry_run=true&force=true&only=$only" -Headers @{ 'x-news-secret' = $secret }
+
+# Read the bytes as UTF-8 ourselves, so the letters are right whatever the console does
+$response.RawContentStream.Position = 0
+$text = (New-Object System.IO.StreamReader($response.RawContentStream, [System.Text.Encoding]::UTF8)).ReadToEnd()
+$dry = $text | ConvertFrom-Json
+
+# One line per headline: score, headline, and the words that scored it
+# (+ strong word, ~ weak word, - a word that took points away)
+$kept = @($dry.items)
+$dropped = @($dry.dropped | Sort-Object -Property score -Descending)
+$lines = @()
+$lines += "Dry run of $only on $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+$lines += 'Source: ' + (($dry.sources | ForEach-Object { "$($_.id) $($_.status) found=$($_.found) kept=$($_.kept) $($_.error)" }) -join '; ')
+$lines += ''
+$lines += "=== KEPT: $(($dry.items | Measure-Object).Count) (score 2 or more) ==="
+foreach ($i in $kept) { if ($i) { $lines += ('{0,3}  {1}  [{2}]' -f $i.score, $i.title, ($i.matched -join ' ')) } }
+$lines += ''
+$lines += "=== DROPPED: $(($dry.dropped | Measure-Object).Count), highest score first ==="
+foreach ($d in $dropped) { if ($d) { $lines += ('{0,3}  {1}  [{2}]' -f $d.score, $d.title, ($d.matched -join ' ')) } }
+
+# Save it in Downloads as UTF-8 with a byte order mark, so Notepad shows Sinhala and Tamil correctly
+$downloads = (New-Object -ComObject Shell.Application).Namespace('shell:Downloads').Self.Path
+$file = Join-Path $downloads "news-review-$only.txt"
+[System.IO.File]::WriteAllLines($file, [string[]]$lines, (New-Object System.Text.UTF8Encoding($true)))
+notepad $file
+
+Remove-Variable only, url, response, text, dry, kept, dropped, lines, downloads, file, entered -ErrorAction SilentlyContinue
+```
+
+What to look for:
+
+- The feed holds only the newest 25 or so headlines (a few hours' worth), so a story from this morning may
+  already be gone. Run it again later in the day.
+- In **DROPPED**, a headline about rain, wind, floods, landslides, elephants or road blockages is a missed
+  word form. Tell me the headline and the word that should have matched.
+- In **KEPT**, a headline that isn't about a disaster is a word that catches too much. The words in
+  brackets are the ones that scored it.
+- A score of 1 is a near miss (one weak word). A negative score means a cricket, money or foreign word
+  took points off.
+- Only sources with the keyword filter have a DROPPED list. The official channels (DMC warnings, the DMC
+  report tables, the Met advisories) are kept whole.
+- Don't run this over and over for `dailymirror` or `lankadeepa`: their robots.txt asks for an hour
+  between requests, and `force=true` ignores our own timing (not theirs).
 
 ## Tuning the keywords
 
-The Sinhala and Tamil lists in `keywords.ts` were written by an AI and need a native speaker. A dry run
-(step 6) lists both kept and dropped headlines with their `score` and `matched` words. A headline is kept
-at score 2. Look for disaster headlines in `dropped` (a missed word form) and unrelated ones in `items`
-(a word that catches too much), change the lists, run `npm test`, and redeploy.
+The Sinhala and Tamil lists in `keywords.ts` were written by an AI and need a native speaker. Use the
+section above to see kept and dropped headlines with their `score` and `matched` words. A headline is
+kept at score 2. Look for disaster headlines in the dropped list (a missed word form) and unrelated ones
+in the kept list (a word that catches too much), change the lists, run `npm test`, and redeploy.
 
 ## Limits to keep in mind
 

@@ -37,6 +37,15 @@ export const KEEP_SCORE = 2
 
 const SRI_LANKA_OFFSET = '+05:30'
 
+// Every answer the function sends. The charset matters: without it Windows PowerShell 5.1 reads the
+// body as Latin-1 and Sinhala and Tamil headlines come out as scrambled text.
+export function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  })
+}
+
 // Compares hashes so the check takes the same time wherever the strings differ
 async function sameSecret(a: string, b: string): Promise<boolean> {
   const enc = new TextEncoder()
@@ -523,7 +532,20 @@ async function request(
   }
 }
 
-type RobotsFile = { status: number; body: string } | 'unreachable'
+type RobotsFile = { status: number; body: string } | { error: string }
+
+// The name and message of whatever went wrong, short enough to keep in a table: a timeout, a refused
+// connection, a certificate problem. This is what shows up in last_error.
+export function describeError(err: unknown): string {
+  const e = err as { name?: string; message?: string } | null
+  const text = e?.message ? (e.name && e.name !== 'Error' ? `${e.name}: ${e.message}` : e.message) : String(err)
+  return text.replace(/\s+/g, ' ').slice(0, 160)
+}
+
+type RobotsResult =
+  | { allowed: boolean; delaySec: number; fresh: boolean }
+  // robots.txt could not be read: why, and the HTTP status if there was one
+  | { unreadable: string; status: number | null }
 
 // What a source's robots.txt says, read at most once a day (and once per site per run)
 async function robotsCheck(
@@ -532,7 +554,7 @@ async function robotsCheck(
   state: SourceState,
   now: number,
   cache: Map<string, Promise<RobotsFile>>,
-): Promise<{ allowed: boolean; delaySec: number; fresh: boolean } | null> {
+): Promise<RobotsResult> {
   const known = state.robots_ok !== null && state.robots_at !== null
   if (known && now - Date.parse(state.robots_at!) < ROBOTS_MAX_AGE_MS) {
     return { allowed: state.robots_ok!, delaySec: state.memo.robotsDelaySec ?? 0, fresh: false }
@@ -543,13 +565,17 @@ async function robotsCheck(
       target.host,
       request(deps, `https://${target.host}/robots.txt`, source.ownDomains, baseHeaders())
         .then(({ res }): RobotsFile => ({ status: res.status, body: res.body ?? '' }))
-        .catch((): RobotsFile => 'unreachable'),
+        .catch((err): RobotsFile => ({ error: describeError(err) })),
     )
   }
   const file = await cache.get(target.host)!
-  if (file === 'unreachable' || file.status >= 500 || file.status === 429) {
-    // Keep the last answer; with none, wait for a run where it can be read
-    return known ? { allowed: state.robots_ok!, delaySec: state.memo.robotsDelaySec ?? 0, fresh: false } : null
+  if ('error' in file || file.status >= 500 || file.status === 429) {
+    // Keep the last answer. With none we don't know the rules, and a robots.txt that can't be reached
+    // is treated as "not allowed for now" (RFC 9309), so the source waits and is tried again later.
+    if (known) return { allowed: state.robots_ok!, delaySec: state.memo.robotsDelaySec ?? 0, fresh: false }
+    return 'error' in file
+      ? { unreadable: file.error, status: null }
+      : { unreadable: `HTTP ${file.status}`, status: file.status }
   }
   // A missing robots.txt (4xx) allows everything
   const verdict = file.status === 200 ? robotsVerdict(file.body, target.pathname + target.search) : { allowed: true, crawlDelaySec: 0 }
@@ -575,9 +601,15 @@ async function runSource(
   const done = () => ({ report: { ...report, kept: rows.length }, rows, dropped, ended, state })
 
   const robots = await robotsCheck(deps, source, state, startedAt, robotsCache)
-  if (!robots) {
+  if ('unreadable' in robots) {
+    // Counts as a failed attempt with its reason on record. Before, this left the row untouched, so a
+    // source stuck here looked like it had never been tried, with nothing to say why.
+    state.last_fetch_at = iso
+    state.last_status = robots.status
+    state.last_error = `robots.txt: ${robots.unreadable}`
+    state.failures = before.failures + 1
     report.status = 'robots_unknown'
-    report.error = 'robots.txt could not be read'
+    report.error = state.last_error
     return done()
   }
   if (robots.fresh) {
@@ -683,7 +715,7 @@ async function runSource(
     state.last_modified = before.last_modified
     state.memo.meteoActive = before.memo.meteoActive
     state.failures = before.failures + 1
-    state.last_error = ((err as Error).message || 'failed').slice(0, 300)
+    state.last_error = describeError(err) || 'failed'
     report.status = 'failed'
     report.error = state.last_error
     rows.length = 0
@@ -778,7 +810,7 @@ export async function refresh(deps: Deps, options: Options = {}): Promise<Outcom
         runs.push(await runSource(deps, source, before, startedAt, !!options.dryRun, robotsCache))
       } catch (err) {
         // runSource catches its own errors; this is only a last guard
-        const message = ((err as Error).message || 'failed').slice(0, 300)
+        const message = describeError(err) || 'failed'
         runs.push({
           report: { id: source.id, status: 'failed', found: 0, kept: 0, error: message },
           rows: [],

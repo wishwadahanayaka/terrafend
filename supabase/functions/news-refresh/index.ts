@@ -1,24 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
-import { FETCH_TIMEOUT_MS, isAuthorised, MAX_BYTES, readCapped, refresh, type SourceState } from './logic.ts'
+import { FETCH_TIMEOUT_MS, isAuthorised, jsonResponse, MAX_BYTES, readCapped, refresh, type SourceState } from './logic.ts'
 import { SOURCES } from './sources.ts'
 
 // Reads the news sources every 15 minutes (a cron job calls this) and keeps the disaster headlines in
 // news_items. What it does is in logic.ts; this file only connects that to fetch() and the database.
 // Setup and checks: docs/news-feed.md.
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (req) => {
   // No secret set means nobody gets in, rather than everybody
   if (!(await isAuthorised(req.headers.get('x-news-secret'), Deno.env.get('NEWS_SECRET')))) {
-    return json({ error: 'Unauthorized' }, 401)
+    return jsonResponse({ error: 'Unauthorized' }, 401)
   }
-  if (req.method !== 'POST') return json({ error: 'Use POST' }, 405)
+  if (req.method !== 'POST') return jsonResponse({ error: 'Use POST' }, 405)
 
   // ?force=true asks every source now, whatever its interval (robots.txt still applies).
   // ?dry_run=true reads and judges everything but stores nothing, and lists what the filter dropped.
@@ -27,7 +20,7 @@ Deno.serve(async (req) => {
   const force = params.get('force') === 'true'
   const dryRun = params.get('dry_run') === 'true'
   const only = params.get('only')
-  if (only && !SOURCES.some((s) => s.id === only)) return json({ error: `Unknown source: ${only}` }, 400)
+  if (only && !SOURCES.some((s) => s.id === only)) return jsonResponse({ error: `Unknown source: ${only}` }, 400)
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -78,5 +71,5 @@ Deno.serve(async (req) => {
     { force, dryRun, only },
   )
 
-  return json(outcome, outcome.result === 'failed' ? 502 : 200)
+  return jsonResponse(outcome, outcome.result === 'failed' ? 502 : 200)
 })

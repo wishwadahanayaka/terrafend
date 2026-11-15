@@ -19,7 +19,7 @@ Approved 15 Nov 2026, with these changes to the first draft:
 | 1 | Review the sources (this document) | done |
 | 2 | Function logic and tests (`supabase/functions/news-refresh/`) | **built**, not deployed |
 | 3 | Migration 0010, `supabase/checks/0010_check.sql`, privacy checks 6 and 17, `docs/news-feed.md` | **built**, not run |
-| 4 | Run 0010, deploy, set the secrets, dry run, watch for 2 to 3 days, tune the keywords | to do (by hand) |
+| 4 | Run 0010, deploy, set the secrets, dry run, watch for 2 to 3 days, tune the keywords | **in progress**: 0010 run, deployed, cron running from 15 Nov 2026. First run: `meteo_advisory` never read (reason now recorded, see below), `thinakaran` 403, Sinhala sources 0 kept. Redeploy needed for the fixes; owner reviews the Sinhala headlines with the command in `docs/news-feed.md`. |
 | 5 | App: sheet and chip behind `?news=1`, offline, en/si/ta text | not built |
 | 6 | Switch on, README credits, CLAUDE.md | not built |
 | 7 | Later: Lankapuvath when it's back, NBRO with the landslide layer, news pins | not planned in detail |

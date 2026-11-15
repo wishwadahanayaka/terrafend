@@ -6,10 +6,12 @@ import {
   BLOCKED_MIN,
   cleanTitle,
   decodeEntities,
+  describeError,
   emptyState,
   isAuthorised,
   isDue,
   isFeed,
+  jsonResponse,
   MAX_BYTES,
   MAX_ITEMS_PER_SOURCE,
   MAX_TITLE,
@@ -545,6 +547,61 @@ describe('one run', () => {
       expect(fetch.mock.calls.some(([url]) => url === ADA.url)).toBe(false)
     })
 
+    // This used to leave the source's row untouched (last_fetch_at and last_status empty, no error), so
+    // a source stuck here looked as if it had never been tried, with nothing to say why.
+    describe('when robots.txt cannot be read, the reason is kept', () => {
+      const timeout = Object.assign(new Error('The operation timed out.'), { name: 'TimeoutError' })
+
+      it.each([
+        ['an HTTP 503', code(503), 'robots.txt: HTTP 503', 503],
+        ['an HTTP 429', code(429), 'robots.txt: HTTP 429', 429],
+        ['a refused connection', new Error('connection refused'), 'robots.txt: connection refused', null],
+        ['a timeout', timeout, 'robots.txt: TimeoutError: The operation timed out.', null],
+      ] as const)('%s', async (_name, reply, message, status) => {
+        const { deps, savedState } = setup({ 'https://adaderana.lk/robots.txt': reply }, [ADA])
+        const out = await refresh(deps)
+        expect(out.sources[0]).toEqual({ id: 'adaderana_en', status: 'robots_unknown', found: 0, kept: 0, error: message })
+        expect(savedState(ADA.id)).toMatchObject({
+          last_error: message,
+          last_status: status,
+          last_fetch_at: new Date(NOW).toISOString(),
+          failures: 1,
+          robots_ok: null,
+        })
+      })
+
+      it('shows it in a dry run too, which is where it was first noticed', async () => {
+        const { deps } = setup({ 'https://adaderana.lk/robots.txt': new Error('connection reset') }, [ADA])
+        const out = await refresh(deps, { dryRun: true, force: true })
+        expect(out.sources[0]).toMatchObject({ status: 'robots_unknown', error: 'robots.txt: connection reset' })
+      })
+
+      it('counts as a failure, so a source that stays unreachable is asked hourly after three', async () => {
+        const stuck = state(ADA.id, { failures: 2, last_fetch_at: ago(15) })
+        const { deps, savedState } = setup({ 'https://adaderana.lk/robots.txt': code(503) }, [ADA], [stuck])
+        await refresh(deps)
+        const saved = savedState(ADA.id)!
+        expect(saved.failures).toBe(3)
+        expect(isDue(ADA, { ...saved, last_fetch_at: ago(30) }, NOW)).toBe(false)
+        expect(isDue(ADA, { ...saved, last_fetch_at: ago(BACKOFF_MIN) }, NOW)).toBe(true)
+      })
+
+      it('clears the note once the source works again', async () => {
+        const stuck = state(ADA.id, { failures: 4, last_error: 'robots.txt: HTTP 503', last_fetch_at: ago(120) })
+        const { deps, savedState } = setup({ [ADA.url]: ok(ADA_FEED) }, [ADA], [stuck])
+        await refresh(deps)
+        expect(savedState(ADA.id)).toMatchObject({ last_error: null, failures: 0, last_status: 200 })
+      })
+
+      it('puts a timeout and a network error into words', () => {
+        expect(describeError(timeout)).toBe('TimeoutError: The operation timed out.')
+        expect(describeError(new Error('boom'))).toBe('boom')
+        expect(describeError('plain text')).toBe('plain text')
+        expect(describeError(new Error('a\n   b'))).toBe('a b')
+        expect(describeError(new Error('x'.repeat(500)))).toHaveLength(160)
+      })
+    })
+
     it('keeps the last answer when robots.txt cannot be read now', async () => {
       const known = state(ADA.id, { robots_ok: true, robots_at: ago(2 * 24 * 60) })
       const { deps, stored } = setup({ 'https://adaderana.lk/robots.txt': new Error('offline'), [ADA.url]: ok(ADA_FEED) }, [ADA], [known])
@@ -738,6 +795,86 @@ describe('one run', () => {
     })
   })
 
+  describe('a site whose robots.txt is its home page (the Met Department)', () => {
+    // meteo.gov.lk answers /robots.txt with its whole home page. Made-up page, same shape: HTML, CSS
+    // and script lines with colons in them, none of them robots rules.
+    const homePage =
+      '<!DOCTYPE html><html><head><title>A department</title><style>\nbody {\n  font-family: Arial;\n  display: flex;\n}\n' +
+      '.allow: x\n</style></head><body>\n<h1>Welcome</h1>\n<script>\nconst sitemap = "x";\nlet user = 1;\n</script>\n' +
+      '<p>' + 'text '.repeat(4000) + '</p></body></html>'
+    const SEA = 'https://meteo.gov.lk/pdfs/sea_pdf.pdf'
+
+    it('reads it as "no rules", fetches content.json and stores the advisory', async () => {
+      const { deps, stored, savedState, calls } = setup(
+        {
+          'https://meteo.gov.lk/robots.txt': ok(homePage),
+          [METEO.url]: ok(meteo({ sea_pdf: 'pdfs/sea_pdf.pdf' }), { etag: 'W/"6af98216-9511"' }),
+          [SEA]: code(200, { etag: '"6af96ebf-25e09d"', lastModified: 'Sun, 15 Nov 2026 08:35:11 GMT' }),
+        },
+        [METEO],
+      )
+      const out = await refresh(deps, { only: 'meteo_advisory', force: true })
+      expect(out.sources).toEqual([{ id: 'meteo_advisory', status: 'ok', found: 1, kept: 1 }])
+      expect(stored()).toHaveLength(1)
+      expect(calls.map((c) => c.url)).toEqual(['https://meteo.gov.lk/robots.txt', METEO.url, SEA])
+      expect(savedState(METEO.id)).toMatchObject({ last_status: 200, last_error: null, robots_ok: true, failures: 0 })
+      expect(savedState(METEO.id)?.last_fetch_at).toBe(new Date(NOW).toISOString())
+    })
+
+    it('asks only for www-less meteo.gov.lk, as the site redirects www there', () => {
+      expect(new URL(METEO.url).host).toBe('meteo.gov.lk')
+      expect(METEO.ownDomains).toEqual(['meteo.gov.lk'])
+    })
+  })
+
+  describe('a source that answers 403 (thinakaran)', () => {
+    const THINA = source('thinakaran')
+    const HOUR = 60 * MIN
+
+    // Runs at a different time and keeps the stored state between runs, like the real cron job does
+    async function runAt(minutesFromNow: number, replies: Record<string, Reply>, states: SourceState[]) {
+      const t = NOW + minutesFromNow * MIN
+      const s = setup(replies, [THINA], states, { now: () => t })
+      const out = await refresh(s.deps)
+      return { ...s, out, next: s.writeStates.mock.calls.at(-1)?.[0] ?? states }
+    }
+
+    it('is asked once a day after that, and never with different headers', async () => {
+      const replies = { [THINA.url]: code(403) }
+      const first = await runAt(0, replies, [])
+      expect(first.out.sources[0]).toMatchObject({ status: 'failed', error: 'HTTP 403' })
+      expect(first.next[0]).toMatchObject({ last_status: 403, failures: 1 })
+
+      // every 15 minutes for the next 23 hours: nothing is sent at all
+      let states = first.next
+      for (let minutes = 15; minutes < 24 * 60; minutes += 15) {
+        const run = await runAt(minutes, replies, states)
+        expect(run.fetch, `at +${minutes} min`).not.toHaveBeenCalled()
+        expect(run.out.skipped).toEqual([{ id: 'thinakaran', reason: 'not_due' }])
+      }
+
+      // after a day it asks once more, with the same User-Agent and nothing added
+      const again = await runAt(24 * 60, replies, states)
+      const feedCall = again.calls.find((c) => c.url === THINA.url)!
+      expect(feedCall.headers['User-Agent']).toBe(USER_AGENT)
+      expect(Object.keys(feedCall.headers).sort()).toEqual(['Accept', 'User-Agent'])
+      expect(again.next[0]).toMatchObject({ last_status: 403, failures: 2 })
+
+      // and then not again for another day
+      states = again.next
+      const soon = await runAt(24 * 60 + HOUR / MIN, replies, states)
+      expect(soon.fetch).not.toHaveBeenCalled()
+    })
+
+    it('goes back to the normal interval once it answers again', async () => {
+      const blocked = await runAt(0, { [THINA.url]: code(403) }, [])
+      const open = await runAt(24 * 60, { [THINA.url]: ok(rss([])) }, blocked.next)
+      expect(open.next[0]).toMatchObject({ last_status: 200, failures: 0, last_error: null })
+      const later = await runAt(24 * 60 + THINA.everyMin, { [THINA.url]: ok(rss([])) }, open.next)
+      expect(later.fetch).toHaveBeenCalled()
+    })
+  })
+
   describe('database trouble', () => {
     it('reports a failed write, but still saves the state of each source', async () => {
       const { deps, writeStates } = setup({ [ADA.url]: ok(ADA_FEED) }, [ADA], [], {
@@ -828,6 +965,33 @@ describe('the source list', () => {
   it('has the official sources first, so they win a shared link', () => {
     const kinds = SOURCES.map((s) => s.kind)
     expect(kinds.lastIndexOf('official')).toBeLessThan(kinds.indexOf('media'))
+  })
+})
+
+describe('what the function sends back', () => {
+  it('says the body is UTF-8, so Windows PowerShell 5.1 does not scramble Sinhala and Tamil', async () => {
+    const res = jsonResponse({ title: 'තද වැසි', note: 'கனமழை' })
+    expect(res.headers.get('content-type')).toBe('application/json; charset=utf-8')
+    expect(res.status).toBe(200)
+  })
+
+  it('sends the letters as UTF-8 bytes and they read back unchanged', async () => {
+    const body = { title: 'තද වැසි', note: 'கனமழை', n: 3 }
+    const res = jsonResponse(body, 502)
+    expect(res.status).toBe(502)
+    const bytes = new Uint8Array(await res.arrayBuffer())
+    expect(JSON.parse(new TextDecoder('utf-8').decode(bytes))).toEqual(body)
+    // the letters themselves are in the body, not \u escapes
+    expect(new TextDecoder('utf-8').decode(bytes)).toContain('තද වැසි')
+  })
+
+  it('is what every answer in index.ts goes through', () => {
+    const index = readFileSync(join(__dirname, '..', '..', 'supabase', 'functions', 'news-refresh', 'index.ts'), 'utf8')
+    expect(index).toContain('jsonResponse')
+    expect(index).not.toMatch(/new Response\(/)
+    expect(index).not.toMatch(/'Content-Type': 'application\/json'(?!;)/)
+    // 401, 405, 400 and the final answer
+    expect(index.match(/return jsonResponse\(/g)).toHaveLength(4)
   })
 })
 
