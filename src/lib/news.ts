@@ -2,6 +2,7 @@ import { HAZARDS, type Hazard } from '../../supabase/functions/news-refresh/haza
 import { isOwnLink, tidyTitle } from '../../supabase/functions/news-refresh/shared'
 import { SOURCES, type Lang } from '../../supabase/functions/news-refresh/sources'
 import { t } from '../i18n'
+import type { NewsFilter } from './newsFilter'
 
 // Disaster news headlines, read from the news_items table that the news-refresh function fills (see
 // docs/news-feed.md). Headline, source, time and link only, never the article text. This file is
@@ -25,7 +26,8 @@ export const DUPLICATE_OVERLAP = 0.5 // of the words in the shorter headline
 export const DUPLICATE_MIN_SHARED = 3 // but never fewer than this many (fewer, if the headline has fewer)
 
 export type NewsLanguage = Lang
-export type NewsFilter = 'all' | NewsLanguage
+// The sheet's language filter lives in its own small file (the main download needs it, not this one)
+export type { NewsFilter }
 
 export type NewsItem = {
   id: number
@@ -132,6 +134,33 @@ export function channelName(channel: string): string {
   const key = `news.channel.${channel}`
   const name = t(key)
   return name === key ? channel : name
+}
+
+// "Floods", "Strong winds and rough seas"... the heading of a group of news reports. The code itself
+// if there is no name, so a new kind of hazard still shows something.
+export function newsHazardName(hazard: string): string {
+  const key = `news.hazard.${hazard}`
+  const name = t(key)
+  return name === key ? hazard : name
+}
+
+// "dmc.gov.lk" from a link, for "Read on dmc.gov.lk". The whole link if it can't be read.
+export function siteOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+// The official notices that are files (the DMC reports, the Met Department's advisories) say "Open the
+// notice (PDF)"; the others are pages
+export function isPdfLink(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.pdf')
+  } catch {
+    return false
+  }
 }
 
 // ---- Same story from several outlets ----
@@ -306,4 +335,30 @@ export type NewsChip = {
 export function newsChip(items: NewsItem[], now: number): NewsChip {
   const grouped = groupNews(items, { now, language: 'all', maxAgeMs: NEWS_CHIP_WINDOW_MS })
   return { count: grouped.official.length + grouped.storyCount, officialRecent: grouped.official.length > 0 }
+}
+
+// What the News part of the chip and the Layers entry show.
+//   null          nothing yet: the first load hasn't finished (or the news feed is off)
+//   count: null   the headlines could not be loaded and none are saved: the entry still shows, without
+//                 a number, so the sheet can say so and offer Try again
+//   count: n      the last 24 hours
+export type NewsEntryState = { count: number | null; officialRecent: boolean }
+
+// `hasFailed` means a load has failed at some point, not that one is failing right now: while it tries
+// again the query goes back to "pending", and the entry should not vanish and come back.
+export function newsEntryState(items: NewsItem[] | undefined, hasFailed: boolean, now: number): NewsEntryState | null {
+  if (items) return newsChip(items, now)
+  return hasFailed ? { count: null, officialRecent: false } : null
+}
+
+// The words on the chip's News part: "News 4", or just "News" when there is nothing to count (or the
+// headlines couldn't be loaded). The sheet says what there is.
+export function newsPillText(count: number | null): string {
+  return count ? t('news.chipCount', { count }) : t('news.chip')
+}
+
+// What a screen reader says for it, including the red dot's meaning
+export function newsAriaLabel(count: number | null, officialRecent: boolean): string {
+  if (!count) return t('news.chipAriaNone')
+  return t(officialRecent ? 'news.chipAriaOfficial' : 'news.chipAria', { count })
 }

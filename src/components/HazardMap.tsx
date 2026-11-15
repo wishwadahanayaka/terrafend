@@ -31,6 +31,8 @@ const RainMapOverlay = lazy(() => import('./RainMapOverlay'))
 const MeasuredRainMarkers = lazy(() => import('./MeasuredRainMarkers'))
 const GdacsMarkers = lazy(() => import('./GdacsMarkers'))
 const MyReportsPanel = lazy(() => import('./MyReportsPanel'))
+// The disaster news sheet, only reachable when the news feed is switched on (?news=1, see newsFlag.ts)
+const NewsSheet = lazy(() => import('./NewsSheet'))
 
 export default function HazardMap({
   onOpenEmergency,
@@ -46,6 +48,7 @@ export default function HazardMap({
   const [myReportsOpen, setMyReportsOpen] = useState(false)
   // The report My reports scrolls to when it was opened from a card's Manage button
   const [myReportsFocus, setMyReportsFocus] = useState<string | null>(null)
+  const [newsOpen, setNewsOpen] = useState(false)
 
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
@@ -196,6 +199,7 @@ export default function HazardMap({
           onOpenHelp={onOpenHelp}
           rainView={rainView}
           onRainView={setRainView}
+          onOpenNews={() => setNewsOpen(true)}
           onChange={(name: keyof LayerSettings, value) => {
             setLayers((current) => ({ ...current, [name]: value }))
             saveLayerSetting(name, value)
@@ -218,6 +222,13 @@ export default function HazardMap({
       {myReportsOpen && (
         <Suspense fallback={null}>
           <MyReportsPanel onClose={() => setMyReportsOpen(false)} onShow={showMine} focusId={myReportsFocus} />
+        </Suspense>
+      )}
+
+      {newsOpen && (
+        <Suspense fallback={null}>
+          {/* The emergency numbers open on top of it, so closing those comes back here */}
+          <NewsSheet onClose={() => setNewsOpen(false)} onOpenEmergency={onOpenEmergency} />
         </Suspense>
       )}
 

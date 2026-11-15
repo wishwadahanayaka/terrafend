@@ -63,6 +63,9 @@ export async function loadNews(read: () => Promise<NewsItem[] | null> = fetchNew
 export const NEWS_REFRESH_MS = 10 * 60_000
 export const NEWS_REFRESH_OPEN_MS = 5 * 60_000
 export const NEWS_STALE_MS = 60_000
+// One retry after a failed read, soon: until it has failed twice the sheet says "Loading", so a long
+// wait here (the river data waits 30 s) would keep a person staring at that when they want the news
+export const NEWS_RETRY_DELAY_MS = 5_000
 
 export function newsQueryOptions(sheetOpen: boolean) {
   return {
@@ -75,6 +78,6 @@ export function newsQueryOptions(sheetOpen: boolean) {
     // Kept as long as it is saved on the phone (24 hours), so it is there to show when offline
     gcTime: NEWS_SAVED_MAX_AGE_MS,
     retry: 1,
-    retryDelay: 30_000,
+    retryDelay: NEWS_RETRY_DELAY_MS,
   } as const
 }

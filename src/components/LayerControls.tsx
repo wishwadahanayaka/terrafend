@@ -13,6 +13,7 @@ import {
   RAIN_LABEL,
 } from '../lib/rainForecast'
 import { LIGHT_CONFIRM_HOURS, LIGHT_CONFIRM_KM, LIGHT_VETO_KM } from '../lib/lightRain'
+import { newsEnabled } from '../lib/newsFlag'
 import type { RainView } from '../lib/rainView'
 import { LANGUAGES } from '../i18n/languages'
 import { setLanguage } from '../i18n'
@@ -31,6 +32,8 @@ import RainViewSwitch from './RainViewSwitch'
 // Counts reports from Supabase, so it loads after the map like the other data code
 const ThreatChip = lazy(() => import('./ThreatChip'))
 const ThreatList = lazy(() => import('./ThreatList'))
+// The news code is only downloaded when the news feed is switched on (?news=1, see newsFlag.ts)
+const NewsEntry = lazy(() => import('./NewsEntry'))
 
 type Props = {
   map: LeafletMap | null
@@ -44,6 +47,8 @@ type Props = {
   // Which rain the map shows: the past 3 hours (measured) or the next 3 (forecast)
   rainView: RainView
   onRainView: (view: RainView) => void
+  // Opens the disaster news sheet (the entry points only exist when the news feed is switched on)
+  onOpenNews: () => void
 }
 
 // Shown in this order, with a plain-words meaning for each
@@ -82,8 +87,10 @@ export default function LayerControls({
   onOpenHelp,
   rainView,
   onRainView,
+  onOpenNews,
 }: Props) {
   const { t, i18n } = useTranslation()
+  const [newsOn] = useState(newsEnabled)
   const { status: riverStatus } = useRiverGauges()
   const rain = useRainMap()
   const measured = useMeasuredRain()
@@ -114,6 +121,13 @@ export default function LayerControls({
     setOpen(which)
   }
   const toggle = (which: Exclude<Open, 'none'>) => (open === which ? setOpen('none') : show(which))
+
+  // The news sheet is a full-width sheet, so the panel and any map card give way to it
+  function showNews() {
+    map?.closePopup()
+    setOpen('none')
+    onOpenNews()
+  }
 
   return (
     <div className="absolute right-4 top-[calc(var(--banner-bottom,56px)+1rem)] z-[1000] flex flex-col items-end gap-2">
@@ -173,7 +187,7 @@ export default function LayerControls({
       )}
 
       <Suspense fallback={null}>
-        <ThreatChip map={map} onMore={() => show('layers')} onRainView={onRainView} />
+        <ThreatChip map={map} onMore={() => show('layers')} onRainView={onRainView} onOpenNews={showNews} />
       </Suspense>
 
       {open === 'language' && (
@@ -205,6 +219,11 @@ export default function LayerControls({
           <Suspense fallback={null}>
             <ThreatList />
           </Suspense>
+          {newsOn && (
+            <Suspense fallback={null}>
+              <NewsEntry onOpen={showNews} />
+            </Suspense>
+          )}
           <Toggle
             icon={<TriangleAlert className="h-5 w-5" aria-hidden="true" />}
             label={t('layers.reports')}

@@ -6,6 +6,7 @@
 //   media     English news reports across the kinds of disaster (rain, wind and sea, flood, landslide...)
 //   alllang   Sinhala and Tamil news reports (add media to get English too)
 //   dupes     one story from two outlets in English and from three in Sinhala (they group into one each)
+//   many      six different rain stories, so "Show 3 more" appears (not part of "all")
 //   long      a Tamil headline over 300 characters (it is cut)
 //   ended     two withdrawn official notices (hidden)
 //   old       one report 47 hours old (still shown) and others over 48 hours old (hidden)
@@ -20,7 +21,7 @@
 import { parseNewsRows, type NewsItem } from './news'
 import { SOURCES } from '../../supabase/functions/news-refresh/sources'
 
-export const FAKE_NEWS_MODES = ['official', 'advisory', 'media', 'alllang', 'dupes', 'long', 'ended', 'old', 'empty', 'fail'] as const
+export const FAKE_NEWS_MODES = ['official', 'advisory', 'media', 'alllang', 'dupes', 'many', 'long', 'ended', 'old', 'empty', 'fail'] as const
 export type FakeNewsMode = (typeof FAKE_NEWS_MODES)[number]
 
 const ALL: FakeNewsMode[] = ['official', 'advisory', 'media', 'alllang', 'dupes']
@@ -103,6 +104,14 @@ const SETS: Record<Exclude<FakeNewsMode, 'empty' | 'fail'>, Spec[]> = {
     media('adaderana_si', 'si', 'flood', 35, 'රත්නපුර දිස්ත්‍රික්කයේ ගංවතුර අවදානම'),
     media('lankadeepa', 'si', 'flood', 55, 'රත්නපුර දිස්ත්‍රික්කයේ ගංවතුර අවදානමක්'),
     media('divaina', 'si', 'flood', 80, 'රත්නපුරයේ ගංවතුර අවදානම ඉහළයි'),
+  ],
+  many: [
+    media('adaderana_en', 'en', 'rain', 12, 'Showers over the hill country for a third day'),
+    media('dailymirror', 'en', 'rain', 31, 'Evening thunder rattles the western coast'),
+    media('adaderana_en', 'en', 'rain', 58, 'Schools in the north close early as downpours settle in'),
+    media('dailymirror', 'en', 'rain', 3 * HOUR, 'Paddy farmers watch a swollen tank nervously'),
+    media('adaderana_en', 'en', 'rain', 7 * HOUR, 'Umbrellas sell out across the capital'),
+    media('dailymirror', 'en', 'rain', 15 * HOUR, 'Night storm knocks out power on the east coast'),
   ],
   long: [media('tamilmirror', 'ta', 'landslide', 15, 'மண்சரிவு அபாய எச்சரிக்கை '.repeat(14).trim())],
   ended: [

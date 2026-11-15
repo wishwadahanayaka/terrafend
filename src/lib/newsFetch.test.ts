@@ -9,6 +9,7 @@ import {
   NEWS_COLUMNS,
   NEWS_REFRESH_MS,
   NEWS_REFRESH_OPEN_MS,
+  NEWS_RETRY_DELAY_MS,
   NEWS_STALE_MS,
   newsQueryOptions,
   newsUrl,
@@ -207,6 +208,11 @@ describe('how often it asks again', () => {
     expect(options.gcTime).toBe(NEWS_SAVED_MAX_AGE_MS)
     expect(options.gcTime).toBe(24 * 60 * MIN)
     expect(options.retry).toBe(1)
+  })
+
+  it('retries soon, because until it has failed twice the sheet says "Loading"', () => {
+    expect(newsQueryOptions(false).retryDelay).toBe(NEWS_RETRY_DELAY_MS)
+    expect(NEWS_RETRY_DELAY_MS).toBeLessThanOrEqual(10_000)
   })
 })
 

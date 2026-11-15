@@ -1,3 +1,4 @@
+import { parseNewsFilter, type NewsFilter } from './newsFilter'
 import { parseRainView, type RainView } from './rainView'
 
 // What each Layers toggle adds on top of the serious items, which always show
@@ -60,6 +61,25 @@ export function loadRainView(): RainView {
 export function saveRainView(view: RainView) {
   try {
     localStorage.setItem(RAIN_VIEW_KEY, view)
+  } catch {
+    // not saved, the choice still works until the page is closed
+  }
+}
+
+// The language of news reports the news sheet shows (all, English, Sinhala or Tamil)
+export const NEWS_FILTER_KEY = 'terrafend:newsLanguage'
+
+export function loadNewsFilter(): NewsFilter {
+  try {
+    return parseNewsFilter(localStorage.getItem(NEWS_FILTER_KEY))
+  } catch {
+    return parseNewsFilter(null)
+  }
+}
+
+export function saveNewsFilter(filter: NewsFilter) {
+  try {
+    localStorage.setItem(NEWS_FILTER_KEY, filter)
   } catch {
     // not saved, the choice still works until the page is closed
   }

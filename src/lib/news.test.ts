@@ -11,11 +11,17 @@ import {
   channelName,
   DUPLICATE_WINDOW_MS,
   groupNews,
+  isPdfLink,
+  newsAriaLabel,
   newsChip,
+  newsEntryState,
+  newsHazardName,
+  newsPillText,
   NEWS_CHIP_WINDOW_MS,
   NEWS_WINDOW_MS,
   parseNewsRow,
   parseNewsRows,
+  siteOf,
   sourceName,
   titleWords,
   VISIBLE_PER_HAZARD,
@@ -524,5 +530,99 @@ describe('what the app downloads', () => {
         expect(from, parts.join('/')).not.toMatch(/keywords|news-refresh\/logic|\.\/logic/)
       }
     }
+  })
+})
+
+describe('what the chip and the Layers entry show', () => {
+  const items = [item(), official('dmc_flood', { publishedAt: NOW - 2 * HOUR })]
+
+  it('is the count of the last 24 hours once the headlines are there', () => {
+    expect(newsEntryState(items, false, NOW)).toEqual({ count: 2, officialRecent: true })
+    expect(newsEntryState([], false, NOW)).toEqual({ count: 0, officialRecent: false })
+  })
+
+  it('is nothing yet while the first load has not finished', () => {
+    expect(newsEntryState(undefined, false, NOW)).toBeNull()
+  })
+
+  it('is a bare entry without a number when the load failed and nothing is saved', () => {
+    expect(newsEntryState(undefined, true, NOW)).toEqual({ count: null, officialRecent: false })
+  })
+
+  it('prefers the headlines on hand to a failure, so a failed refresh does not hide them', () => {
+    expect(newsEntryState(items, true, NOW)).toEqual({ count: 2, officialRecent: true })
+  })
+
+  it('uses the clock it is given, so saved headlines read right when opened hours later', () => {
+    expect(newsEntryState(items, false, NOW + 25 * HOUR)).toEqual({ count: 0, officialRecent: false })
+  })
+
+  it('is asked "has it failed", not "is it failing now", so a retry does not make the entry vanish', () => {
+    const hook = readFileSync(join(__dirname, 'useNewsChip.ts'), 'utf8')
+    expect(hook).toContain('query.errorUpdatedAt > 0')
+    expect(hook).not.toMatch(/query.isError|query.isPending/)
+  })
+})
+
+describe.each(['en', 'si', 'ta'] as const)('the words on the chip and the headings, in %s', (lang) => {
+  afterAll(async () => {
+    await setLanguage('en', false)
+  })
+
+  it('says "News 4" for a count, and just "News" when there is nothing to count', async () => {
+    await setLanguage(lang, false)
+    expect(newsPillText(4)).toMatch(/4/)
+    expect(newsPillText(4)).not.toBe(newsPillText(null))
+    expect(newsPillText(0)).toBe(newsPillText(null))
+    for (const text of [newsPillText(4), newsPillText(null)]) expect(text).not.toMatch(/news.chip|{{/)
+  })
+
+  it('has a screen-reader label with the number, and says so when there is an official notice', async () => {
+    await setLanguage(lang, false)
+    const plain = newsAriaLabel(3, false)
+    const official = newsAriaLabel(3, true)
+    expect(plain).toMatch(/3/)
+    expect(official).toMatch(/3/)
+    expect(official).not.toBe(plain)
+    expect(official.length).toBeGreaterThan(plain.length)
+    expect(newsAriaLabel(1, false)).toMatch(/1/)
+    expect(newsAriaLabel(null, false)).toBe(newsAriaLabel(0, true))
+    for (const text of [plain, official, newsAriaLabel(null, false)]) expect(text).not.toMatch(/news.chip|{{/)
+  })
+
+  it('has a heading for every kind of hazard', async () => {
+    await setLanguage(lang, false)
+    for (const hazard of HAZARDS) {
+      const name = newsHazardName(hazard)
+      expect(name, hazard).not.toBe(hazard)
+      expect(name, hazard).not.toMatch(/news.hazard|{{/)
+      expect(name.trim().length, hazard).toBeGreaterThan(2)
+      if (lang === 'si') expect(name, hazard).toMatch(/[඀-෿]/)
+      if (lang === 'ta') expect(name, hazard).toMatch(/[஀-௿]/)
+    }
+  })
+})
+
+describe('headings and links', () => {
+  it('has a name for every hazard in the English file and none left over', () => {
+    expect(Object.keys(en.news.hazard).sort()).toEqual([...HAZARDS].sort())
+  })
+
+  it('shows the code for a hazard it has no name for', () => {
+    expect(newsHazardName('meteor')).toBe('meteor')
+  })
+
+  it('names the site of a link without www., for "Read on dmc.gov.lk"', () => {
+    expect(siteOf('https://www.dmc.gov.lk/index.php?option=x')).toBe('dmc.gov.lk')
+    expect(siteOf('https://adaderana.lk/news/1')).toBe('adaderana.lk')
+    expect(siteOf('not a link')).toBe('not a link')
+  })
+
+  it('tells a PDF notice from a page', () => {
+    expect(isPdfLink('https://www.dmc.gov.lk/images/dmcreports/LEWM_14.pdf')).toBe(true)
+    expect(isPdfLink('https://meteo.gov.lk/pdfs/sea_pdf.PDF')).toBe(true)
+    expect(isPdfLink('https://www.dmc.gov.lk/index.php?option=com_content&view=article&id=1788')).toBe(false)
+    expect(isPdfLink('https://example.org/a.pdf.html')).toBe(false)
+    expect(isPdfLink('nonsense')).toBe(false)
   })
 })

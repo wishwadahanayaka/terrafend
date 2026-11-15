@@ -21,8 +21,8 @@ Approved 15 Nov 2026, with these changes to the first draft:
 | 3 | Migration 0010, `supabase/checks/0010_check.sql`, privacy checks 6 and 17, `docs/news-feed.md` | **built**, not run |
 | 4 | Run 0010, deploy, set the secrets, dry run, watch for 2 to 3 days, tune the keywords | **in progress**: 0010 run, deployed, cron running from 15 Nov 2026. Two sources are switched off (`enabled: false`, 15 Nov 2026): `meteo_advisory` (meteo.gov.lk times out from Supabase even at 25 s) and `thinakaran` (403 to Supabase), leaving 12 read; code and tests kept. Owner reviews the Sinhala headlines with the command in `docs/news-feed.md` (Sinhala sources kept 0 on the first run). |
 | 5a | App logic: reading the table, the query hook, grouping, chip numbers, source names, `?fakeNews=`, offline (24 h, not in the banner), tests | **built** (`news.ts`, `newsFetch.ts`, `useNews.ts`, `fakeNews.ts`); no UI |
-| 5b | App screens: the sheet and the chip behind `?news=1`, UI text in en/si/ta | not built |
-| 6 | Switch on, README credits, CLAUDE.md | not built |
+| 5b | App screens: the sheet, the chip part and the Layers entry behind `?news=1`, UI text in en/si/ta | **built** (`NewsSheet.tsx`, `NewsEntry.tsx`, `ThreatChip.tsx`, `newsFlag.ts`); shown only with `?news=1` |
+| 6 | Switch on for everyone: set `NEWS_FOR_EVERYONE = true` in `src/lib/newsFlag.ts` (one line), add the README credit, update CLAUDE.md | not done: test on the live site with `?news=1` first |
 | 7 | Later: Lankapuvath when it's back, NBRO with the landslide layer, news pins | not planned in detail |
 
 Native review of the Sinhala and Tamil keyword lists runs alongside steps 4 and 5.
@@ -155,7 +155,7 @@ at once; iOS closes websockets of a backgrounded web app, so it would refetch on
 table would have to join the Realtime publication. A plain `fetch` with only the `apikey` header (like
 `forecastCache.ts`), named columns, the last 48 hours, at most 100 items.
 
-## 5. App (5a, the logic, is built; 5b, the screens, is not)
+## 5. App (5a, the logic, and 5b, the screens, are built)
 
 Decided while building the logic (5a):
 

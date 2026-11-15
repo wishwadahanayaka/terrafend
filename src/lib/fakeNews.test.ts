@@ -29,7 +29,7 @@ describe('the switch in the address', () => {
   })
 
   it('has every value the plan names', () => {
-    expect([...FAKE_NEWS_MODES].sort()).toEqual(['advisory', 'alllang', 'dupes', 'empty', 'ended', 'fail', 'long', 'media', 'official', 'old'])
+    expect([...FAKE_NEWS_MODES].sort()).toEqual(['advisory', 'alllang', 'dupes', 'empty', 'ended', 'fail', 'long', 'many', 'media', 'official', 'old'])
   })
 })
 
@@ -94,6 +94,19 @@ describe('the sample headlines', () => {
     expect(english.also).toEqual(['dailymirror'])
     expect(sinhala.members).toHaveLength(3)
     expect(sinhala.also).toEqual(['lankadeepa', 'divaina'])
+  })
+
+  it('many: six different rain stories, three shown and three behind "Show 3 more"', () => {
+    const g = grouped(['many'])
+    expect(g.storyCount).toBe(6)
+    expect(g.groups).toHaveLength(1)
+    expect(g.groups[0]).toMatchObject({ hazard: 'rain', total: 6 })
+    expect(g.groups[0].visible).toHaveLength(3)
+    expect(g.groups[0].more).toHaveLength(3)
+  })
+
+  it('many: is left out of "all", which would otherwise fill the sheet with rain', () => {
+    expect(fakeNewsModes('?fakeNews=all')).not.toContain('many')
   })
 
   it('long: a Tamil headline cut to 300 letters', () => {
