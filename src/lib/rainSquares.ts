@@ -1,6 +1,6 @@
 import { HOUR_MS } from './openMeteo'
 import { kmFrom } from './fakeRainMap'
-import { lightRainVerdict } from './lightRain'
+import { lightRainShownAt } from './lightRain'
 import { mildRain, rainLevel, type MildLevel, type RainLevel } from './rainForecast'
 import { landGrid, onLand, rainScore, WINDOW_HOURS, type RainMap } from './rainMap'
 import { satelliteCentre, SATELLITE_GRID, type GaugeRain, type SatelliteRain } from './rainMeasured'
@@ -97,7 +97,7 @@ export function pastSquares(
     const level = rainLevel(seen, null)
     const mild = level ? null : mildRain(seen)
     if (!level && !mild) continue
-    if (mild === 'light' && !lightRainVerdict(spot.index, spot.lat, spot.lng, satellite, gauges, now).show) continue
+    if (mild === 'light' && !lightRainShownAt(spot.index, satellite, gauges, now)) continue
 
     squares.push({
       lat: spot.lat,

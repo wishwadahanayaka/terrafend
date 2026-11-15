@@ -1,4 +1,5 @@
 import { t } from '../i18n'
+import { lightRainShownAt } from './lightRain'
 import {
   MILD_LABEL,
   mildRain,
@@ -84,7 +85,13 @@ export function recentRainAlongRoute(route: RouteResult, measured: MeasuredRain 
       const mm = index === null ? null : sat.mm[index]
       if (mm === null) return null
       const level = rainLevel(mm, null)
-      return { km: s.km, level, mild: level ? null : mildRain(mm), mm }
+      const mild = level ? null : mildRain(mm)
+      // Light satellite rain the map doesn't draw isn't mentioned here either (lightRain.ts). The
+      // point still counts as having been read: it's dry as far as we can tell, not unknown.
+      if (mild === 'light' && index !== null && !lightRainShownAt(index, sat, measured.gauges, now)) {
+        return { km: s.km, level: null, mild: null, mm }
+      }
+      return { km: s.km, level, mild, mm }
     })
     const when = satelliteWhen(sat, now)
 

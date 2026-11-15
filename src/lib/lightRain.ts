@@ -1,6 +1,6 @@
 import { kmFrom } from './fakeRainMap'
 import { LIGHT_MM } from './rainForecast'
-import { SATELLITE_GRID, type GaugeRain, type SatelliteRain } from './rainMeasured'
+import { satelliteCentre, SATELLITE_GRID, type GaugeRain, type SatelliteRain } from './rainMeasured'
 
 // The satellite sometimes shows a patch of light rain on a dry night: it reads a little rain from
 // thin cloud, and its newest hours are 1 to 3 hours old. So a satellite square at LIGHT level (and
@@ -74,4 +74,12 @@ export function lightRainVerdict(
     return { show: true, reason: 'gauge' }
   }
   return { show: false, reason: 'alone' }
+}
+
+// The same question for a grid cell, judged from the middle of the cell. The map's squares and the
+// route panel's satellite lines both ask it this way, so the route never mentions light rain that
+// the map hides.
+export function lightRainShownAt(index: number, satellite: SatelliteRain, gauges: GaugeRain[], now: number): boolean {
+  const [lat, lng] = satelliteCentre(index)
+  return lightRainVerdict(index, lat, lng, satellite, gauges, now).show
 }
