@@ -24,6 +24,10 @@ export type Source = {
   // What the site's robots.txt asked for (Crawl-delay) when it was checked, in minutes. 0 if nothing.
   // The function also reads robots.txt once a day and goes by whichever is longer.
   crawlDelayMin: number
+  // How long to wait for each request to this source's site (its robots.txt and its feed or page), in
+  // ms. Leave it out for the normal 10 s (FETCH_TIMEOUT_MS in logic.ts). A request is also cut short
+  // when the run is nearly out of time, whatever is set here.
+  timeoutMs?: number
   // Links must be on one of these (or www. in front of one), over https
   ownDomains: string[]
   // keywords: only headlines judge() keeps. none: every item (official warning channels).
@@ -104,6 +108,9 @@ export const SOURCES: Source[] = [
     enabled: true,
   },
   {
+    // From Supabase's servers this site's robots.txt timed out at 10 s (15 Nov 2026), though it answers
+    // in under a second from a home PC. It may just be slow for foreign addresses, so it gets 25 s.
+    // If it keeps timing out, set enabled: false (docs/news-feed.md). It is not to be got round.
     id: 'meteo_advisory',
     url: 'https://meteo.gov.lk/content.json',
     kind: 'official',
@@ -111,6 +118,7 @@ export const SOURCES: Source[] = [
     parser: 'meteoJson',
     everyMin: 15,
     crawlDelayMin: 0,
+    timeoutMs: 25_000,
     ownDomains: ['meteo.gov.lk'],
     filter: 'none',
     enabled: true,

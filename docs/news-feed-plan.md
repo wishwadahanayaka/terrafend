@@ -106,7 +106,7 @@ supabase/functions/news-refresh/
   logic.ts     parseFeed (RSS 2.0 + Atom, CDATA, entities), parseDmcList, parseMeteo, judge,
                cleanTitle, normaliseUrl, parseDate/publishedAt, robotsVerdict, isDue,
                refresh(deps, {force, dryRun, only}), readCapped
-  index.ts     secret check, POST only, fetch (manual redirects, 10 s timeout, 1 MB cap), Supabase writes
+  index.ts     secret check, POST only, fetch (manual redirects, 10 s timeout, 25 s for meteo_advisory only, 1 MB cap), Supabase writes
 ```
 
 - User-Agent: `TerraFend/1.0 (+https://terrafend.vercel.app; free Sri Lanka hazard map; contact: https://github.com/wishwadahanayaka/terrafend)`.

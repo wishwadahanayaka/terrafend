@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { FETCH_TIMEOUT_MS, isAuthorised, jsonResponse, MAX_BYTES, readCapped, refresh, type SourceState } from './logic.ts'
+import { isAuthorised, jsonResponse, MAX_BYTES, readCapped, refresh, type SourceState } from './logic.ts'
 import { SOURCES } from './sources.ts'
 
 // Reads the news sources every 15 minutes (a cron job calls this) and keeps the disaster headlines in
@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
     {
       now: () => Date.now(),
       sources: SOURCES,
-      fetch: async (url, { method, headers }) => {
-        const res = await fetch(url, { method, headers, redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+      fetch: async (url, { method, headers, timeoutMs }) => {
+        const res = await fetch(url, { method, headers, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs) })
         const found = {
           etag: res.headers.get('etag'),
           lastModified: res.headers.get('last-modified'),

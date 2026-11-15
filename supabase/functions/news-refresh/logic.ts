@@ -13,7 +13,14 @@ export const USER_AGENT =
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
 
+// How long to wait for one request, unless the source sets its own timeoutMs
 export const FETCH_TIMEOUT_MS = 10_000
+// No request starts, or is allowed to run on, past this long after the run began. The cron job gives
+// the whole call 60 s, and a run that is cut off saves nothing for any source, so this leaves the rest
+// for the writes. It only bites when sites are very slow.
+export const RUN_DEADLINE_MS = 52_000
+// With less than this left of the run's time a request is not started
+export const MIN_REQUEST_MS = 2_000
 export const MAX_BYTES = 1_000_000
 export const MAX_REDIRECTS = 3
 export const MAX_ITEMS_PER_SOURCE = 50
@@ -472,8 +479,11 @@ export type Deps = {
   now: () => number
   sources: Source[]
   // Sends one request with exactly these headers, does not follow redirects, gives up after
-  // FETCH_TIMEOUT_MS and stops reading after MAX_BYTES. Throws on a network error or a timeout.
-  fetch: (url: string, init: { method: 'GET' | 'HEAD'; headers: Record<string, string> }) => Promise<FetchResult>
+  // timeoutMs and stops reading after MAX_BYTES. Throws on a network error or a timeout.
+  fetch: (
+    url: string,
+    init: { method: 'GET' | 'HEAD'; headers: Record<string, string>; timeoutMs: number },
+  ) => Promise<FetchResult>
   readStates: () => Promise<SourceState[]>
   // Adds new rows (an item_key already stored is left alone). Gives back how many were new.
   writeItems: (rows: NewsRow[]) => Promise<number>
@@ -513,17 +523,28 @@ const baseHeaders = (): Record<string, string> => ({
   Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, application/json, text/html;q=0.8, */*;q=0.5',
 })
 
+export const timeoutFor = (source: Source): number => source.timeoutMs ?? FETCH_TIMEOUT_MS
+
+type Limits = {
+  // Wait this long for each request, but never past the run's deadline (a time, in ms)
+  timeoutMs: number
+  deadline: number
+}
+
 // Follows up to MAX_REDIRECTS redirects, and only to the source's own sites
 async function request(
   deps: Deps,
   url: string,
   domains: string[],
   headers: Record<string, string>,
+  limits: Limits,
   method: 'GET' | 'HEAD' = 'GET',
 ): Promise<{ res: FetchResult; finalUrl: string }> {
   let current = url
   for (let hop = 0; ; hop++) {
-    const res = await deps.fetch(current, { method, headers })
+    const left = limits.deadline - deps.now()
+    if (left < MIN_REQUEST_MS) throw new Error('out of time for this run')
+    const res = await deps.fetch(current, { method, headers, timeoutMs: Math.min(limits.timeoutMs, left) })
     if (!REDIRECTS.has(res.status)) return { res, finalUrl: current }
     if (hop >= MAX_REDIRECTS) throw new Error('too many redirects')
     const next = res.headers.location ? normaliseUrl(res.headers.location, current, domains) : null
@@ -563,7 +584,10 @@ async function robotsCheck(
   if (!cache.has(target.host)) {
     cache.set(
       target.host,
-      request(deps, `https://${target.host}/robots.txt`, source.ownDomains, baseHeaders())
+      request(deps, `https://${target.host}/robots.txt`, source.ownDomains, baseHeaders(), {
+        timeoutMs: timeoutFor(source),
+        deadline: now + RUN_DEADLINE_MS,
+      })
         .then(({ res }): RobotsFile => ({ status: res.status, body: res.body ?? '' }))
         .catch((err): RobotsFile => ({ error: describeError(err) })),
     )
@@ -631,7 +655,10 @@ async function runSource(
     // A dry run reads everything afresh, so it shows what is there and changes nothing
     if (!dryRun && before.etag) headers['If-None-Match'] = before.etag
     if (!dryRun && before.last_modified) headers['If-Modified-Since'] = before.last_modified
-    const { res, finalUrl } = await request(deps, source.url, source.ownDomains, headers)
+    const { res, finalUrl } = await request(deps, source.url, source.ownDomains, headers, {
+      timeoutMs: timeoutFor(source),
+      deadline: startedAt + RUN_DEADLINE_MS,
+    })
     state.last_status = res.status
 
     if (res.status === 304) {
@@ -688,7 +715,15 @@ async function runSource(
           let version: string | null = null
           let issued: number | null = null
           try {
-            const head = await request(deps, url, source.ownDomains, baseHeaders(), 'HEAD')
+            // Only a side check with a fallback just below, so it keeps the normal short wait
+            const head = await request(
+              deps,
+              url,
+              source.ownDomains,
+              baseHeaders(),
+              { timeoutMs: FETCH_TIMEOUT_MS, deadline: startedAt + RUN_DEADLINE_MS },
+              'HEAD',
+            )
             if (head.res.status === 200) {
               version = head.res.headers.etag ?? head.res.headers.lastModified
               issued = parseDate(head.res.headers.lastModified)

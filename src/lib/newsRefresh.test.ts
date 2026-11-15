@@ -10,11 +10,15 @@ import {
   emptyState,
   isAuthorised,
   isDue,
+  FETCH_TIMEOUT_MS,
   isFeed,
   jsonResponse,
   MAX_BYTES,
   MAX_ITEMS_PER_SOURCE,
   MAX_TITLE,
+  MIN_REQUEST_MS,
+  RUN_DEADLINE_MS,
+  timeoutFor,
   normaliseUrl,
   parseDate,
   parseDmcList,
@@ -91,7 +95,7 @@ const meteo = (advisory: Record<string, string>) =>
 type Reply = FetchResult | Error | ((init: { method: string; headers: Record<string, string> }) => FetchResult)
 
 function setup(routes: Record<string, Reply>, sources: Source[], states: SourceState[] = [], over: Partial<Deps> = {}) {
-  const calls: { url: string; method: string; headers: Record<string, string> }[] = []
+  const calls: { url: string; method: string; headers: Record<string, string>; timeoutMs: number }[] = []
   const fetch = vi.fn<Deps['fetch']>(async (url, init) => {
     calls.push({ url, ...init })
     // A site with no robots.txt allows everything
@@ -875,6 +879,151 @@ describe('one run', () => {
     })
   })
 
+  describe('how long each request may take', () => {
+    const MET_ROBOTS = 'https://meteo.gov.lk/robots.txt'
+    const SEA = 'https://meteo.gov.lk/pdfs/sea_pdf.pdf'
+    const metReplies = {
+      [MET_ROBOTS]: code(404),
+      [METEO.url]: ok(meteo({ sea_pdf: 'pdfs/sea_pdf.pdf' })),
+      [SEA]: code(200, { etag: '"v1"' }),
+    }
+
+    it('gives only the Met Department source a longer wait, 25 s, and every other source the normal 10 s', () => {
+      expect(FETCH_TIMEOUT_MS).toBe(10_000)
+      expect(METEO.timeoutMs).toBe(25_000)
+      expect(timeoutFor(METEO)).toBe(25_000)
+      expect(SOURCES.filter((s) => s.timeoutMs !== undefined).map((s) => s.id)).toEqual(['meteo_advisory'])
+      for (const s of SOURCES.filter((s) => s.id !== 'meteo_advisory')) expect(timeoutFor(s), s.id).toBe(10_000)
+    })
+
+    it('waits 25 s for the Met source’s robots.txt and content.json, and 10 s for the side check on the PDF', async () => {
+      const { deps, calls } = setup(metReplies, [METEO])
+      await refresh(deps, { force: true })
+      expect(calls.map((c) => [c.url, c.method, c.timeoutMs])).toEqual([
+        [MET_ROBOTS, 'GET', 25_000],
+        [METEO.url, 'GET', 25_000],
+        [SEA, 'HEAD', 10_000],
+      ])
+    })
+
+    it('waits 10 s for everything else, robots.txt included', async () => {
+      const { deps, calls } = setup({ [ADA.url]: ok(ADA_FEED) }, [ADA])
+      await refresh(deps, { force: true })
+      expect(calls.map((c) => [c.url, c.timeoutMs])).toEqual([
+        ['https://adaderana.lk/robots.txt', 10_000],
+        [ADA.url, 10_000],
+      ])
+    })
+
+    it('keeps the longer wait through a redirect', async () => {
+      const { deps, calls } = setup({ ...metReplies, [METEO.url]: code(301, { location: '/content2.json' }), 'https://meteo.gov.lk/content2.json': ok(meteo({})) }, [METEO])
+      await refresh(deps, { force: true })
+      expect(calls.filter((c) => c.url.includes('content')).map((c) => c.timeoutMs)).toEqual([25_000, 25_000])
+    })
+
+    describe('the whole run has a deadline', () => {
+      // The cron job gives the call 60 s, and a run that is cut off saves nothing for any source
+      it(`never goes past ${RUN_DEADLINE_MS / 1000} s: a long wait is cut to what is left`, async () => {
+        let calls = 0
+        const { deps, calls: sent } = setup(metReplies, [METEO], [], { now: () => (calls++ === 0 ? NOW : NOW + 40_000) })
+        await refresh(deps, { force: true })
+        // 52 s minus the 40 s already gone leaves 12 s, less than the 25 s asked for
+        expect(sent[0]).toMatchObject({ url: MET_ROBOTS, timeoutMs: 12_000 })
+        expect(sent.every((c) => c.timeoutMs <= 12_000)).toBe(true)
+      })
+
+      it(`starts no request with under ${MIN_REQUEST_MS / 1000} s left, and says why`, async () => {
+        // The robots.txt answer takes 51 s, so 1 s of the run is left for content.json
+        let elapsed = 0
+        const { deps, calls } = setup({ ...metReplies, [MET_ROBOTS]: () => ((elapsed = 51_000), code(404)) }, [METEO], [], {
+          now: () => NOW + elapsed,
+        })
+        const out = await refresh(deps, { force: true })
+        expect(calls.map((c) => c.url)).toEqual([MET_ROBOTS])
+        expect(out.sources[0]).toMatchObject({ status: 'failed', error: 'out of time for this run' })
+      })
+
+      it('says so too when robots.txt itself gets no time', async () => {
+        // Only reachable when another source used the time first: the clock is past the deadline at the first request
+        let calls = 0
+        const { deps, fetch } = setup(metReplies, [METEO], [], { now: () => (calls++ < 2 ? NOW : NOW + 51_000) })
+        const out = await refresh(deps, { force: true })
+        expect(fetch).not.toHaveBeenCalled()
+        expect(out.sources[0]).toMatchObject({ status: 'robots_unknown', error: 'robots.txt: out of time for this run' })
+      })
+
+      it('leaves room for the writes inside the 60 s the cron job allows', () => {
+        expect(RUN_DEADLINE_MS).toBeLessThan(60_000)
+        expect(60_000 - RUN_DEADLINE_MS).toBeGreaterThanOrEqual(5_000)
+        const sql = readFileSync(join(__dirname, '..', '..', 'supabase', 'migrations', '0010_news_feed.sql'), 'utf8')
+        expect(sql).toContain('timeout_milliseconds := 60000')
+      })
+    })
+  })
+
+  describe('the Met source keeps timing out', () => {
+    const timeout = Object.assign(new Error('Signal timed out.'), { name: 'TimeoutError' })
+    const hosts = new Set<string>()
+    const replies = { 'https://meteo.gov.lk/robots.txt': timeout }
+
+    async function runAt(minutes: number, states: SourceState[]) {
+      const t = NOW + minutes * MIN
+      const s = setup(replies, [METEO], states, { now: () => t })
+      await refresh(s.deps)
+      for (const c of s.calls) hosts.add(new URL(c.url).host)
+      return { ...s, next: s.writeStates.mock.calls.at(-1)?.[0] ?? states }
+    }
+
+    it('records the timeout, then stays in the normal backoff: every 15 min for three tries, then hourly', async () => {
+      let states: SourceState[] = []
+      const tried: number[] = []
+      for (let minutes = 0; minutes <= 180; minutes += 15) {
+        const run = await runAt(minutes, states)
+        if (run.fetch.mock.calls.length > 0) tried.push(minutes)
+        states = run.next
+      }
+      // 0, 15 and 30 fail (three in a row), then one try an hour after the last
+      expect(tried.slice(0, 3)).toEqual([0, 15, 30])
+      expect(tried.slice(3)).toEqual([90, 150])
+      expect(states[0]).toMatchObject({
+        last_error: 'robots.txt: TimeoutError: Signal timed out.',
+        last_fetch_at: new Date(NOW + 150 * MIN).toISOString(),
+        last_status: null,
+      })
+      expect(states[0].failures).toBe(5)
+    })
+
+    it('never changes who it asks or how: same site, same User-Agent, same headers, every time', async () => {
+      const calls: { url: string; headers: Record<string, string> }[] = []
+      let states: SourceState[] = []
+      for (const minutes of [0, 15, 30, 90]) {
+        const s = setup(replies, [METEO], states, { now: () => NOW + minutes * MIN })
+        await refresh(s.deps)
+        calls.push(...s.calls)
+        states = s.writeStates.mock.calls.at(-1)?.[0] ?? states
+      }
+      expect(calls.length).toBeGreaterThan(0)
+      expect(new Set(calls.map((c) => new URL(c.url).host))).toEqual(new Set(['meteo.gov.lk']))
+      for (const c of calls) {
+        expect(c.headers['User-Agent']).toBe(USER_AGENT)
+        expect(Object.keys(c.headers).sort()).toEqual(['Accept', 'User-Agent'])
+      }
+      expect([...hosts].every((h) => h === 'meteo.gov.lk')).toBe(true)
+    })
+
+    it('goes back to every 15 minutes the first time it answers', async () => {
+      const failing = state(METEO.id, { failures: 5, last_fetch_at: ago(60), last_error: 'robots.txt: TimeoutError: Signal timed out.' })
+      const { deps, savedState } = setup(
+        { 'https://meteo.gov.lk/robots.txt': code(404), [METEO.url]: ok(meteo({})) },
+        [METEO],
+        [failing],
+      )
+      await refresh(deps)
+      expect(savedState(METEO.id)).toMatchObject({ failures: 0, last_error: null, last_status: 200 })
+      expect(isDue(METEO, savedState(METEO.id)!, NOW + 15 * MIN)).toBe(true)
+    })
+  })
+
   describe('database trouble', () => {
     it('reports a failed write, but still saves the state of each source', async () => {
       const { deps, writeStates } = setup({ [ADA.url]: ok(ADA_FEED) }, [ADA], [], {
@@ -1006,7 +1155,8 @@ describe('the function file (index.ts)', () => {
 
   it('does not follow redirects itself, times out, and caps the body', () => {
     expect(index).toContain("redirect: 'manual'")
-    expect(index).toContain('AbortSignal.timeout(FETCH_TIMEOUT_MS)')
+    // the wait comes from logic.ts, per source and cut to the run's deadline
+    expect(index).toContain('AbortSignal.timeout(timeoutMs)')
     expect(index).toContain('readCapped(res.body, MAX_BYTES)')
   })
 
