@@ -703,6 +703,25 @@ const si: Translations = {
     reports_one: 'වාර්තා {{count}}ක්',
     reports_other: 'වාර්තා {{count}}ක්',
     withReports: '{{part}} ({{reports}})',
+    // NEEDS REVIEW BY A NATIVE SPEAKER: the landslide lines of the route panel (AI-written)
+    landslideCount_one: 'නායයෑම් ප්‍රදේශ {{count}}ක්',
+    landslideCount_other: 'නායයෑම් ප්‍රදේශ {{count}}ක්',
+    landslide: {
+      title: 'නායයෑම් අනතුරු ඇඟවීම්',
+      passes3_one: 'මාර්ගය නායයෑම් ඉවත් වීමේ (3 වන මට්ටම) ප්‍රදේශයක් හරහා යයි: {{names}}',
+      passes3_other: 'මාර්ගය නායයෑම් ඉවත් වීමේ (3 වන මට්ටම) ප්‍රදේශ හරහා යයි: {{names}}',
+      passes2_one: 'මාර්ගය නායයෑම් අවවාද (2 වන මට්ටම) ප්‍රදේශයක් හරහා යයි: {{names}}',
+      passes2_other: 'මාර්ගය නායයෑම් අවවාද (2 වන මට්ටම) ප්‍රදේශ හරහා යයි: {{names}}',
+      passes1_one: 'මාර්ගය විමසිලිමත් වන්න (1 වන මට්ටම) ප්‍රදේශයක් හරහා යයි: {{names}}',
+      passes1_other: 'මාර්ගය විමසිලිමත් වන්න (1 වන මට්ටම) ප්‍රදේශ හරහා යයි: {{names}}',
+      show: 'සිතියමේ පෙන්වන්න',
+      showWatch: 'සිතියමේ පෙන්වන්න (විමසිලිමත් වන්න ප්‍රදේශ සක්‍රිය කරයි)',
+      unreadable: 'නවතම නායයෑම් අනතුරු ඇඟවීම කියවිය නොහැකි විය',
+      unchecked: 'අනතුරු ඇඟවීමේ නම් කර ඇති සමහර ප්‍රදේශ මාර්ගයට අනුව පරීක්ෂා කළ නොහැකි විය: {{names}}',
+      namesMore: '{{names}} සහ තවත් {{count}}ක්',
+      checking: 'නායයෑම් අනතුරු ඇඟවීම් ප්‍රදේශවලට අනුව මාර්ගය පරීක්ෂා කරමින්…',
+      failed: 'නායයෑම් අනතුරු ඇඟවීම් ප්‍රදේශවලට අනුව මාර්ගය දැනට පරීක්ෂා කළ නොහැකි විය.',
+    },
   },
 
   reroute: {

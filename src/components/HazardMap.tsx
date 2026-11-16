@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import { Route as RouteIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { latLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet'
+import { latLngBounds, type LatLng, type LatLngTuple, type Map as LeafletMap } from 'leaflet'
 import { BUTTON_COLUMN_PX, SRI_LANKA_BOUNDS, SRI_LANKA_LIMITS } from '../lib/mapBounds'
 import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
 import { useNotice } from '../lib/useNotice'
@@ -126,6 +126,19 @@ export default function HazardMap({
     // No animation, so the icon is already in place when its card opens
     map.fitBounds(latLngBounds(rainPath(route, stretch)), { padding: [40, 40], maxZoom: 13, animate: false })
     setRainRequest({ id: stretch.id, n: Date.now() })
+  }
+
+  // "Show on map" under a landslide line in the route panel: the panel folds away and the map fits the
+  // areas the route passes through. Watch areas are only drawn with the Landslide warnings switch on,
+  // so it is turned on for them (the person asked to see them).
+  function showLandslide(points: LatLngTuple[], needsWatch: boolean) {
+    if (!map || points.length === 0) return
+    if (needsWatch) {
+      setLayers((current) => ({ ...current, landslides: true }))
+      saveLayerSetting('landslides', true)
+    }
+    setPanel('collapsed')
+    map.fitBounds(latLngBounds(points), { paddingTopLeft: [40, 160], paddingBottomRight: [40, 100], maxZoom: 13 })
   }
 
   return (
@@ -311,6 +324,8 @@ export default function HazardMap({
                 onAlternativeChange={setAlternative}
                 onSelectHazard={showHazard}
                 onSelectRain={showRain}
+                landslideSwitchOn={layers.landslides}
+                onSelectLandslide={showLandslide}
                 onStaleChange={setRouteStale}
               />
             </Suspense>

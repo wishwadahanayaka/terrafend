@@ -12,6 +12,9 @@ const PLACES: Place[] = [
   { label: 'Kalutara, KT, Sri Lanka', lat: 6.5854, lng: 79.9607 },
   { label: 'Galle, GL, Sri Lanka', lat: 6.0535, lng: 80.221 },
   { label: 'Negombo, GM, Sri Lanka', lat: 7.2008, lng: 79.8737 },
+  { label: 'Mawanella, KG, Sri Lanka', lat: 7.2528, lng: 80.445 },
+  { label: 'Ratnapura, RN, Sri Lanka', lat: 6.6828, lng: 80.3992 },
+  { label: 'Badulla, BD, Sri Lanka', lat: 6.9934, lng: 81.055 },
 ]
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -70,6 +73,47 @@ const COLOMBO_KALUTARA: [number, number][] = [
   [79.9607, 6.5854],
 ]
 
+// Colombo to Galle along the coast: no landslide warning area in any ?fakeLandslide= mode touches it
+export const COLOMBO_GALLE: [number, number][] = [
+  [79.8612, 6.9271],
+  [79.8816, 6.773],
+  [79.9026, 6.7132],
+  [79.9607, 6.5854],
+  [80.0, 6.4],
+  [80.05, 6.25],
+  [80.1, 6.14],
+  [80.221, 6.0535],
+]
+// Colombo to Mawanella through Avissawella, Ruwanwella and the south of Kegalle district: passes
+// Aranayake (Level 3 in ?fakeLandslide=mixed and level3) and Mawanella (Level 2)
+export const COLOMBO_MAWANELLA: [number, number][] = [
+  [79.8612, 6.9271],
+  [79.984, 6.935],
+  [80.084, 6.91],
+  [80.2046, 6.9543],
+  [80.257, 7.046],
+  [80.33, 7.135],
+  [80.42, 7.2],
+  [80.445, 7.2528],
+]
+// Colombo to Ratnapura by way of Avissawella: passes Eheliyagoda (Level 3)
+export const COLOMBO_RATNAPURA: [number, number][] = [
+  [79.8612, 6.9271],
+  [80.0, 6.94],
+  [80.215, 6.9528],
+  [80.27, 6.855],
+  [80.36, 6.78],
+  [80.3992, 6.6828],
+]
+// Kandy to Badulla by way of Nuwara Eliya: passes Badulla (a Level 1 area in level1, mixed and kegalle)
+export const KANDY_BADULLA: [number, number][] = [
+  [80.6337, 7.2906],
+  [80.7, 7.15],
+  [80.76, 7.0],
+  [80.9, 6.95],
+  [81.055, 6.9934],
+]
+
 const RADIANS = Math.PI / 180
 
 function metres(a: Point, b: Point): number {
@@ -79,7 +123,18 @@ function metres(a: Point, b: Point): number {
   return 2 * 6_371_000 * Math.asin(Math.sqrt(h))
 }
 
-const near = (a: Point, [lng, lat]: [number, number]) => metres(a, { lat, lng }) < 25_000
+const near = (a: Point, [lng, lat]: [number, number], km = 25) => metres(a, { lat, lng }) < km * 1000
+
+// The places the test routes run between. The first group that fits both ends is used, so the ones with a
+// narrow radius come first: Mawanella is only 21 km from Kandy.
+const GROUPS: { options: [number, number][][]; km: number }[] = [
+  { options: [COLOMBO_MAWANELLA], km: 8 },
+  { options: [COLOMBO_RATNAPURA], km: 25 },
+  { options: [KANDY_BADULLA], km: 25 },
+  { options: [COLOMBO_GALLE], km: 25 },
+  { options: [COLOMBO_KANDY, COLOMBO_KANDY_ALT1, COLOMBO_KANDY_ALT2], km: 25 },
+  { options: [COLOMBO_KALUTARA], km: 25 },
+]
 
 // Roughly what the real 200 m avoid squares catch
 const AVOID_M = 120
@@ -91,11 +146,11 @@ const passes = (line: [number, number][], spots: Point[]) =>
 // spots to avoid, the first sample that misses all of them is used, like a reroute.
 export async function fakeRoute(start: Point, end: Point, avoid: Point[] = []) {
   await sleep(400)
-  for (const options of [[COLOMBO_KANDY, COLOMBO_KANDY_ALT1, COLOMBO_KANDY_ALT2], [COLOMBO_KALUTARA]]) {
+  for (const { options, km } of GROUPS) {
     const first = options[0][0]
     const last = options[0][options[0].length - 1]
-    const forward = near(start, first) && near(end, last)
-    const backward = near(start, last) && near(end, first)
+    const forward = near(start, first, km) && near(end, last, km)
+    const backward = near(start, last, km) && near(end, first, km)
     if (!forward && !backward) continue
 
     const line = options.find((l) => !passes(l, avoid))
@@ -112,5 +167,7 @@ export async function fakeRoute(start: Point, end: Point, avoid: Point[] = []) {
     const distance_m = Math.round(distance * 1.1)
     return { coordinates, distance_m, duration_s: Math.round(distance_m / 12.5) }
   }
-  throw new Error('Test routing only knows Colombo to Kandy and Colombo to Kalutara (either way).')
+  throw new Error(
+    'Test routing only knows Colombo to Kandy, Kalutara, Galle, Mawanella and Ratnapura, and Kandy to Badulla (either way).',
+  )
 }

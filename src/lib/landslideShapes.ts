@@ -29,6 +29,8 @@ export type Drawn = {
   positions: LatLngTuple[][][]
   // south-west and north-east corners
   box: [LatLngTuple, LatLngTuple]
+  // The outline as the file has it (longitude first), for checking a route against it
+  geometry: Feature['geometry']
 }
 
 const flip = ([lng, lat]: number[]): LatLngTuple => [lat, lng]
@@ -54,6 +56,7 @@ function drawnFor(area: LandslideArea, feature: Feature, data: ShapeData): Drawn
     names: { division: feature.properties, district: data.districtNames[feature.properties.district] },
     positions,
     box: [[south, west], [north, east]],
+    geometry: feature.geometry,
   }
 }
 

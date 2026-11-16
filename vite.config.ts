@@ -104,6 +104,13 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // The landslide outlines (src/data/areas/ds.json, 339 DS divisions) are one chunk of about 550 KB
+    // (136 KB gzipped). It is on purpose: it loads only when a valid warning needs it and the service
+    // worker keeps it, so the default 500 KB warning would only be noise. Anything else growing past
+    // this should still warn.
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     // Always the same address. If 5173 is taken (often by a dev server left running),
     // it stops with an error instead of quietly moving to another port.

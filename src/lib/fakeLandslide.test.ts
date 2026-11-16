@@ -41,7 +41,7 @@ describe('the switch', () => {
   })
 
   it('has every mode the prompt asks for', () => {
-    expect([...FAKE_LANDSLIDE_MODES].sort()).toEqual(['expired', 'fail', 'level1', 'level2', 'level3', 'mixed', 'none', 'offline-expiry', 'unmatched', 'unreadable'])
+    expect([...FAKE_LANDSLIDE_MODES].sort()).toEqual(['expired', 'fail', 'kegalle', 'level1', 'level2', 'level3', 'mixed', 'none', 'offline-expiry', 'unmatched', 'unreadable'])
   })
 
   it('does nothing without the switch: a real read goes ahead', async () => {
@@ -106,6 +106,13 @@ describe('the sample warnings are built from real areas', () => {
     expect(matchedAreas(areas)).toHaveLength(11)
   })
 
+  it('kegalle has one Level 3, one Level 2 and three Level 1 areas, all in Kegalle district (for the route test)', () => {
+    const areas = readable(answerOf('kegalle')).areas
+    expect(areas.map((a) => `${a.level}:${a.name}`)).toEqual(['3:Aranayake', '2:Mawanella', '1:Ruwanwella', '1:Galigamuwa', '1:Kegalle'])
+    expect(new Set(areas.map((a) => a.district))).toEqual(new Set(['Kegalle']))
+    expect(unmatchedAreas(areas)).toHaveLength(0)
+  })
+
   it('goes through the same checks as a real answer, and links a PDF on dmc.gov.lk only', () => {
     for (const mode of FAKE_LANDSLIDE_MODES) {
       if (mode === 'fail') continue
@@ -119,7 +126,7 @@ describe('what each mode shows at the time it is asked', () => {
   const kind = (mode: FakeLandslideMode, now = NOW) => landslideView(answerOf(mode, now), now).kind
 
   it('is active for the level, mixed and unmatched samples', () => {
-    for (const mode of ['level1', 'level2', 'level3', 'mixed', 'unmatched'] as const) expect(kind(mode), mode).toBe('active')
+    for (const mode of ['level1', 'level2', 'level3', 'mixed', 'unmatched', 'kegalle'] as const) expect(kind(mode), mode).toBe('active')
   })
 
   it('"expired" ended 2 hours ago, so there is no active warning', () => {

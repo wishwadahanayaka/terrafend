@@ -19,6 +19,7 @@
     "@tanstack/query-sync-storage-persister": "^5.107.1",
     "@tanstack/react-query": "^5.107.1",
     "@tanstack/react-query-persist-client": "^5.107.1",
+    "@turf/boolean-intersects": "7.4.0",
     "browser-image-compression": "^2.0.2",
     "i18next": "^27.0.1",
     "leaflet": "^1.9.4",

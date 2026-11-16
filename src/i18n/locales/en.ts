@@ -711,6 +711,25 @@ const en = {
     reports_one: '{{count}} report',
     reports_other: '{{count}} reports',
     withReports: '{{part}} ({{reports}})',
+    landslideCount_one: '{{count}} landslide area',
+    landslideCount_other: '{{count}} landslide areas',
+    // NBRO's landslide warning against the route (lib/landslideRoute.ts). The level names are NBRO's own.
+    landslide: {
+      title: 'Landslide warnings',
+      passes3_one: 'Passes through a landslide Evacuate (Level 3) area: {{names}}',
+      passes3_other: 'Passes through landslide Evacuate (Level 3) areas: {{names}}',
+      passes2_one: 'Passes through a landslide Alert (Level 2) area: {{names}}',
+      passes2_other: 'Passes through landslide Alert (Level 2) areas: {{names}}',
+      passes1_one: 'Passes through a Watch (Level 1) area: {{names}}',
+      passes1_other: 'Passes through Watch (Level 1) areas: {{names}}',
+      show: 'Show on map',
+      showWatch: 'Show on map (switches Watch areas on)',
+      unreadable: "Latest landslide warning couldn't be read",
+      unchecked: "Some areas named in the warning couldn't be checked against the route: {{names}}",
+      namesMore: '{{names}} and {{count}} more',
+      checking: 'Checking the route against the landslide warning areas…',
+      failed: "The route couldn't be checked against the landslide warning areas just now.",
+    },
   },
 
   reroute: {

@@ -3,7 +3,7 @@ import { Mountain } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { LatLngTuple } from 'leaflet'
 import { Pane, Polygon, Popup, useMap } from 'react-leaflet'
-import { areasToDraw, areaStyle, cardContent, isDrawnLevel, LEVEL_COLOR, MAP_ATTRIBUTION, type ActiveWarning, type Level } from '../lib/landslide'
+import { areasToDraw, areaStyle, cardContent, isDrawnLevel, LEVEL_COLOR, LEVEL_PILL_TEXT, MAP_ATTRIBUTION, type ActiveWarning, type Level } from '../lib/landslide'
 import { placeAreas, type Drawn } from '../lib/landslideShapes'
 import { POPUP_PADDING } from '../lib/popupPadding'
 import { useLandslide, useLandslideShapes } from '../lib/useLandslide'
@@ -18,9 +18,6 @@ type Props = {
   // Tells the map which levels are drawn (none: nothing is), so its small legend shows only those
   onShown: (levels: Level[]) => void
 }
-
-// Text that reads on each level's colour
-const PILL_TEXT: Record<1 | 2 | 3, string> = { 1: '#422006', 2: '#431407', 3: '#ffffff' }
 
 type Selected = { code: string; at: LatLngTuple }
 
@@ -122,7 +119,7 @@ function LandslideCard({ drawn, warning, onOpenEmergency }: { drawn: Drawn; warn
       <div className="mt-2">
         <span
           className="inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold"
-          style={{ backgroundColor: LEVEL_COLOR[card.level], color: PILL_TEXT[card.level] }}
+          style={{ backgroundColor: LEVEL_COLOR[card.level], color: LEVEL_PILL_TEXT[card.level] }}
         >
           {card.levelText}
         </span>

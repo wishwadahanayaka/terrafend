@@ -4,7 +4,7 @@ Every 30 minutes an Edge Function reads DMC's list of landslide warnings, downlo
 PDFs (LEWM messages) it hasn't seen, reads each one, and stores the warning and the DS divisions it
 names, level by level (1 Watch/Yellow, 2 Alert/Amber, 3 Evacuate/Red). Phones will read the tables
 through one function, `landslide_current()`. The app side (the map layer, the chip, the route warnings)
-is not built yet.
+is built: see `docs/news-map-plan.md`.
 
 ```
 pg_cron (minutes 9 and 39)

@@ -8,6 +8,9 @@
 //   mixed       all three levels, with a raised, a lowered, a raised-by-two and a newly added area
 //               (also what ?fakeLandslide or ?fakeLandslide= means)
 //   unmatched   mixed, plus two names that could not be matched to a division
+//   kegalle     one of each level, all in Kegalle district: Level 3 Aranayake, Level 2 Mawanella, Level 1
+//               Ruwanwella, Galigamuwa and Kegalle. The Colombo to Mawanella test route (?fakeRouting=1)
+//               passes through every one of them, so a route check shows all three kinds of line.
 //   expired     a warning that ended 2 hours ago: "No active landslide warning"
 //   unreadable  the newest warning could not be read
 //   none        no warning stored
@@ -22,7 +25,7 @@
 import names from '../../supabase/functions/landslide-refresh/ds-names.json'
 import { parseLandslide, type LandslideAnswer } from './landslide'
 
-export const FAKE_LANDSLIDE_MODES = ['level1', 'level2', 'level3', 'mixed', 'unmatched', 'expired', 'unreadable', 'none', 'fail', 'offline-expiry'] as const
+export const FAKE_LANDSLIDE_MODES = ['level1', 'level2', 'level3', 'mixed', 'unmatched', 'kegalle', 'expired', 'unreadable', 'none', 'fail', 'offline-expiry'] as const
 export type FakeLandslideMode = (typeof FAKE_LANDSLIDE_MODES)[number]
 
 // The mode asked for, or null when the switch is not in the address
@@ -57,6 +60,14 @@ const L3: Pick[] = [
   { level: 3, district: 'Kegalle', division: 'Aranayake' },
   { level: 3, district: 'Ratnapura', division: 'Eheliyagoda' },
   { level: 3, district: 'Ratnapura', division: 'Kolonna' },
+]
+// One of each level along the Colombo to Mawanella test route
+const KEGALLE: Pick[] = [
+  { level: 3, district: 'Kegalle', division: 'Aranayake' },
+  { level: 2, district: 'Kegalle', division: 'Mawanella' },
+  { level: 1, district: 'Kegalle', division: 'Ruwanwella' },
+  { level: 1, district: 'Kegalle', division: 'Galigamuwa' },
+  { level: 1, district: 'Kegalle', division: 'Kegalle' },
 ]
 // Every kind of change since the last message, one of each
 const MIXED: Pick[] = [
@@ -117,7 +128,7 @@ export function fakeLandslideAnswer(mode: FakeLandslideMode, now: number): Lands
   } else if (mode === 'unreadable') {
     raw = { found: true, id: 1, message_id: null, update: null, issued_at: null, valid_from: null, valid_to: null, listed_at: listedAt, pdf_url: pdfUrl, parse_ok: false, valid: false, areas: [] }
   } else {
-    const picks = mode === 'level1' ? L1 : mode === 'level2' ? L2 : mode === 'level3' ? L3 : MIXED
+    const picks = mode === 'level1' ? L1 : mode === 'level2' ? L2 : mode === 'level3' ? L3 : mode === 'kegalle' ? KEGALLE : MIXED
     const areas = picks.map(rowOf)
     if (mode === 'unmatched') areas.push(...(UNMATCHED as unknown as ReturnType<typeof rowOf>[]))
     const issuedAt = now - 2 * HOUR

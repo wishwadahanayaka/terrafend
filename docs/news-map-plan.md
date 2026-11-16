@@ -1,7 +1,7 @@
 # News on map, and official landslide areas: plan
 
 Planned 15 Nov 2026. Parts 1 to 3 of the landslide areas (the boundaries, the PDF reader and the name
-matching; then the backend: migration 0011 and the function; then the map layer) are built; see "Built:
+matching; then the backend: migration 0011 and the function; then the map layer) and part 4 (route warnings) are built; see "Built:
 landslide areas, part 1", "part 2" and "part 3" below. Read with `docs/news-feed-plan.md`
 (the feed this builds on) and `supabase/functions/news-refresh/`.
 
@@ -15,7 +15,7 @@ area of the event. NBRO's warnings name the exact DS divisions and levels, every
 | Step | What | Status |
 |---|---|---|
 | A | Boundaries and gazetteer: DS divisions and districts with en/si/ta names, simplified, one build script | **built** for the landslide areas (`npm run areas`, `src/data/areas/`); the news gazetteer (aliases, towns, rivers) is part of D |
-| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **parts 1 to 3 built**: 1 and 2 are committed, run and deployed (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`; migration `0011_landslide_areas.sql`, `0011_check.sql`, the function's `logic.ts` and `index.ts`, `docs/landslide-areas.md`); 3 is the map layer (below), written but not yet tried on a phone. Part 4, route warnings, is next |
+| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **parts 1 to 4 built**: 1 and 2 are committed, run and deployed (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`; migration `0011_landslide_areas.sql`, `0011_check.sql`, the function's `logic.ts` and `index.ts`, `docs/landslide-areas.md`); 3 is the map layer (below), written but not yet tried on a phone. Part 4, route warnings, is built (below) |
 | C | (part of B) the "Landslide warnings, coming soon" row becomes a real layer | **built** (part 3 of B, on for everyone) |
 | D | News areas: place matching in `news-refresh`, `news_places`, "News on map" toggle, route note | planned, after B |
 | E | Roads from headlines | later, assessed only |
@@ -201,13 +201,67 @@ by hand are at the end.
   ten modes, real codes, `offline-expiry`), `landslideShapes.test.ts` (placing areas, the lazy load and
   the service worker rule), `landslideLayer.test.ts` (the wiring, read from source), `layerSettings.test.ts`,
   and more in `offline.test.ts` and `appQueries.test.ts`.
-- **Not done (part 4):** a route through a Level 2 or 3 area as a warning in the route panel.
+- Part 4 (route warnings) is below.
 
 By hand, on a phone or in the dev server: `?fakeLandslide=level1|level2|level3|mixed|unmatched|expired|unreadable|none|fail|offline-expiry`.
 Look at 360 px and 320 px for: the Layers panel (switch and status line, and the long "Also named in the
 warning" line with `unmatched`), the legend (bottom left, clear of the rain label and the buttons),
 a card (not wider than the screen, the Emergency link opens the numbers screen), the chip, and
 Sinhala and Tamil.
+
+## Built: landslide areas, part 4, route warnings (16 Nov 2026)
+
+Not tried in a real browser by the author of the code. No SQL, no deploy.
+
+- **How:** the route line is checked against the matched DS outlines of the newest valid warning with Turf
+  (`@turf/boolean-intersects`), after a bounding-box check. Same warning view, same `placeAreas`, same
+  `ds.json` as the map; the outlines chunk is asked for only with a route on screen and a valid warning
+  with a matched name (any level: the Watch note ignores the Layers switch). Touching an edge counts.
+  The outlines are simplified to about 200 m, so a road within roughly 200 m of an edge may be judged
+  either way.
+- **Panel:** Level 3 and 2 are serious items and counted (header pill "N landslide areas", worst level's
+  colour); Level 1 is a plain note and never counted. Each has "Valid until", "NBRO via DMC", the official
+  PDF and "Show on map" (fits the map to the areas; for Watch areas with the switch off it turns the
+  switch on). Unreadable newest warning: one note and the PDF. Names that can't be checked: one line.
+  Details are in CLAUDE.md.
+- **Never a reroute:** nothing here touches `reroute.ts`.
+- **Choice made without asking (say if you want it changed):** when a valid warning exists and the route
+  passes none of its areas the panel says nothing, because NBRO's areas include "surrounding areas" and
+  "not in an area" must not read as "safe".
+
+### Reroute around Level 3 areas: assessed, not built (recommendation: no, not with `avoid_polygons`)
+
+- **What exists:** the `routing` function's route action already takes up to 20 `avoid` points, turns each
+  into a 200 m square and sends them as `options.avoid_polygons` (a MultiPolygon). That is only used for
+  blocked reports. When ORS finds no route it answers "No other route avoids these blocked roads".
+- **ORS's documented limits** ([hosted API restrictions](https://giscience.github.io/openrouteservice/hosted-api-restrictions)):
+  avoid polygon area 200 km², avoid polygon extent (height or width) 20 km, and **distance with avoid
+  areas 150 km** (this also limits the existing blocked-road reroute on long trips). The page doesn't say
+  whether the 200 km² is per polygon or in total; an ORS moderator says "in total"
+  ([forum](https://ask.openrouteservice.org/t/big-avoid-polygons/6445)), and forum posts mention long thin
+  shapes being refused.
+- **Measured on the real outlines** (339 DS divisions, planar estimate): median 136 km² and 19 km across;
+  **156 of 339 break the area or the extent limit (104 over 200 km², 152 over 20 km)**, up to 1,065 km²
+  and 67 km. Even hill divisions that were in warnings are close or over: Dehiowita 195 km² and 24 km,
+  Yatiyantota 181 and 23, Deraniyagala 223 and 22, Balangoda 185 and 29, Ratnapura 329 and 29; Aranayake,
+  Mawanella, Eheliyagoda, Kolonna and Ella fit alone (107 to 179 km², 15 to 20 km). With several red
+  divisions the total goes past 200 km² whichever way the limit is read. Vertices are no problem
+  (median 80, max 234 per outline; the request would be a few KB).
+- **A route that starts or ends inside a red area:** an avoid area covering the start or end leaves no
+  usable road there, so ORS can't find a route (not tested against ORS: it uses the quota). The function
+  would turn that into the wrong message ("No other route avoids these blocked roads"). And a person who
+  lives in a red area has to be able to get out: avoiding it would be wrong.
+- **Recommendation: no.** Sending DS outlines as avoid polygons fails for about half of them, the distance
+  limit stops long trips, and avoiding a whole division is more than NBRO's warning says (it is about
+  slope and rain, not about every road).
+- **If you want it later,** the cheap and honest way is the existing blocked-road mechanism: put avoid
+  points (200 m squares, at most 20) on the stretches of the route that are inside Level 3 areas, ignore
+  any stretch within about 1 km of the start or end, and keep the 150 km limit in mind; then re-check the
+  new route with `routePassesThrough` and say plainly "this route still passes through a Level 3 area" if
+  it does. It would be an offer ("Find a way round the evacuation area?"), never automatic, and "no
+  other route" would be an expected answer, since some of these roads are the only way. A second option
+  is ORS `alternative_routes` (up to 3, but only for routes up to 100 km), picking the one that passes
+  the fewest Level 3 areas, which needs no avoid polygons. Neither is built.
 
 ## What was tried (15 Nov 2026, about 9 pm)
 

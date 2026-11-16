@@ -227,6 +227,9 @@ export function areaStyle(level: Level): AreaStyle {
   return { ...base, weight: 4, fillOpacity: 0.42 }
 }
 
+// Text that reads on each level's colour (the level pills on the card and in the route panel)
+export const LEVEL_PILL_TEXT: Record<Level, string> = { 1: '#422006', 2: '#431407', 3: '#ffffff' }
+
 // ---- Credits (English only, like the other data credits) ----
 
 export const LANDSLIDE_CREDIT = 'Landslide warnings: NBRO, via DMC'
@@ -251,7 +254,8 @@ export function changeOf(area: Pick<LandslideArea, 'shift' | 'added'>): ChangeKi
 }
 
 type Named = { en: string; si: string; ta: string }
-const pick = (names: Named | undefined, fallback: string): string => {
+// A division's or district's name in the person's language, or the name as the warning printed it
+export const pickName = (names: Named | undefined, fallback: string): string => {
   if (!names) return fallback
   const lang = currentLang()
   return names[lang] || names.en || fallback
@@ -282,7 +286,7 @@ export function cardContent(
   return {
     level: area.level,
     levelText: t(`landslide.level.${area.level}`),
-    place: t('landslide.place', { name: pick(names.division, area.name), district: pick(names.district, area.district) }),
+    place: t('landslide.place', { name: pickName(names.division, area.name), district: pickName(names.district, area.district) }),
     change: change ? t(`landslide.change.${change}`) : null,
     // Both with the date, since a warning runs over two days: "Issued 16 Nov, 6:52 pm"
     issued: t('landslide.issued', { when: sriLankaDateTime(warning.issuedAt) }),

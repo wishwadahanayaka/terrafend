@@ -8,6 +8,7 @@ import {
   polyline,
   type ErrorEvent as LeafletErrorEvent,
   type LatLng,
+  type LatLngTuple,
   type LocationEvent,
   type Map as LeafletMap,
 } from 'leaflet'
@@ -31,6 +32,9 @@ import {
 } from '../lib/routing'
 import { gaugeName, STEP_COLOR, STEP_LABEL, stepTextColor, worstStep } from '../lib/riverGauges'
 import { gaugesNearRoute } from '../lib/routeGauges'
+import { LEVEL_COLOR, LEVEL_PILL_TEXT } from '../lib/landslide'
+import { seriousAreas, worstLevel } from '../lib/landslideRoute'
+import { useRouteLandslide } from '../lib/useRouteLandslide'
 import { useRouteRecentRain } from '../lib/useRouteRecentRain'
 import { GDACS_CREDIT, GDACS_LEVEL_COLOR, gdacsAlertLabel } from '../lib/gdacs'
 import { GDACS_ICON } from '../lib/gdacsIcons'
@@ -44,6 +48,7 @@ import { groupReports } from '../lib/duplicates'
 import { RAIN_COLOR, worstRain, type RainStretch } from '../lib/rainForecast'
 import { useRouteRain } from '../lib/useRouteRain'
 import { addAvoidSpots, avoidedCount, blockedOn, detourWaypoints, notAvoided, type AvoidSpot } from '../lib/reroute'
+import LandslideRouteSection from './LandslideRouteSection'
 import PlaceInput from './PlaceInput'
 import RainSection from './RainSection'
 import RerouteSection from './RerouteSection'
@@ -67,6 +72,9 @@ type Props = {
   onAlternativeChange: (route: RouteResult | null) => void
   onSelectHazard: (hazard: RouteHazard) => void
   onSelectRain: (stretch: RainStretch) => void
+  // The Landslide warnings switch, and "Show on map" for the areas a route passes through
+  landslideSwitchOn: boolean
+  onSelectLandslide: (points: LatLngTuple[], needsWatch: boolean) => void
   // Tells the map when the results are out of date, so the rain on it can fade too
   onStaleChange: (stale: boolean) => void
 }
@@ -113,6 +121,8 @@ export default function RoutePlanner({
   onAlternativeChange,
   onSelectHazard,
   onSelectRain,
+  landslideSwitchOn,
+  onSelectLandslide,
   onStaleChange,
 }: Props) {
   const { t } = useTranslation()
@@ -143,6 +153,10 @@ export default function RoutePlanner({
     () => (route && alerts.events ? gdacsAlongRoute(route, alerts.events) : []),
     [route, alerts.events],
   )
+  // NBRO's newest landslide warning against the route. The outlines are only downloaded when there is
+  // a valid warning with an area to check.
+  const landslide = useRouteLandslide(route)
+
   // The inputs live here, not in the panel, so they're still there after it's closed and reopened
   const [fromMe, setFromMe] = useState(true)
   const [fromField, setFromField] = useState<PlaceField>(EMPTY_FIELD)
@@ -333,6 +347,9 @@ export default function RoutePlanner({
   const altBlocked = blockedOn(altGroups)
   // Every report on the reroute, to tell which avoided roads it really stays clear of
   const avoidTotal = avoid.length + notAvoided(avoid, altBlocked).length
+  // Level 3 and Level 2 areas count like river warnings. A Level 1 (Watch) note is never counted.
+  const landslideCount = seriousAreas(landslide).length
+  const landslideWorst = worstLevel(landslide)
   const riverWorst = worstStep(riversNear.map((r) => r.gauge))
   const alertWorst = globalAlerts.some((a) => a.event.level === 'Red') ? 'Red' : globalAlerts.length > 0 ? 'Orange' : null
   const rainStretches = rain.data?.stretches ?? []
@@ -359,6 +376,17 @@ export default function RoutePlanner({
             {route && (
               <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-slate-600">
                 <span className="shrink-0">{formatKm(route.distance_m)}</span>
+                {landslideWorst && (
+                  <>
+                    <span aria-hidden="true">&middot;</span>
+                    <span
+                      className="max-w-full rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{ backgroundColor: LEVEL_COLOR[landslideWorst], color: LEVEL_PILL_TEXT[landslideWorst] }}
+                    >
+                      {t('route.landslideCount', { count: landslideCount })}
+                    </span>
+                  </>
+                )}
                 {alertWorst && (
                   <>
                     <span aria-hidden="true">&middot;</span>
@@ -537,7 +565,10 @@ export default function RoutePlanner({
                   onKeep={keepOriginal}
                 />
 
-                {/* Official warnings come first, before anything crowd-sourced, and the biggest first of those */}
+                {/* Official warnings come first, before anything crowd-sourced, and the biggest first of those.
+                    An evacuation warning outranks the rest, as in the threats chip. */}
+                <LandslideRouteSection landslide={landslide} switchOn={landslideSwitchOn} onShow={onSelectLandslide} />
+
                 {globalAlerts.length > 0 && (
                   <div className="mt-3">
                     <p className="text-sm font-semibold text-slate-900">{t('route.alertsTitle')}</p>
@@ -605,7 +636,7 @@ export default function RoutePlanner({
                     ? t('route.hazardsChecking')
                     : hazards.isError
                       ? t('route.hazardsError')
-                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0) + ((hazards.data?.length ?? 0) >= 200 ? t('route.first200') : '')}
+                      : hazardSummary(list, riversNear.length > 0 || globalAlerts.length > 0 || landslideCount > 0) + ((hazards.data?.length ?? 0) >= 200 ? t('route.first200') : '')}
                 </p>
                 {hazards.isError && (
                   <button

@@ -124,7 +124,9 @@ describe('loading the outlines only when they are needed', () => {
     expect(layer).toContain('const wanted = warning !== null && areasToDraw(warning.areas, enabled).length > 0')
     expect(layer).toContain('useLandslideShapes(wanted)')
     expect(layer).toContain("view?.kind === 'active'")
-    // the chip, the status line and the route and everything else only read what is there
+    // the chip and the status line only read what is there. The route check asks too, but only through
+    // useRouteLandslide (`wanted`: a route on screen and a valid warning, see landslideRoute.test.ts).
+    // Everything else only reads what is there.
     for (const file of [join('src', 'lib', 'useThreats.ts'), join('src', 'components', 'LandslideStatus.tsx')]) {
       expect(read(file), file).toContain('useLandslideShapes(false)')
     }
