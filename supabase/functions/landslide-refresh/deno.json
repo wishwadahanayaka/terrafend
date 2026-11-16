@@ -1,6 +1,7 @@
 {
   "nodeModulesDir": "none",
   "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
     "unpdf": "npm:unpdf@1.9.1"
   }
 }

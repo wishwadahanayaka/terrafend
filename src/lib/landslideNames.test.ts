@@ -149,8 +149,8 @@ describe('names that cannot be matched are reported, never dropped or guessed', 
     const m = matchNames(w, index)
     expect(m.areas.map((a) => a.name)).toEqual(['Ratnapura'])
     expect(m.unmatched).toEqual([
-      { level: 1, district: 'Ratnapura', written: 'Ratnapura-Ratnapura', why: 'no DS division of that name in Ratnapura' },
-      { level: 2, district: 'Nuwara Eliya', written: 'Kotmale', why: 'no DS division of that name in Nuwara Eliya' },
+      { level: 1, district: 'Ratnapura', districtCode: 'LK91', written: 'Ratnapura-Ratnapura', shift: 0, added: false, why: 'no DS division of that name in Ratnapura' },
+      { level: 2, district: 'Nuwara Eliya', districtCode: 'LK23', written: 'Kotmale', shift: 0, added: false, why: 'no DS division of that name in Nuwara Eliya' },
     ])
   })
 
@@ -162,14 +162,14 @@ describe('names that cannot be matched are reported, never dropped or guessed', 
 
   it('a district that does not exist, and one written another way', () => {
     const m = matchNames(warning({ 1: [entry('Atlantis', 'Ella'), entry('Moneragala', 'Bibila')] }), index)
-    expect(m.unmatched).toEqual([{ level: 1, district: 'Atlantis', written: 'Ella', why: 'no district called Atlantis' }])
-    expect(m.areas.map((a) => [a.name, a.district])).toEqual([['Bibile', 'LK82']])
+    expect(m.unmatched).toEqual([{ level: 1, district: 'Atlantis', districtCode: null, written: 'Ella', shift: 0, added: false, why: 'no district called Atlantis' }])
+    expect(m.areas.map((a) => [a.name, a.district, a.districtName])).toEqual([['Bibile', 'LK82', 'Moneragala']])
   })
 
   it('the same division at two levels is a contradiction: the second is reported', () => {
     const m = matchNames(warning({ 1: [entry('Kegalle', 'Mawanella')], 3: [entry('Kegalle', 'Mawanella')] }), index)
     expect(m.areas.map((a) => [a.name, a.level])).toEqual([['Mawanella', 1]])
-    expect(m.unmatched).toEqual([{ level: 3, district: 'Kegalle', written: 'Mawanella', why: 'Mawanella is also at Level 1' }])
+    expect(m.unmatched).toEqual([{ level: 3, district: 'Kegalle', districtCode: 'LK92', written: 'Mawanella', shift: 0, added: false, why: 'Mawanella is also at Level 1' }])
   })
 
   it('the same division twice at one level is one area ("Kandy Four Gravets and Gangawata Korale" splits in two)', () => {

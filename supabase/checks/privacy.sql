@@ -1,7 +1,8 @@
 -- Privacy checks, to run AFTER 0009 is live. Read-only: it changes nothing.
 -- Run it in the SQL Editor. One result table, one line per check. Every line should say PASS.
 -- Run it again after 0010 (news feed), 0011 (landslide warnings), the photo-path cleanup (the next
--- free number after the landslide migration), and any time a table, column or policy is added. Check 17 says FAIL until 0010 has been run.
+-- free number after the landslide migration), and any time a table, column or policy is added. Check 17
+-- says FAIL until 0010 has been run, and check 18 until 0011 has been run.
 --
 -- Not covered here, because SQL can't do it: the real API with the public key (see privacy.ps1),
 -- and a real photo upload (see the last line).
@@ -51,7 +52,8 @@ select ord, check_name, case when ok then 'PASS' else 'FAIL' end as result, deta
     union all
     -- Tables the API can read at all. Anything unexpected here is worth a look.
     select 6, 'API-readable tables in public are only the expected ones',
-           coalesce(bool_and(c.relname in ('reports', 'report_votes', 'island_forecast', 'news_items')), true),
+           coalesce(bool_and(c.relname in ('reports', 'report_votes', 'island_forecast', 'news_items',
+                                           'landslide_warnings', 'landslide_areas')), true),
            'readable: ' || coalesce(string_agg(c.relname, ', ' order by c.relname), 'none')
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v', 'm', 'p')
@@ -148,6 +150,41 @@ select ord, check_name, case when ok then 'PASS' else 'FAIL' end as result, deta
            'found: ' || coalesce(string_agg(c.relname, ', ' order by c.relname), 'neither (run 0010 first)')
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relname in ('news_items', 'news_source_state')
+
+    union all
+    -- The landslide warnings (0011). The app may only read landslide_warnings and landslide_areas,
+    -- through column grants that leave out parse_error and fetched_at, and never write. The seen-PDF
+    -- list has no grants at all, and the function that stores a warning is for service_role only.
+    select 18, 'landslide tables are read-only for the app (parse_error and fetched_at private), landslide_seen_pdfs is closed, and nobody but service_role can store',
+           count(*) = 3 and coalesce(bool_and(c.relrowsecurity and case c.relname
+             when 'landslide_warnings' then
+               not has_table_privilege('anon', c.oid, 'select') and not has_table_privilege('authenticated', c.oid, 'select')
+               and has_column_privilege('anon', c.oid, 'parse_ok', 'select') and has_column_privilege('authenticated', c.oid, 'parse_ok', 'select')
+               and not has_column_privilege('anon', c.oid, 'parse_error', 'select') and not has_column_privilege('authenticated', c.oid, 'parse_error', 'select')
+               and not has_column_privilege('anon', c.oid, 'fetched_at', 'select') and not has_column_privilege('authenticated', c.oid, 'fetched_at', 'select')
+               and not has_any_column_privilege('anon', c.oid, 'insert') and not has_any_column_privilege('authenticated', c.oid, 'insert')
+               and not has_any_column_privilege('anon', c.oid, 'update') and not has_any_column_privilege('authenticated', c.oid, 'update')
+               and not has_table_privilege('anon', c.oid, 'delete') and not has_table_privilege('authenticated', c.oid, 'delete')
+             when 'landslide_areas' then
+               not has_table_privilege('anon', c.oid, 'select') and not has_table_privilege('authenticated', c.oid, 'select')
+               and has_column_privilege('anon', c.oid, 'area_code', 'select') and has_column_privilege('authenticated', c.oid, 'area_code', 'select')
+               and not has_any_column_privilege('anon', c.oid, 'insert') and not has_any_column_privilege('authenticated', c.oid, 'insert')
+               and not has_any_column_privilege('anon', c.oid, 'update') and not has_any_column_privilege('authenticated', c.oid, 'update')
+               and not has_table_privilege('anon', c.oid, 'delete') and not has_table_privilege('authenticated', c.oid, 'delete')
+             else
+               not has_any_column_privilege('anon', c.oid, 'select') and not has_any_column_privilege('authenticated', c.oid, 'select')
+               and not has_any_column_privilege('anon', c.oid, 'insert') and not has_any_column_privilege('authenticated', c.oid, 'insert')
+               and not has_any_column_privilege('anon', c.oid, 'update') and not has_any_column_privilege('authenticated', c.oid, 'update')
+               and not has_table_privilege('anon', c.oid, 'delete') and not has_table_privilege('authenticated', c.oid, 'delete')
+             end), false)
+           -- by oid, so this says FAIL (not an error) when 0011 has not been run
+           and not exists (select 1 from pg_proc p join pg_namespace pn on pn.oid = p.pronamespace
+                            where pn.nspname = 'public' and p.proname = 'store_landslide_warning'
+                              and (has_function_privilege('anon', p.oid, 'execute')
+                                   or has_function_privilege('authenticated', p.oid, 'execute'))),
+           'found: ' || coalesce(string_agg(c.relname, ', ' order by c.relname), 'none (run 0011 first)')
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relname in ('landslide_warnings', 'landslide_areas', 'landslide_seen_pdfs')
 
   ) q
  order by ord;

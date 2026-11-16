@@ -405,6 +405,10 @@ verify_jwt = false
 [functions.news-refresh]
 verify_jwt = false
 
+# Called by a cron job every 30 minutes, and checks its own secret header (x-landslide-secret).
+[functions.landslide-refresh]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

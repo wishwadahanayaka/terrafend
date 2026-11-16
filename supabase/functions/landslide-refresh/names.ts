@@ -18,14 +18,20 @@ export type MatchedArea = {
   // As written in the warning, and the Survey Department's name it matched
   written: string
   name: string
+  // The district as written in the warning ("Nuwara Eliya")
+  districtName: string
   shift: number
   added: boolean
 }
 
 export type Unmatched = {
   level: Level
+  // The district as written in the warning, and its p-code if that was found
   district: string
+  districtCode: string | null
   written: string
+  shift: number
+  added: boolean
   why: string
 }
 
@@ -123,16 +129,17 @@ export function matchNames(warning: LewmWarning, gazetteer: Gazetteer | Index): 
 
   for (const level of [1, 2, 3] as Level[]) {
     for (const entry of warning.levels[level]) {
-      const districtCode = index.district.get(nameKey(entry.district))
+      const districtCode = index.district.get(nameKey(entry.district)) ?? null
+      const left = { level, district: entry.district, districtCode, written: entry.name, shift: entry.shift, added: entry.added }
       if (!districtCode) {
-        unmatched.push({ level, district: entry.district, written: entry.name, why: `no district called ${entry.district}` })
+        unmatched.push({ ...left, why: `no district called ${entry.district}` })
         continue
       }
       const found = index.division.get(districtCode)?.get(nameKey(entry.name))
       if (!found) {
         const elsewhere = index.anywhere.get(nameKey(entry.name))
         const why = elsewhere ? `not in ${entry.district}; a division with this name is in ${elsewhere.join(', ')}` : `no DS division of that name in ${entry.district}`
-        unmatched.push({ level, district: entry.district, written: entry.name, why })
+        unmatched.push({ ...left, why })
         continue
       }
       // The same division twice: fine at one level ("Kandy Four Gravets and Gangawata Korale" lists
@@ -140,11 +147,20 @@ export function matchNames(warning: LewmWarning, gazetteer: Gazetteer | Index): 
       const had = levelOf.get(found.code)
       if (had === level) continue
       if (had !== undefined) {
-        unmatched.push({ level, district: entry.district, written: entry.name, why: `${found.en} is also at Level ${had}` })
+        unmatched.push({ ...left, why: `${found.en} is also at Level ${had}` })
         continue
       }
       levelOf.set(found.code, level)
-      areas.push({ code: found.code, district: districtCode, level, written: entry.name, name: found.en, shift: entry.shift, added: entry.added })
+      areas.push({
+        code: found.code,
+        district: districtCode,
+        level,
+        written: entry.name,
+        name: found.en,
+        districtName: entry.district,
+        shift: entry.shift,
+        added: entry.added,
+      })
     }
   }
   return { areas, unmatched }

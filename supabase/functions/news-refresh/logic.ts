@@ -458,22 +458,24 @@ export type Outcome = {
 
 const REDIRECTS = new Set([301, 302, 303, 307, 308])
 
-const baseHeaders = (): Record<string, string> => ({
+// Also used by landslide-refresh, which reads DMC's landslide list the same polite way
+export const baseHeaders = (): Record<string, string> => ({
   'User-Agent': USER_AGENT,
   Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, application/json, text/html;q=0.8, */*;q=0.5',
 })
 
 export const timeoutFor = (source: Source): number => source.timeoutMs ?? FETCH_TIMEOUT_MS
 
-type Limits = {
+export type Limits = {
   // Wait this long for each request, but never past the run's deadline (a time, in ms)
   timeoutMs: number
   deadline: number
 }
 
-// Follows up to MAX_REDIRECTS redirects, and only to the source's own sites
-async function request(
-  deps: Deps,
+// Follows up to MAX_REDIRECTS redirects, and only to the source's own sites. Exported for
+// landslide-refresh, which only needs the clock and the fetch of Deps.
+export async function request(
+  deps: Pick<Deps, 'now' | 'fetch'>,
   url: string,
   domains: string[],
   headers: Record<string, string>,

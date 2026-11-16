@@ -206,6 +206,9 @@ How to read it:
 - A source with `last_fetch_at` empty and `last_error` empty was never reached by a run that wrote its
   row. Before the 15 Nov evening fix, an unreadable robots.txt looked exactly like this, with no reason kept.
 - `dmc_warnings` usually has nothing: DMC's Emergency Warnings category is empty between emergencies.
+- Once migration 0011 is in use, the table also has a row `landslide_list`. It is not a news source: it is
+  the landslide-refresh function's own state for DMC's landslide list (`docs/landslide-areas.md`), so it
+  shows up in these queries beside the news sources.
 
 ## Sources that are switched off
 

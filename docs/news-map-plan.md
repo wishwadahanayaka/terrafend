@@ -1,7 +1,8 @@
 # News on map, and official landslide areas: plan
 
-Planned 15 Nov 2026. Part 1 of the landslide areas (the boundaries, the PDF reader and the name
-matching) is built; see "Built: landslide areas, part 1" below. Read with `docs/news-feed-plan.md`
+Planned 15 Nov 2026. Parts 1 and 2 of the landslide areas (the boundaries, the PDF reader and the name
+matching; then the backend: migration 0011 and the function) are built; see "Built: landslide areas,
+part 1" and "part 2" below. Read with `docs/news-feed-plan.md`
 (the feed this builds on) and `supabase/functions/news-refresh/`.
 
 **Recommendation in one line:** build the official landslide areas (part B) first, on the shared
@@ -14,7 +15,7 @@ area of the event. NBRO's warnings name the exact DS divisions and levels, every
 | Step | What | Status |
 |---|---|---|
 | A | Boundaries and gazetteer: DS divisions and districts with en/si/ta names, simplified, one build script | **built** for the landslide areas (`npm run areas`, `src/data/areas/`); the news gazetteer (aliases, towns, rivers) is part of D |
-| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **part 1 built** (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`, tests); next: migration 0011, the function's `index.ts` and dry run, then C |
+| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **parts 1 and 2 built** (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`; migration `0011_landslide_areas.sql`, `0011_check.sql`, the function's `logic.ts` and `index.ts`, `docs/landslide-areas.md`); next: run 0011, deploy, dry run (by hand), then C |
 | C | (part of B) the "Landslide warnings, coming soon" row becomes a real layer | planned |
 | D | News areas: place matching in `news-refresh`, `news_places`, "News on map" toggle, route note | planned, after B |
 | E | Roads from headlines | later, assessed only |
@@ -88,6 +89,71 @@ Data and logic only: no migration, no deploy, no screens.
   - `landslideNames.test.ts`: every name in the fixtures, the aliases, unmatched and conflicts.
   - `areas.test.ts`: the boundary files, the fixes, the licence and credit, and the script's checks
     and zip reader on made-up input.
+
+## Built: landslide areas, part 2 (16 Nov 2026)
+
+The backend: migration, function, checks, docs. No screens, no map layer. Nothing is run or deployed:
+the owner runs the migration and deploys by hand (`docs/landslide-areas.md`).
+
+- **Migration `0011_landslide_areas.sql`** (stops with a message if 0010 is missing):
+  - `landslide_warnings`: one row per PDF that is a warning, **read or not**. `pdf_url` unique;
+    `message_id` unique (from inside the PDF); update number, `listed_at` (DMC's list time: what
+    "newest" goes by, known even for an unreadable PDF), `issued_at`, `valid_from`, `valid_to`,
+    `parse_ok`, `parse_error`, `fetched_at`. A table constraint makes a warning either complete (read) or
+    only a reason (not read): no partial guess can be stored.
+  - `landslide_areas`: one row per name: level 1 to 3, district and DS name **as printed**, the
+    p-codes (or null), arrow shift, newly-added, and `match_note`. A constraint says a name is matched
+    (with both codes) or explained (null code and a reason): unmatched names are kept and readable. One
+    division per warning (a unique index). Deleted with its warning (cascade).
+  - `landslide_seen_pdfs`: PDFs looked at and skipped (`not_lewm`, `duplicate`). Closed to the API.
+    A stored warning, read or not, counts as seen by itself.
+  - RLS on; the app reads named columns only (`parse_error` and `fetched_at` are private); only
+    `service_role` writes, and only select and insert.
+  - `store_landslide_warning(jsonb, jsonb)`: the warning and its areas in one transaction, runs as the
+    caller, `service_role` only. `landslide_current()`: for the app, runs as the caller, `stable`:
+    the NEWEST warning (by `listed_at`, then `id`), `valid` (read and `valid_to > now()`), its areas and
+    `parse_ok`; if the newest could not be read it says so and gives no areas and no fallback.
+  - Cron: `landslide-refresh` at minutes 9 and 39 (free: the others use 0, 4, 19, 23, 34, 41, 49) and
+    `landslide-cleanup` at 56 (warnings and skipped PDFs after 14 days). Vault secret `landslide_secret`.
+  - `supabase/checks/0011_check.sql` (23 PASS/FAIL and info rows) and a new check 18 in `privacy.sql`.
+- **Function `landslide-refresh`** (`logic.ts` pure, `index.ts` wiring):
+  - Reads DMC's list itself (the plan said it would read `news_items`; reading the list shows every new
+    entry and not just the newest), politely like `news-refresh`, with its own row (`landslide_list`) in
+    `news_source_state`. It imports `news-refresh/logic.ts` for the User-Agent, the redirect rules,
+    robots.txt reading and the timeouts. `news-refresh` only gained `export` keywords (`request`,
+    `baseHeaders`, `Limits`) and a narrower parameter type: no behaviour change, so it needs no redeploy.
+  - Looks at the newest 5 list entries (ignoring any older than 13 days), downloads only PDFs not seen,
+    and identifies a warning by its message ID, not its file name.
+  - **Not a warning** only on positive evidence (readable text with neither the title nor `LEWM`):
+    recorded as seen and skipped. A scan, or a warning in a layout the reader can't handle, is stored as
+    a warning that **could not be read**, never skipped.
+  - A download that fails is tried again on the next runs; after 3 tries it is stored as "could not be
+    downloaded", so a newer warning that can't be fetched is not hidden behind an older one.
+  - Checks every row against the tables' rules before storing (message ID, update number, validity,
+    lengths, p-codes, one division once). A warning that breaks one, or that the database still
+    refuses as bad data (Postgres error class 22 or 23: `database rejected: ...`), is stored as "could
+    not be read" instead of being refused on every run. Any other storing error (no code, network,
+    timeout, 5xx) stores nothing, counts as a failed run and is retried next run (`store_failed`),
+    without blocking the other PDFs. PDF links must be on `dmc.gov.lk` / `www.dmc.gov.lk` in `/images/dmcreports/`, in the
+    function and in both tables. `service_role` can only select and insert on the three tables.
+  - `?dry_run=true` parses and returns everything and writes nothing (not even its state); `?force=true`
+    ignores the interval and the seen list; `?pdfs=N` looks at the newest N.
+  - Needs `LANDSLIDE_SECRET` (header `x-landslide-secret`), deployed with `--no-verify-jwt`
+    (`config.toml` has `verify_jwt = false`).
+- **Names**: `names.ts` now also returns the district as printed on a match, and the district code,
+  arrow shift and "newly added" on a name that did not match (so every name can be stored as a row).
+- **Tests** (105 new, 1104 in all): `landslideRefresh.test.ts` (70: the list and robots.txt rules, a new
+  PDF, a PDF seen before, not a warning, could not be read, could not be downloaded, the newest
+  warning, dry run, time budget, rows the database would refuse, the wiring), the 0011 section of
+  `migrations.test.ts` (the grants, constraints, functions, cron minutes against every other job,
+  `landslide_current()` using only granted columns and no older warning, the SQL patterns matching the
+  function's, and every p-code in the boundary files and names list fitting them), and the two check
+  scripts. The database stand-in in the tests
+  applies the same rules as the SQL's constraints. **The SQL itself has not run on a database**: the first
+  run of the migration and `0011_check.sql` is its real test.
+- **Not covered**: a stale list. If DMC's list stops changing or the page changes without breaking the
+  parse, nothing says so (the app would show the last warning until it expires). See "Health check" in
+  `docs/landslide-areas.md`.
 
 ## What was tried (15 Nov 2026, about 9 pm)
 
@@ -207,24 +273,14 @@ a layer that needs it is on, and precached like every built file, so it works of
   - CPU: Supabase Edge Functions allow about 2 s of CPU per request (check the docs). pdf.js on a 540
     KB, 3-page file should be well under that, but it must be measured in a dry run first.
 
-**Backend.**
+**Backend (built: part 2, see "Built: landslide areas, part 2" below; the design above changed in
+three ways).** It reads DMC's list itself and not `news_items` (so it sees every new entry, not only the
+newest), each area is a table row and not a JSON array, and a failed read is a row too.
 - A separate function `landslide-refresh`, so a slow parse never delays the news run. Every 30 minutes
-  (minutes 9 and 39), it:
-  - reads the newest `dmc_landslide` row from `news_items` (service role, no extra DMC page fetch);
-  - if its message is new, fetches that one PDF (TerraFend User-Agent, 2 MB cap, own-site check, 20 s
-    timeout), parses and stores it.
-- About 1 to 3 PDFs a day, under 2 MB in all.
-- `?dry_run=true` returns the parsed table, unmatched names and timings.
-- **Migration 0011** (it runs before the photo-path cleanup planned for about 29 Nov 2026, which takes
-  the next free number after it):
-  `landslide_warnings`:
-  - `message_id` unique (`LEWM-14-11-2026-1600-09`), `issued_at`, `valid_from`, `valid_to`, `pdf_url`
-    (https, dmc.gov.lk);
-  - `areas jsonb`, an array of `{ ds: 'LK2209', level: 1..3, shift: -2..2, added: bool }`, checked by
-    the function and by a SQL check on shape;
-  - `parse_ok`, `unmatched text[]`, `fetched_at`.
-  - RLS on, public select through a column grant, only `service_role` writes, deleted after 14 days
-    by a cron job. No Realtime.
+  (minutes 9 and 39), it reads DMC's list, downloads the PDFs it hasn't seen, parses, matches and stores.
+- **Migration 0011**: `landslide_warnings` (one row per PDF that is a warning, read or not),
+  `landslide_areas` (one row per division named) and `landslide_seen_pdfs` (skipped PDFs). RLS on, column
+  grants, only `service_role` writes, deleted after 14 days by a cron job. No Realtime.
 
 **App.**
 - The "Landslide warnings, coming soon" row becomes a real switch. It follows the layer rule in
