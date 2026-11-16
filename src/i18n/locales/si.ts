@@ -293,7 +293,19 @@ const si: Translations = {
     globalAlertsHint:
       'ශ්‍රී ලංකාව සහ අවට සඳහා තැඹිලි සහ රතු අනතුරු ඇඟවීම් (GDACS) සැමවිටම පෙන්වයි. කොළ ඒවාද එක් කිරීමට ක්‍රියාත්මක කරන්න.',
     landslides: 'නායයෑම් අනතුරු ඇඟවීම්',
-    comingSoon: 'ඉක්මනින්',
+    // NEEDS REVIEW BY A NATIVE SPEAKER: the landslide warning texts below, in the Layers panel, the
+    // legend, the chip and the card on the map (and the names of the levels: "Watch", "Alert", "Evacuate")
+    landslidesHint: 'අවවාද සහ ඉවත් වීමේ ප්‍රදේශ සැමවිටම පෙන්වයි. විමසිලිමත් වන්න ප්‍රදේශ එක් කිරීමට සක්‍රිය කරන්න.',
+    landslideChecking: 'නායයෑම් අනතුරු ඇඟවීම් පරීක්ෂා කරමින්…',
+    landslideUnavailable: 'නායයෑම් අනතුරු ඇඟවීම් දැනට නොමැත',
+    landslideNone: 'දැනට සක්‍රිය නායයෑම් අනතුරු ඇඟවීමක් නැත',
+    landslideActive_one: 'සක්‍රිය අනතුරු ඇඟවීම: ප්‍රදේශ {{count}}ක්',
+    landslideActive_other: 'සක්‍රිය අනතුරු ඇඟවීම: ප්‍රදේශ {{count}}ක්',
+    landslideUnreadable: 'නවතම අනතුරු ඇඟවීම කියවිය නොහැකි විය',
+    landslideOffHint: 'විමසිලිමත් වන්න ප්‍රදේශ සිතියමේ සඟවා ඇත. බැලීමට සක්‍රිය කරන්න.',
+    landslideAlso: 'අනතුරු ඇඟවීමේ නම් කර ඇති තවත් ප්‍රදේශ (සිතියමේ නැත): {{names}}',
+    landslideDrawFailed: 'ප්‍රදේශ සිතියමේ ඇඳීමට දැනට නොහැකි විය.',
+    landslideSaved: '{{when}} දී සුරකින ලදී. දැනට නැවුම් කිරීමට නොහැකි විය.',
     riversUnavailable: 'ගංගා මට්ටම් දැනට නොමැත',
     forecastUnavailable: 'වැසි අනාවැකිය දැනට නොමැත',
     forecastFrom: '{{when}} වේලාවේ වැසි අනාවැකිය. එය දැන් අලුත් කිරීමට නොහැකි විය.',
@@ -313,6 +325,10 @@ const si: Translations = {
   },
 
   legend: {
+    // NEEDS REVIEW BY A NATIVE SPEAKER
+    landslideTitle: 'නායයෑම් අනතුරු ඇඟවීම් වර්ණ',
+    landslideNote:
+      'වර්ණ ගැන්වූ සෑම ප්‍රදේශයක්ම NBRO (ජාතික ගොඩනැගිලි පර්යේෂණ සංවිධානය) හි නවතම අනතුරු ඇඟවීමේ නම් කර ඇති ප්‍රාදේශීය ලේකම් කොට්ඨාසයකි. මායිම් සරල කර ඇති නිසා දාර ආසන්න වශයෙනි. 3 වන මට්ටමේ (ඉවත් වන්න) සහ 2 වන මට්ටමේ (අවවාදය) ප්‍රදේශ සැමවිටම පෙන්වන අතර ඉහළ ඇති තර්ජන පටියේද ගණන් ගනී. 1 වන මට්ටමේ (විමසිලිමත් වන්න) ප්‍රදේශවලට තිත් ඉරි දාරයක් ඇති අතර නායයෑම් අනතුරු ඇඟවීම් සක්‍රිය කළ විට පෙන්වයි. විස්තර සඳහා ප්‍රදේශයක් ඔබන්න.',
     riverTitle: 'ගං මාන වර්ණ',
     riverNormal: 'සාමාන්‍යයි, අවවාද මට්ටමට පහළයි',
     riverAlert: 'අවවාදය',
@@ -432,7 +448,38 @@ const si: Translations = {
     tapToSwitch: 'මනින ලද සහ අනාවැකි වැසි අතර මාරු වීමට ස්පර්ශ කරන්න',
   },
 
+  // NEEDS REVIEW BY A NATIVE SPEAKER: the landslide warning card on the map. The level names follow
+  // NBRO's own (Watch, Alert, Evacuate with Yellow, Amber, Red).
+  landslide: {
+    title: 'නායයෑම් අනතුරු ඇඟවීම',
+    legendTitle: 'නායයෑම් අනතුරු ඇඟවීම්',
+    level: {
+      1: '1 වන මට්ටම (කහ): විමසිලිමත් වන්න',
+      2: '2 වන මට්ටම (ඇම්බර්): අවවාදය',
+      3: '3 වන මට්ටම (රතු): ඉවත් වන්න',
+    },
+    levelShort: '{{level}} වන මට්ටම',
+    place: '{{name}} ප්‍රාදේශීය ලේකම් කොට්ඨාසය, {{district}} දිස්ත්‍රික්කය',
+    change: {
+      added: 'අලුතින් එක් කළා',
+      raised: 'පෙර අනතුරු ඇඟවීමෙන් පසු ඉහළ දමන ලදී',
+      raisedTwo: 'පෙර අනතුරු ඇඟවීමෙන් පසු මට්ටම් 2කින් ඉහළ දමන ලදී',
+      lowered: 'පෙර අනතුරු ඇඟවීමෙන් පසු පහත දමන ලදී',
+      loweredTwo: 'පෙර අනතුරු ඇඟවීමෙන් පසු මට්ටම් 2කින් පහත දමන ලදී',
+    },
+    issued: 'නිකුත් කළේ {{when}}',
+    validUntil: '{{when}} දක්වා වලංගුයි',
+    source: 'ප්‍රභවය: NBRO, DMC හරහා',
+    openPdf: 'නිල අනතුරු ඇඟවීම විවෘත කරන්න (PDF)',
+    follow: 'නිල උපදෙස් අනුගමනය කරන්න.',
+    emergency: 'හදිසි: 117',
+  },
+
   chip: {
+    landslide3_one: 'ප්‍රදේශ {{count}}ක නායයෑම් ඉවත්වීමේ අනතුරු ඇඟවීම',
+    landslide3_other: 'ප්‍රදේශ {{count}}ක නායයෑම් ඉවත්වීමේ අනතුරු ඇඟවීම',
+    landslide2_one: 'ප්‍රදේශ {{count}}ක නායයෑම් අවවාදය',
+    landslide2_other: 'ප්‍රදේශ {{count}}ක නායයෑම් අවවාදය',
     river_one: 'ගංවතුර මට්ටමේ ගංගා {{count}}ක්',
     river_other: 'ගංවතුර මට්ටමේ ගංගා {{count}}ක්',
     report_one: 'බරපතළ වාර්තා {{count}}ක්',

@@ -294,7 +294,19 @@ const en = {
     globalAlertsHint:
       'Orange and Red alerts for Sri Lanka and nearby (GDACS) always show. Switch on to add Green ones.',
     landslides: 'Landslide warnings',
-    comingSoon: 'Coming soon',
+    landslidesHint: 'Alert and Evacuate areas always show. Switch on to add Watch areas.',
+    landslideChecking: 'Checking for landslide warnings…',
+    landslideUnavailable: 'Landslide warnings unavailable right now',
+    landslideNone: 'No active landslide warning',
+    landslideActive_one: 'Active warning: {{count}} area',
+    landslideActive_other: 'Active warning: {{count}} areas',
+    landslideUnreadable: "Latest warning couldn't be read",
+    // Shown while the switch is off and the warning has Level 1 (Watch) areas
+    landslideOffHint: 'Watch areas are hidden on the map. Switch on to see them.',
+    // The names in the warning that could not be put on the map, each with its district and level
+    landslideAlso: 'Also named in the warning (not on the map): {{names}}',
+    landslideDrawFailed: "The areas couldn't be drawn on the map just now.",
+    landslideSaved: 'Saved at {{when}}. It could not be refreshed just now.',
     riversUnavailable: 'River levels unavailable right now',
     forecastUnavailable: 'Rain forecast unavailable right now',
     forecastFrom: 'Rain forecast from {{when}}. It could not be refreshed just now.',
@@ -315,6 +327,9 @@ const en = {
   },
 
   legend: {
+    landslideTitle: 'Landslide warning colours',
+    landslideNote:
+      'Each coloured area is a DS division named in the latest warning from NBRO (the National Building Research Organisation). The outlines are simplified, so the edges are approximate. Level 3 (Evacuate) and Level 2 (Alert) areas always show and also count in the threats chip at the top. Level 1 (Watch) areas have a dashed outline and show when Landslide warnings is switched on. Tap an area for details.',
     riverTitle: 'River gauge colours',
     riverNormal: 'Normal, below the alert level',
     riverAlert: 'Alert',
@@ -439,7 +454,38 @@ const en = {
     tapToSwitch: 'Tap to switch between measured and forecast rain',
   },
 
+  // The landslide warning card on the map (lib/landslide.ts). The level names are NBRO's own.
+  landslide: {
+    title: 'Landslide warning',
+    legendTitle: 'Landslide warnings',
+    level: {
+      1: 'Level 1 (Yellow): Watch',
+      2: 'Level 2 (Amber): Alert',
+      3: 'Level 3 (Red): Evacuate',
+    },
+    levelShort: 'Level {{level}}',
+    place: '{{name}} DS division, {{district}} district',
+    change: {
+      added: 'Newly added',
+      raised: 'Raised since the last warning',
+      raisedTwo: 'Raised by 2 levels since the last warning',
+      lowered: 'Lowered since the last warning',
+      loweredTwo: 'Lowered by 2 levels since the last warning',
+    },
+    issued: 'Issued {{when}}',
+    validUntil: 'Valid until {{when}}',
+    source: 'Source: NBRO via DMC',
+    openPdf: 'Open the official warning (PDF)',
+    follow: 'Follow official instructions.',
+    // The link: it opens the Emergency numbers screen
+    emergency: 'Emergency: 117',
+  },
+
   chip: {
+    landslide3_one: 'landslide evacuation warning in {{count}} area',
+    landslide3_other: 'landslide evacuation warning in {{count}} areas',
+    landslide2_one: 'landslide alert in {{count}} area',
+    landslide2_other: 'landslide alert in {{count}} areas',
     river_one: '{{count}} river at flood level',
     river_other: '{{count}} rivers at flood level',
     report_one: '{{count}} serious report',

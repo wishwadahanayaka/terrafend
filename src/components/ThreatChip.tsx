@@ -84,7 +84,7 @@ type Props = {
 // list. Tapping the rest of it zooms the map out to show all of them. When the news feed is on, a
 // News part ends it, which is always shown and opens the news sheet.
 export default function ThreatChip({ map, onMore, onRainView, onOpenNews }: Props) {
-  const { parts, points, state } = useThreats()
+  const { parts, points, state, landslideOnMap } = useThreats()
   const { t } = useTranslation()
   const online = useOnline()
   // Read once: the news feed is on for a person or off, it doesn't change while the app is open
@@ -149,6 +149,12 @@ export default function ThreatChip({ map, onMore, onRainView, onOpenNews }: Prop
               key={part.text}
               type="button"
               onClick={() => {
+                // Level 2 and 3 areas are always drawn, once their outlines have loaded. Until then (or if
+                // they couldn't) the Layers panel says what the warning is.
+                if (part.landslide && !landslideOnMap) {
+                  onMore()
+                  return
+                }
                 if (part.view) onRainView(part.view)
                 showThreats()
               }}

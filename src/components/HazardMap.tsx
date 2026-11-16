@@ -8,6 +8,7 @@ import { fadeWhenCardOpen, useCardOpen } from '../lib/useCardOpen'
 import { useNotice } from '../lib/useNotice'
 import { useOnline } from '../lib/useOnline'
 import { loadLayerSettings, loadRainView, saveLayerSetting, saveRainView, type LayerSettings } from '../lib/layerSettings'
+import type { Level } from '../lib/landslide'
 import type { RainView } from '../lib/rainView'
 import type { RouteHazard } from '../lib/useRoute'
 import { reportStatus, type MyReportRow } from '../lib/myReportsList'
@@ -30,6 +31,10 @@ const RainOverlay = lazy(() => import('./RainOverlay'))
 const RainMapOverlay = lazy(() => import('./RainMapOverlay'))
 const MeasuredRainMarkers = lazy(() => import('./MeasuredRainMarkers'))
 const GdacsMarkers = lazy(() => import('./GdacsMarkers'))
+// NBRO's landslide warning areas. The outlines (a chunk of their own) are fetched only when the
+// switch is on and there is a valid warning.
+const LandslideLayer = lazy(() => import('./LandslideLayer'))
+const LandslideLegend = lazy(() => import('./LandslideLegend'))
 const MyReportsPanel = lazy(() => import('./MyReportsPanel'))
 // The disaster news sheet, only reachable when the news feed is switched on (?news=1, see newsFlag.ts)
 const NewsSheet = lazy(() => import('./NewsSheet'))
@@ -49,6 +54,8 @@ export default function HazardMap({
   // The report My reports scrolls to when it was opened from a card's Manage button
   const [myReportsFocus, setMyReportsFocus] = useState<string | null>(null)
   const [newsOpen, setNewsOpen] = useState(false)
+  // The landslide levels drawn right now (none: no legend). The small legend lists only these.
+  const [landslideLevels, setLandslideLevels] = useState<Level[]>([])
 
   const [panel, setPanel] = useState<PanelState>('closed')
   const [route, setRoute] = useState<RouteResult | null>(null)
@@ -141,6 +148,14 @@ export default function HazardMap({
         />
         <MapLimits island={SRI_LANKA_BOUNDS} limits={SRI_LANKA_LIMITS} />
         <Suspense fallback={null}>
+          <LandslideLayer
+            enabled={layers.landslides}
+            hidden={picking}
+            onOpenEmergency={onOpenEmergency}
+            onShown={setLandslideLevels}
+          />
+        </Suspense>
+        <Suspense fallback={null}>
           <RainMapOverlay hidden={picking} showMild={layers.mildRain} view={rainView} />
         </Suspense>
         <Suspense fallback={null}>
@@ -215,6 +230,17 @@ export default function HazardMap({
           bottomClass={panel === 'collapsed' ? 'bottom-20' : 'bottom-6'}
           cardOpen={cardOpen}
         />
+      )}
+
+      {/* Above the rain label, which sits level with the locate button. Hidden with it while the route panel is fully open. */}
+      {!picking && panel !== 'open' && landslideLevels.length > 0 && (
+        <Suspense fallback={null}>
+          <LandslideLegend
+            levels={landslideLevels}
+            bottomClass={panel === 'collapsed' ? 'bottom-[8.25rem]' : 'bottom-[4.75rem]'}
+            cardOpen={cardOpen}
+          />
+        </Suspense>
       )}
 
       <Notice message={notice} />

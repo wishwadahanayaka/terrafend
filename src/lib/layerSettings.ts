@@ -11,6 +11,8 @@ export type LayerSettings = {
   mildRain: boolean
   // Green global alerts
   greenAlerts: boolean
+  // NBRO's landslide warning areas. The only switch that is ON until it is turned off.
+  landslides: boolean
 }
 
 // The rivers key is the one the old Rivers button used, so people keep their choice
@@ -19,23 +21,36 @@ const KEYS: Record<keyof LayerSettings, string> = {
   normalRivers: 'terrafend:showAllRivers',
   mildRain: 'terrafend:showMildRain',
   greenAlerts: 'terrafend:showGreenAlerts',
+  landslides: 'terrafend:showLandslides',
 }
 
-// Storage can be missing or blocked (private windows, strict settings), so it's only ever a bonus
-function read(key: string): boolean {
+// What each switch is before the person has chosen: off for the extras, on for the landslide warnings
+export const LAYER_DEFAULTS: LayerSettings = {
+  passableReports: false,
+  normalRivers: false,
+  mildRain: false,
+  greenAlerts: false,
+  landslides: true,
+}
+
+// Storage can be missing or blocked (private windows, strict settings), so it's only ever a bonus.
+// Only a saved choice counts: anything else (nothing saved, blocked storage) is the default.
+function read(name: keyof LayerSettings): boolean {
   try {
-    return localStorage.getItem(key) === '1'
+    const saved = localStorage.getItem(KEYS[name])
+    return saved === '1' ? true : saved === '0' ? false : LAYER_DEFAULTS[name]
   } catch {
-    return false
+    return LAYER_DEFAULTS[name]
   }
 }
 
 export function loadLayerSettings(): LayerSettings {
   return {
-    passableReports: read(KEYS.passableReports),
-    normalRivers: read(KEYS.normalRivers),
-    mildRain: read(KEYS.mildRain),
-    greenAlerts: read(KEYS.greenAlerts),
+    passableReports: read('passableReports'),
+    normalRivers: read('normalRivers'),
+    mildRain: read('mildRain'),
+    greenAlerts: read('greenAlerts'),
+    landslides: read('landslides'),
   }
 }
 

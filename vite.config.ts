@@ -6,6 +6,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 import {
   FONT_CACHE_NAME,
   FONT_PATH_PREFIX,
+  SHAPES_CACHE_NAME,
+  SHAPES_CHUNK_GLOB,
+  SHAPES_CHUNK_PREFIX,
   TILE_CACHE_DAYS,
   TILE_CACHE_MAX_ENTRIES,
   TILE_CACHE_NAME,
@@ -47,13 +50,15 @@ export default defineConfig({
         // Every file the app is built from, including the chunks that load later, so
         // the first open after install has everything it needs without a connection
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        // Except the landslide outlines: they are kept the first time they are used (below)
+        globIgnores: [SHAPES_CHUNK_GLOB],
         navigateFallback: 'index.html',
         // The rain map is asked for on this path, and it is passed on to another site
         navigateFallbackDenylist: [/^\/waterlevels-api\//],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        // The map tiles and the two fallback fonts are the only things the service worker
-        // keeps besides the app itself (the Sinhala and Tamil text files are part of the app).
+        // The map tiles, the two fallback fonts and the landslide outlines are the only things the
+        // service worker keeps besides the app itself (the Sinhala and Tamil text files are part of the app).
         // Supabase (sign-in, reports, votes), the routing function and every data source have
         // no rule here, so they always go straight to the network. The data shown offline is
         // saved by the app itself (see offline.ts), with its time.
@@ -69,6 +74,18 @@ export default defineConfig({
                 purgeOnQuotaError: true,
               },
               // Only proper answers: an error page must never be kept as a tile
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            // The landslide outlines, our own built file: kept when first downloaded, then used
+            // before the network. A new build has a new file name, so an old copy is never asked for.
+            urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+              sameOrigin && url.pathname.startsWith(SHAPES_CHUNK_PREFIX) && url.pathname.endsWith('.js'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: SHAPES_CACHE_NAME,
+              expiration: { maxEntries: 2 },
               cacheableResponse: { statuses: [200] },
             },
           },

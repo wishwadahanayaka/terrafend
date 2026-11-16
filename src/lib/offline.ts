@@ -1,5 +1,5 @@
 import type { PersistedClient } from '@tanstack/react-query-persist-client'
-import { NEWS_KEY, REPORTS_KEY } from './queryKeys'
+import { LANDSLIDE_KEY, NEWS_KEY, REPORTS_KEY } from './queryKeys'
 import { t } from '../i18n'
 import { sriLankaWhen } from './time'
 
@@ -14,12 +14,15 @@ export const FORECAST_SAVED_MAX_AGE_MS = 3 * HOUR_MS
 // Saved news headlines are kept longer: they are from the last 48 hours, and a headline from this
 // morning is still worth reading tonight, with its time beside it
 export const NEWS_SAVED_MAX_AGE_MS = 24 * HOUR_MS
+// The saved landslide warning: a warning is only valid for 24 hours, and the phone works out whether
+// it still is from its own valid_to, so a saved one can't be shown as current after it runs out
+export const LANDSLIDE_SAVED_MAX_AGE_MS = 24 * HOUR_MS
 // The saved file as a whole is thrown away when it is older than this. It has to be the longest of
 // the above, since the library checks the file's age, not each query's. dropOldQueries then applies
 // each query's own limit.
-export const SAVED_FILE_MAX_AGE_MS = NEWS_SAVED_MAX_AGE_MS
+export const SAVED_FILE_MAX_AGE_MS = Math.max(NEWS_SAVED_MAX_AGE_MS, LANDSLIDE_SAVED_MAX_AGE_MS)
 
-export type Source = 'rivers' | 'measured-rain' | 'forecast' | 'alerts' | 'reports' | 'news'
+export type Source = 'rivers' | 'measured-rain' | 'forecast' | 'alerts' | 'reports' | 'news' | 'landslide'
 
 // Which of the data sources a query belongs to. Only these are saved on the phone, and
 // anything else (votes, place searches, routes, the reports for one map view) is not.
@@ -39,6 +42,8 @@ export function sourceOf(key: readonly unknown[]): Source | null {
       return key[1] === 'island' ? 'reports' : null
     case NEWS_KEY:
       return 'news'
+    case LANDSLIDE_KEY:
+      return 'landslide'
     default:
       return null
   }
@@ -53,15 +58,16 @@ export function shouldSave(key: readonly unknown[], forecastOnly = false): boole
 }
 
 // Whether a query goes into the saved file right now. Only answers that loaded, except the
-// forecast and the news: after a failed refresh their older data is still good for a while
-// and must stay in the file, or a reload during an outage would lose it.
+// forecast, the news and the landslide warning: after a failed refresh their older data is still good
+// for a while and must stay in the file, or a reload during an outage would lose it.
 export function shouldSaveQuery(
   key: readonly unknown[],
   state: { status: string; data: unknown },
   forecastOnly = false,
 ): boolean {
   if (!shouldSave(key, forecastOnly)) return false
-  const keepsOldData = sourceOf(key) === 'forecast' || sourceOf(key) === 'news'
+  const source = sourceOf(key)
+  const keepsOldData = source === 'forecast' || source === 'news' || source === 'landslide'
   return state.status === 'success' || (keepsOldData && state.data !== undefined)
 }
 
@@ -69,6 +75,7 @@ export function shouldSaveQuery(
 export function savedMaxAge(source: Source): number {
   if (source === 'forecast') return FORECAST_SAVED_MAX_AGE_MS
   if (source === 'news') return NEWS_SAVED_MAX_AGE_MS
+  if (source === 'landslide') return LANDSLIDE_SAVED_MAX_AGE_MS
   return SAVED_MAX_AGE_MS
 }
 
@@ -89,13 +96,13 @@ export type CacheEntry = { queryKey: readonly unknown[]; dataUpdatedAt: number }
 
 // When the data on screen was loaded. Each source counts from its newest load, and the
 // oldest of those is returned, so the banner never sounds fresher than its oldest part.
-// Null when nothing has ever loaded. The news headlines are saved but not counted here: the banner
-// is about the map's data, and the news sheet shows its own time.
+// Null when nothing has ever loaded. The news headlines and the landslide warning are saved but not
+// counted here: the banner is about the map's data, and each of them shows its own time.
 export function dataFrom(entries: CacheEntry[]): number | null {
   const newest = new Map<Source, number>()
   for (const { queryKey, dataUpdatedAt } of entries) {
     const source = sourceOf(queryKey)
-    if (!source || source === 'news' || dataUpdatedAt <= 0) continue
+    if (!source || source === 'news' || source === 'landslide' || dataUpdatedAt <= 0) continue
     newest.set(source, Math.max(newest.get(source) ?? 0, dataUpdatedAt))
   }
   return newest.size === 0 ? null : Math.min(...newest.values())

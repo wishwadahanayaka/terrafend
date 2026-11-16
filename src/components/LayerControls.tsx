@@ -13,6 +13,7 @@ import {
   RAIN_LABEL,
 } from '../lib/rainForecast'
 import { LIGHT_CONFIRM_HOURS, LIGHT_CONFIRM_KM, LIGHT_VETO_KM } from '../lib/lightRain'
+import { BOUNDARY_CREDIT, BOUNDARY_URL, LANDSLIDE_CREDIT } from '../lib/landslide'
 import { newsEnabled } from '../lib/newsFlag'
 import type { RainView } from '../lib/rainView'
 import { LANGUAGES } from '../i18n/languages'
@@ -27,6 +28,8 @@ import { useRainMap } from '../lib/useRainMap'
 import { sriLankaWhen } from '../lib/time'
 import { useRiverGauges } from '../lib/useRiverGauges'
 
+import LandslideStatus from './LandslideStatus'
+import LevelSwatch from './LevelSwatch'
 import RainViewSwitch from './RainViewSwitch'
 
 // Counts reports from Supabase, so it loads after the map like the other data code
@@ -293,7 +296,14 @@ export default function LayerControls({
           )}
 
           <div className="mt-1 border-t border-slate-200 pt-1">
-            <ComingSoon icon={<Mountain className="h-5 w-5" aria-hidden="true" />} label={t('layers.landslides')} soon={t('layers.comingSoon')} />
+            <Toggle
+              icon={<Mountain className="h-5 w-5" aria-hidden="true" />}
+              label={t('layers.landslides')}
+              hint={t('layers.landslidesHint')}
+              checked={settings.landslides}
+              onChange={(value) => onChange('landslides', value)}
+            />
+            <LandslideStatus layerOn={settings.landslides} />
           </div>
         </div>
       )}
@@ -389,6 +399,24 @@ export default function LayerControls({
           </ul>
           <p className="mt-3 text-xs text-slate-600">{t('legend.alertsNote')}</p>
           <p className="mt-2 text-[11px] leading-tight text-slate-500">{GDACS_CREDIT}</p>
+
+          <p className="mt-4 text-sm font-semibold">{t('legend.landslideTitle')}</p>
+          <ul className="mt-2 space-y-1.5">
+            {([3, 2, 1] as const).map((level) => (
+              <li key={level} className="flex items-center gap-2 text-xs">
+                <LevelSwatch level={level} />
+                <span>{t(`landslide.level.${level}`)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-slate-600">{t('legend.landslideNote')}</p>
+          <p className="mt-2 text-[11px] leading-tight text-slate-500">{LANDSLIDE_CREDIT}</p>
+          <p className="mt-1 text-[11px] leading-tight text-slate-500">
+            {BOUNDARY_CREDIT}{' '}
+            <a href={BOUNDARY_URL} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap underline">
+              HDX
+            </a>
+          </p>
         </div>
       )}
     </div>
@@ -430,12 +458,3 @@ function Toggle({ icon, label, hint, checked, onChange }: ToggleProps) {
   )
 }
 
-function ComingSoon({ icon, label, soon }: { icon: ReactNode; label: string; soon: string }) {
-  return (
-    <div aria-disabled="true" className="flex min-h-12 items-center gap-3 px-2 py-2 text-slate-400">
-      {icon}
-      <span className="flex-1 text-sm font-semibold">{label}</span>
-      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{soon}</span>
-    </div>
-  )
-}

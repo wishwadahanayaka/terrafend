@@ -67,6 +67,11 @@ export function sriLankaWhen(ms: number, now = Date.now()): string {
   return sriLankaDay(ms) === sriLankaDay(now) ? sriLankaClock(ms) : `${sriLankaDay(ms)}, ${sriLankaClock(ms)}`
 }
 
+// "16 Nov, 6:52 pm": always with the day, for times that belong to a warning that runs over two days
+export function sriLankaDateTime(ms: number): string {
+  return `${sriLankaDay(ms)}, ${sriLankaClock(ms)}`
+}
+
 // The API sends UTC; people here think in Sri Lanka time wherever their phone is set
 export function sriLankaTime(iso: string): string {
   const ms = new Date(iso).getTime()

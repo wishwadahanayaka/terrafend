@@ -14,3 +14,12 @@ export const TILE_CACHE_MAX_ENTRIES = 400
 // a phone actually needs one (a phone with no Sinhala or Tamil font of its own), not at install.
 export const FONT_PATH_PREFIX = '/fonts/'
 export const FONT_CACHE_NAME = 'terrafend-fonts'
+
+// The DS division outlines for the landslide layer (src/data/areas/dsAreas.ts, a chunk of its own,
+// 134 KB gzipped). It is not part of the install: the app downloads it the first time a warning is
+// drawn, and the service worker keeps it from then on, so the areas draw offline too. The built file
+// is named after its source (dsAreas-<hash>.js) and nothing else is, so this finds only it.
+export const SHAPES_CHUNK_PREFIX = '/assets/dsAreas-'
+export const SHAPES_CACHE_NAME = 'terrafend-landslide-areas'
+// The name that is left out of the install list, written for the build's file-matching
+export const SHAPES_CHUNK_GLOB = '**/dsAreas-*.js'

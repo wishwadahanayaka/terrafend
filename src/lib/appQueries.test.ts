@@ -66,10 +66,20 @@ describe('what the app asks the database for', () => {
     expect(everything).not.toMatch(/select=\*/)
   })
 
-  it('reads the REST API directly only for the forecast cache and the news headlines', () => {
+  it('reads the REST API directly only for the forecast cache, the news headlines and the landslide warning', () => {
     const paths = [...everything.matchAll(/\/rest\/v1\/([a-z_]+)/g)].map((m) => m[1])
     expect(paths.length).toBeGreaterThan(0)
-    expect(new Set(paths)).toEqual(new Set(['island_forecast', 'news_items']))
+    expect(new Set(paths)).toEqual(new Set(['island_forecast', 'news_items', 'rpc']))
+  })
+
+  it('calls only one function over REST, landslide_current(), which the migration lets the app run', () => {
+    const called = [...everything.matchAll(/\/rest\/v1\/rpc\/([a-z_]+)/g)].map((m) => m[1])
+    expect(new Set(called)).toEqual(new Set(['landslide_current']))
+    const migration = readFileSync(join(SRC, '..', 'supabase', 'migrations', '0011_landslide_areas.sql'), 'utf8')
+    expect(migration).toMatch(/create function public\.landslide_current\(\)/)
+    expect(migration).toMatch(/grant execute on function public\.landslide_current\(\) to anon, authenticated/)
+    const fetcher = files.find((f) => f.name.endsWith('landslideFetch.ts'))
+    expect(fetcher?.code).not.toMatch(/parse_error|fetched_at|\.insert\(|\.upsert\(|\.update\(|\.delete\(/)
   })
 
   it('only reads the news table, and never asks for the private columns of it', () => {

@@ -1,8 +1,8 @@
 # News on map, and official landslide areas: plan
 
-Planned 15 Nov 2026. Parts 1 and 2 of the landslide areas (the boundaries, the PDF reader and the name
-matching; then the backend: migration 0011 and the function) are built; see "Built: landslide areas,
-part 1" and "part 2" below. Read with `docs/news-feed-plan.md`
+Planned 15 Nov 2026. Parts 1 to 3 of the landslide areas (the boundaries, the PDF reader and the name
+matching; then the backend: migration 0011 and the function; then the map layer) are built; see "Built:
+landslide areas, part 1", "part 2" and "part 3" below. Read with `docs/news-feed-plan.md`
 (the feed this builds on) and `supabase/functions/news-refresh/`.
 
 **Recommendation in one line:** build the official landslide areas (part B) first, on the shared
@@ -15,8 +15,8 @@ area of the event. NBRO's warnings name the exact DS divisions and levels, every
 | Step | What | Status |
 |---|---|---|
 | A | Boundaries and gazetteer: DS divisions and districts with en/si/ta names, simplified, one build script | **built** for the landslide areas (`npm run areas`, `src/data/areas/`); the news gazetteer (aliases, towns, rivers) is part of D |
-| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **parts 1 and 2 built** (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`; migration `0011_landslide_areas.sql`, `0011_check.sql`, the function's `logic.ts` and `index.ts`, `docs/landslide-areas.md`); next: run 0011, deploy, dry run (by hand), then C |
-| C | (part of B) the "Landslide warnings, coming soon" row becomes a real layer | planned |
+| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **parts 1 to 3 built**: 1 and 2 are committed, run and deployed (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`; migration `0011_landslide_areas.sql`, `0011_check.sql`, the function's `logic.ts` and `index.ts`, `docs/landslide-areas.md`); 3 is the map layer (below), written but not yet tried on a phone. Part 4, route warnings, is next |
+| C | (part of B) the "Landslide warnings, coming soon" row becomes a real layer | **built** (part 3 of B, on for everyone) |
 | D | News areas: place matching in `news-refresh`, `news_places`, "News on map" toggle, route note | planned, after B |
 | E | Roads from headlines | later, assessed only |
 
@@ -154,6 +154,60 @@ the owner runs the migration and deploys by hand (`docs/landslide-areas.md`).
 - **Not covered**: a stale list. If DMC's list stops changing or the page changes without breaking the
   parse, nothing says so (the app would show the last warning until it expires). See "Health check" in
   `docs/landslide-areas.md`.
+
+## Built: landslide areas, part 3, the map layer (16 Nov 2026)
+
+On for everyone (no URL flag). Not tried in a real browser by the author of the code: the checks to do
+by hand are at the end.
+
+- **Data.** `useLandslide` calls `landslide_current()` with a plain POST (like `forecastCache.ts` and
+  `newsFetch.ts`, only the `apikey` header), every 10 minutes while the app is open, saved offline for 24
+  hours. "Still valid" is `now < valid_to`, worked out on the phone from the saved times and the clock
+  (a minute tick, and a timer for the moment `valid_to` passes). The server's own `valid` flag is not
+  read, so a saved answer shown offline stops being current on time. One name the app can't read makes
+  the whole answer unreadable: nothing is quietly left out.
+- **Outlines.** `ds.json` is 536 KB, **136 KB gzipped**, a chunk of its own (`dsAreas-<hash>.js`). It
+  is downloaded only when the newest warning is valid and has something to draw: a Level 2 or 3 area
+  (whatever the switch says), or a Level 1 area with the switch on. It is not in the install:
+  the service worker keeps it the first time it is used. District names (2.6 KB) are in a small file
+  made from `districts.json`, so the district outlines don't come with it.
+- **Layers panel.** The switch is on by default and follows the layer rule: "Alert and Evacuate areas
+  always show. Switch on to add Watch areas." Under it one line: "Active warning: N areas" (every name
+  in the warning) / "No active landslide warning" / "Latest warning couldn't be read" and a link to the
+  PDF. Names with no match, or no outline, are listed as text and never dropped. With the switch off and
+  Watch areas in the warning, a second line says they are hidden. The legend lists only the levels drawn.
+- **Style (the proposal).** A light fill and an outline in NBRO's colour, heavier with the level:
+  Level 1 yellow, dashed, weight 2; Level 2 orange-amber, solid, weight 3; Level 3 red, solid, weight 4.
+  Edges are irregular admin boundaries, so they don't look like the rain's squares, and the dash and
+  weight make the levels differ without colour. Hatching was left out: Leaflet's SVG renderer would need
+  a pattern definition injected, and the outline weights do the same job. In a pane at z 370 (the rain
+  panes are 380 and 390, the markers 600).
+- **Chip.** Level 3 and Level 2 count ("landslide evacuation warning in 3 areas", "landslide alert in 5
+  areas"), Level 1 does not. Why: the chip is for serious things (a river at Alert or above, heavy rain),
+  and a Level 1 "Watch" is the lowest step, issued for 17 to 39 divisions on most rainy days in the real
+  warnings, so counting it would put a landslide part on the chip nearly every day and teach people to
+  ignore it. It is on the map (with the switch on) and in the Layers panel. It follows the existing rule
+  (serious items always show and count): Level 2 and 3 are drawn and counted whatever the switch says,
+  and a tap on the part fits the map to those areas once their outlines have loaded, otherwise it opens
+  the Layers panel.
+- **Card.** "Issued 16 Nov, 6:52 pm" and "Valid until 17 Nov, 6:52 pm": both always with the date.
+- **The rule, as built.** This is the plan's section B (Level 2 and 3 always drawn, the switch adding
+  Level 1). An earlier version of part 3 made the switch the whole layer; it was changed back the same
+  day, so the outlines load for any valid Level 2 or 3 area, and for a Level 1 area only with the switch on.
+- **Tests** (114 new, 1218 in all): `landslide.test.ts` (reading the answer, the PDF link, validity on
+  the phone including a saved answer read later, which levels are drawn, the chip rule, the card, the
+  style, the credits),
+  `landslideStatus.test.ts` (every status line), `landslideFetch.test.ts`, `fakeLandslide.test.ts` (all
+  ten modes, real codes, `offline-expiry`), `landslideShapes.test.ts` (placing areas, the lazy load and
+  the service worker rule), `landslideLayer.test.ts` (the wiring, read from source), `layerSettings.test.ts`,
+  and more in `offline.test.ts` and `appQueries.test.ts`.
+- **Not done (part 4):** a route through a Level 2 or 3 area as a warning in the route panel.
+
+By hand, on a phone or in the dev server: `?fakeLandslide=level1|level2|level3|mixed|unmatched|expired|unreadable|none|fail|offline-expiry`.
+Look at 360 px and 320 px for: the Layers panel (switch and status line, and the long "Also named in the
+warning" line with `unmatched`), the legend (bottom left, clear of the rain label and the buttons),
+a card (not wider than the screen, the Emergency link opens the numbers screen), the chip, and
+Sinhala and Tamil.
 
 ## What was tried (15 Nov 2026, about 9 pm)
 

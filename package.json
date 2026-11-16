@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "icons": "pwa-assets-generator",
-    "areas": "node scripts/build-areas.mjs"
+    "areas": "node scripts/build-areas.mjs",
+    "areas:names": "node scripts/district-names.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

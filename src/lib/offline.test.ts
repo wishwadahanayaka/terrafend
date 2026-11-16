@@ -7,6 +7,7 @@ import {
   dropOldQueries,
   FORECAST_SAVED_MAX_AGE_MS,
   isSavedDataUsable,
+  LANDSLIDE_SAVED_MAX_AGE_MS,
   liveReports,
   NEWS_SAVED_MAX_AGE_MS,
   offlineMessage,
@@ -157,6 +158,47 @@ describe('the news headlines, offline', () => {
     const main = readFileSync(join(__dirname, '..', 'main.tsx'), 'utf8')
     expect(main).toContain('maxAge: SAVED_FILE_MAX_AGE_MS')
     expect(main).not.toMatch(/maxAge: SAVED_MAX_AGE_MS/)
+  })
+})
+
+describe('the landslide warning, offline', () => {
+  const query = (key: unknown[], age: number) => ({ queryKey: key, queryHash: JSON.stringify(key), state: { dataUpdatedAt: NOW - age } })
+  const file = (queries: ReturnType<typeof query>[]) =>
+    ({ timestamp: NOW, buster: 'b', clientState: { mutations: [], queries } }) as unknown as PersistedClient
+
+  it('is saved, as its own source, and the outlines are not (the service worker keeps that file)', () => {
+    expect(sourceOf(['landslide'])).toBe('landslide')
+    expect(shouldSave(['landslide'])).toBe(true)
+    expect(shouldSaveQuery(['landslide'], { status: 'success', data: { found: false } })).toBe(true)
+    expect(sourceOf(['landslide-shapes'])).toBeNull()
+    expect(shouldSave(['landslide-shapes'])).toBe(false)
+  })
+
+  it('is saved for 24 hours, the longest a warning is valid', () => {
+    expect(LANDSLIDE_SAVED_MAX_AGE_MS).toBe(24 * HOUR)
+    expect(isSavedDataUsable(['landslide'], NOW - 23 * HOUR, NOW)).toBe(true)
+    expect(isSavedDataUsable(['landslide'], NOW - 25 * HOUR, NOW)).toBe(false)
+  })
+
+  it('stays in the saved file after a failed refresh', () => {
+    expect(shouldSaveQuery(['landslide'], { status: 'error', data: { found: false } })).toBe(true)
+    expect(shouldSaveQuery(['landslide'], { status: 'error', data: undefined })).toBe(false)
+  })
+
+  it('is not counted in the offline banner: the Layers panel says when it was saved', () => {
+    const entry = (key: unknown[], at: number) => ({ queryKey: key, dataUpdatedAt: at })
+    expect(dataFrom([entry(['river-gauges'], NOW - 2 * HOUR), entry(['landslide'], NOW - 20 * HOUR)])).toBe(NOW - 2 * HOUR)
+    expect(dataFrom([entry(['landslide'], NOW)])).toBeNull()
+  })
+
+  it('is not saved while a dev test switch is on, so ?fakeLandslide= data never turns up later', () => {
+    expect(shouldSave(['landslide'], true)).toBe(false)
+    expect(shouldSaveQuery(['landslide'], { status: 'success', data: {} }, true)).toBe(false)
+  })
+
+  it('survives a file older than 6 hours, which the 6-hour data in it does not', () => {
+    const saved = file([query(['landslide'], 10 * HOUR), query(['river-gauges'], 10 * HOUR)])
+    expect(dropOldQueries(saved, NOW).clientState.queries.map((q) => q.queryKey[0])).toEqual(['landslide'])
   })
 })
 
