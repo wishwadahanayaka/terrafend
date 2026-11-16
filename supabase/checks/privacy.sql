@@ -1,7 +1,7 @@
 -- Privacy checks, to run AFTER 0009 is live. Read-only: it changes nothing.
 -- Run it in the SQL Editor. One result table, one line per check. Every line should say PASS.
--- Run it again after 0010 (news feed) and 0011 (photo-path cleanup), and any time a table, column or
--- policy is added. Check 17 says FAIL until 0010 has been run.
+-- Run it again after 0010 (news feed), 0011 (landslide warnings), the photo-path cleanup (the next
+-- free number after the landslide migration), and any time a table, column or policy is added. Check 17 says FAIL until 0010 has been run.
 --
 -- Not covered here, because SQL can't do it: the real API with the public key (see privacy.ps1),
 -- and a real photo upload (see the last line).
@@ -112,7 +112,8 @@ select ord, check_name, case when ok then 'PASS' else 'FAIL' end as result, deta
            and not has_function_privilege('anon', 'public.owns_report_photo(text)', 'execute'), ''
 
     union all
-    -- Shows how many photos are still on the old <user id>/<name> paths. 0011 can go ahead at 0.
+    -- Shows how many photos are still on the old <user id>/<name> paths. The photo-path cleanup (the next
+    -- free migration number after the landslide migration) can go ahead at 0.
     select 15, 'photos still on old <user id>/ paths (info: this should fall to 0 on its own)',
            true,
            'old style=' || count(*) filter (where name like '%/%') || ', flat=' || count(*) filter (where name not like '%/%')

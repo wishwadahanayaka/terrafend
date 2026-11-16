@@ -1,0 +1,6 @@
+{
+  "nodeModulesDir": "none",
+  "imports": {
+    "unpdf": "npm:unpdf@1.9.1"
+  }
+}

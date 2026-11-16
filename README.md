@@ -95,6 +95,8 @@ Disaster news: News headlines link to their publishers. TerraFend shows only the
 
 Fonts: Noto Sans Sinhala and Noto Sans Tamil (Noto Project Authors, SIL Open Font License 1.1), used only on phones that have no Sinhala or Tamil font of their own.
 
+DS division and district boundaries (for the coming landslide warning areas): Administrative boundaries: Survey Department of Sri Lanka, via OCHA (Humanitarian Data Exchange), CC BY-IGO 3.0. Simplified, with name fixes, by TerraFend. See [HDX: Sri Lanka subnational administrative boundaries](https://data.humdata.org/dataset/cod-ab-lka) (dataset https://data.humdata.org/dataset/cod-ab-lka) and the [licence](https://creativecommons.org/licenses/by/3.0/igo/). The files are built by `npm run areas` (`scripts/build-areas.mjs`).
+
 The rain map uses a simplified Sri Lanka coastline, derived from [geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0), only to leave sea out of its grid.
 
 ## Running it locally

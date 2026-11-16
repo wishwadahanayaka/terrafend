@@ -1,7 +1,8 @@
 # News on map, and official landslide areas: plan
 
-Planned 15 Nov 2026. Nothing here is built. Read with `docs/news-feed-plan.md` (the feed this builds
-on) and `supabase/functions/news-refresh/`.
+Planned 15 Nov 2026. Part 1 of the landslide areas (the boundaries, the PDF reader and the name
+matching) is built; see "Built: landslide areas, part 1" below. Read with `docs/news-feed-plan.md`
+(the feed this builds on) and `supabase/functions/news-refresh/`.
 
 **Recommendation in one line:** build the official landslide areas (part B) first, on the shared
 boundary files (part A), and the news areas (part D) after them. The trial below shows that headlines
@@ -12,11 +13,81 @@ area of the event. NBRO's warnings name the exact DS divisions and levels, every
 
 | Step | What | Status |
 |---|---|---|
-| A | Boundaries and gazetteer: DS divisions and districts with en/si/ta names, simplified, one build script | planned |
-| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | planned, **first** |
+| A | Boundaries and gazetteer: DS divisions and districts with en/si/ta names, simplified, one build script | **built** for the landslide areas (`npm run areas`, `src/data/areas/`); the news gazetteer (aliases, towns, rivers) is part of D |
+| B | Official landslide areas: parse NBRO's LEWM PDF, migration, function, map layer, route warnings | **part 1 built** (reader `lewm.ts`, `pdfText.ts`, matching `names.ts`, tests); next: migration 0011, the function's `index.ts` and dry run, then C |
 | C | (part of B) the "Landslide warnings, coming soon" row becomes a real layer | planned |
 | D | News areas: place matching in `news-refresh`, `news_places`, "News on map" toggle, route note | planned, after B |
 | E | Roads from headlines | later, assessed only |
+
+## Built: landslide areas, part 1 (15 Nov 2026)
+
+Data and logic only: no migration, no deploy, no screens.
+
+- **Boundaries** (`scripts/build-areas.mjs`, `npm run areas`):
+  - **Source:** HDX `cod-ab-lka` (Survey Department, CC BY-IGO, updated January 2026: 25 districts and
+    339 DS divisions). The script downloads the GeoJSON zip once into `.cache/areas/` (git-ignored).
+  - **Simplifying:** mapshaper 0.7.100 runs through `npx`, so it isn't a project dependency. It
+    simplifies to about 200 m (topology kept), then dissolves the divisions into districts so their
+    borders line up exactly.
+  - **Output:**
+    - `src/data/areas/ds.json` (542 KB, 134 KB gzipped);
+    - `src/data/areas/districts.json` (158 KB, 47 KB gzipped);
+    - `supabase/functions/landslide-refresh/ds-names.json` (English names and p-codes only, 5 KB
+      gzipped).
+
+    Each file has a `meta` block with the source, licence, attribution and the list of changes.
+  - **Name fixes:** the source keeps names in a 50-byte field (a shapefile limit), so long Sinhala and
+    Tamil names are cut off mid-word. Fixed by `scripts/area-name-fixes.mjs`, never by editing the
+    output:
+    - the cut-off word "district" is stripped from district names (ගම්පහ දිස්ත්‍රික්, ත්‍රිකුණාමළය දිස්);
+    - Kalutara's legacy-font error කඵතර is fixed to කළුතර;
+    - **34 cut-off DS names** are completed (ශ්‍රී ජයවර්ධනපුර ක → ... කෝට්ටේ, புதுக்குடியிருப் →
+      ...பு). These are AI-written, marked for native review, and only ever complete the text the
+      source has (a test checks).
+
+    Every DS name at the byte limit must be either completed or listed as checked and whole, or the
+    build stops. The remaining oddities, which need a native speaker, are listed as notes (Tamil
+    கண்டி for Gangawata Korale, காலி for Galle Four Gravets).
+- **Reader** (`supabase/functions/landslide-refresh/lewm.ts`, with `pdfText.ts` for the PDF step):
+  - **Library:** unpdf 1.9.1, pinned in `deno.json` and `package.json`. It is pdf.js built for
+    serverless runtimes (no worker, canvas or DOM), so the same code runs in Supabase Edge Functions
+    (Deno) and in the Node tests. This pdf.js build has no eval path at all, and it runs without
+    system fonts, font faces or XFA. Its size and page count are capped.
+  - **Speed:** 20 to 190 ms per PDF, in Node and Deno alike.
+  - **Rules, learned from ten real LEWMs (May to Nov 2026):**
+    - every cell ends with "Divisional Secretariat Division(s) (DSD) and surrounding areas.", which
+      separates the cells;
+    - cells and district names are vertically centred in their row, so a cell's lines span its
+      district's name;
+    - a long table runs over 2 to 3 pages without repeating the header, and rows (even single cells)
+      can break across a page;
+    - the "Update:" line is often missing (the Message ID's last number is the update);
+    - the Sinhala and Tamil text is partly in legacy fonts, so only the English is read.
+  - **Result:** all ten read; none had a Level 3 cell, so Level 3 is tested on layouts built in the
+    tests.
+  - **Failing safe:** anything unexpected gives `parseOk: false` and a reason, never half a table:
+    - a missing or reordered header, or no "Note:" line;
+    - a cell without its closing words, or one that lines up with no district or two;
+    - text crossing columns, or anything but a DS name in a cell;
+    - Message IDs, the Update line, the validity and the printed issue time that disagree;
+    - impossible dates.
+- **Matching** (`names.ts`):
+  - **How:** a name is looked for only in its row's district. Case, spaces, hyphens, underscores,
+    th/t, dh/d and doubled letters are ignored, and 13 aliases cover the rest (Aranayaka, Kuruwita,
+    Bulathkohupitiya, Meegahakivula, Pitabeddara, Bibila...).
+  - **Result:** on the ten samples, 288 of 290 entries matched. The other two are reported unmatched
+    on purpose: "Kotmale" alone (East or West?) and "Ratnapura-Ratnapura".
+  - **Reporting:** a name in the wrong district gets a hint where it is. The same division at two
+    levels is reported as a contradiction.
+- **Tests:**
+  - `lewm.test.ts`: the reader on three real warnings kept as text with positions (13 districts over
+    three pages with a Level 2 cell split across a page; a row split across pages; today's), layouts
+    built in the test, and broken layouts. No PDF is committed (they are DMC's documents, over 450 KB
+    each); the PDF step (`pdfText.ts`) is tried on small PDFs written in the test, and a test checks no
+    `.pdf` is in the fixtures folder.
+  - `landslideNames.test.ts`: every name in the fixtures, the aliases, unmatched and conflicts.
+  - `areas.test.ts`: the boundary files, the fixes, the licence and credit, and the script's checks
+    and zip reader on made-up input.
 
 ## What was tried (15 Nov 2026, about 9 pm)
 
@@ -144,7 +215,8 @@ a layer that needs it is on, and precached like every built file, so it works of
     timeout), parses and stores it.
 - About 1 to 3 PDFs a day, under 2 MB in all.
 - `?dry_run=true` returns the parsed table, unmatched names and timings.
-- **Migration 0012** (`0011` is taken by the photo-path cleanup planned for about 29 Nov 2026):
+- **Migration 0011** (it runs before the photo-path cleanup planned for about 29 Nov 2026, which takes
+  the next free number after it):
   `landslide_warnings`:
   - `message_id` unique (`LEWM-14-11-2026-1600-09`), `issued_at`, `valid_from`, `valid_to`, `pdf_url`
     (https, dmc.gov.lk);
@@ -248,7 +320,8 @@ the reason, so the owner can tune the lists from real headlines as was done for 
   places, a point is not an area, and a separate table can be emptied and re-filled without touching
   the headlines. The two old columns stay unused (dropping them would mean a column-grant change for
   nothing). They can go in a later migration if no use turns up.
-- **Migration 0013** (0012 if this is built before B) creates `news_places`:
+- **A migration with the next free number when it is written** (after 0011, the landslide warnings,
+  and the photo-path cleanup) creates `news_places`:
   - `id`;
   - `news_item_id bigint not null references news_items(id) on delete cascade`;
   - `area_code text` (p-code, `^LK\d{2,4}$`);
@@ -418,12 +491,12 @@ Feasible in a limited way, not now.
 
 1. **A:** the boundary build script and gazetteer, with tests. The owner checks the licence text on
    HDX and the Sinhala and Tamil names.
-2. **B:** migration 0012 and `landslide-refresh` with `?dry_run=true`. Run the dry run on the PDFs of
+2. **B:** migration 0011 and `landslide-refresh` with `?dry_run=true`. Run the dry run on the PDFs of
    the next rainy week (the DMC list keeps older ones, including Level 3 days), measure CPU time, then
    switch on the cron job.
 3. **C:** the landslide layer in the app (the "coming soon" row), route warnings, chip parts. Headless
    checks, then live.
-4. **D, backend:** the matcher in `news-refresh` (titles only), migration 0013, the dry run lists
+4. **D, backend:** the matcher in `news-refresh` (titles only), its migration (the next free number), the dry run lists
    places. Watch 1 to 2 weeks of real headlines, tune the lists, and get a native review of the
    Sinhala and Tamil names and common words.
 5. **D, app:** the "News on map" toggle (off by default), the card, the route note. Live.

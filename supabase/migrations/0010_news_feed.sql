@@ -4,8 +4,8 @@
 -- The secret the cron job sends is NOT in this file: store it in Vault as news_secret after running this
 -- (see docs/news-feed.md for the steps).
 --
--- Builds on 0003 (pg_cron, pg_net, Vault and the project_url secret). Independent of 0009, and of 0011
--- (which drops the old photo paths).
+-- Builds on 0003 (pg_cron, pg_net, Vault and the project_url secret). Independent of 0009, and of the
+-- photo-path cleanup (which drops the old photo paths; the next free number after the landslide migration).
 -- Run by hand in the SQL Editor, then supabase/checks/0010_check.sql. One transaction, so it either all
 -- applies or none of it does.
 

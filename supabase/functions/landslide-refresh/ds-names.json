@@ -1,0 +1,1818 @@
+{
+ "meta": {
+  "title": "Sri Lanka: districts and DS divisions, English names and p-codes",
+  "source": "Survey Department of Sri Lanka, via OCHA (Humanitarian Data Exchange)",
+  "dataset": "https://data.humdata.org/dataset/cod-ab-lka",
+  "licence": "CC BY-IGO 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0/igo/",
+  "attribution": "Administrative boundaries: Survey Department of Sri Lanka, via OCHA (Humanitarian Data Exchange), CC BY-IGO 3.0. Simplified, with name fixes, by TerraFend.",
+  "sourceModified": "2026-01-26T15:49:40.474034",
+  "notes": [
+   "Gangawata Korale (Kandy Four Gravets and Gangawata Korale) is கண்டி in Tamil, the same as the Kandy district.",
+   "Galle Four Gravets is காலி in Tamil, the same as the Galle district (and காலி also means \"empty\"); in Sinhala it is කඩවත්සතර (\"four gravets\") without Galle.",
+   "Trincomalee district is ත්‍රිකුණාමළය in Sinhala (with ළ); ත්‍රිකුණාමලය (with ල) is also common.",
+   "Nuwara Eliya district is நுவரேலியா in Tamil; நுவரெலியா is the more common spelling.",
+   "Sri Jayawardanapura Kotte is ஸ்ரீ ஜயவர்தனபுர in Tamil, without கோட்டை (Kotte). It is under the byte limit, so it was written that way, not cut off."
+  ],
+  "builtBy": "scripts/build-areas.mjs (npm run areas). Do not edit by hand."
+ },
+ "districts": [
+  {
+   "code": "LK11",
+   "en": "Colombo"
+  },
+  {
+   "code": "LK12",
+   "en": "Gampaha"
+  },
+  {
+   "code": "LK13",
+   "en": "Kalutara"
+  },
+  {
+   "code": "LK21",
+   "en": "Kandy"
+  },
+  {
+   "code": "LK22",
+   "en": "Matale"
+  },
+  {
+   "code": "LK23",
+   "en": "Nuwara Eliya"
+  },
+  {
+   "code": "LK31",
+   "en": "Galle"
+  },
+  {
+   "code": "LK32",
+   "en": "Matara"
+  },
+  {
+   "code": "LK33",
+   "en": "Hambantota"
+  },
+  {
+   "code": "LK41",
+   "en": "Jaffna"
+  },
+  {
+   "code": "LK42",
+   "en": "Mannar"
+  },
+  {
+   "code": "LK43",
+   "en": "Vavuniya"
+  },
+  {
+   "code": "LK44",
+   "en": "Mullaitivu"
+  },
+  {
+   "code": "LK45",
+   "en": "Kilinochchi"
+  },
+  {
+   "code": "LK51",
+   "en": "Batticaloa"
+  },
+  {
+   "code": "LK52",
+   "en": "Ampara"
+  },
+  {
+   "code": "LK53",
+   "en": "Trincomalee"
+  },
+  {
+   "code": "LK61",
+   "en": "Kurunegala"
+  },
+  {
+   "code": "LK62",
+   "en": "Puttalam"
+  },
+  {
+   "code": "LK71",
+   "en": "Anuradhapura"
+  },
+  {
+   "code": "LK72",
+   "en": "Polonnaruwa"
+  },
+  {
+   "code": "LK81",
+   "en": "Badulla"
+  },
+  {
+   "code": "LK82",
+   "en": "Monaragala"
+  },
+  {
+   "code": "LK91",
+   "en": "Ratnapura"
+  },
+  {
+   "code": "LK92",
+   "en": "Kegalle"
+  }
+ ],
+ "divisions": [
+  {
+   "code": "LK1103",
+   "district": "LK11",
+   "en": "Colombo"
+  },
+  {
+   "code": "LK1106",
+   "district": "LK11",
+   "en": "Kolonnawa"
+  },
+  {
+   "code": "LK1109",
+   "district": "LK11",
+   "en": "Kaduwela"
+  },
+  {
+   "code": "LK1112",
+   "district": "LK11",
+   "en": "Homagama"
+  },
+  {
+   "code": "LK1115",
+   "district": "LK11",
+   "en": "Seethawaka"
+  },
+  {
+   "code": "LK1118",
+   "district": "LK11",
+   "en": "Padukka"
+  },
+  {
+   "code": "LK1121",
+   "district": "LK11",
+   "en": "Maharagama"
+  },
+  {
+   "code": "LK1124",
+   "district": "LK11",
+   "en": "Sri Jayawardanapura Kotte"
+  },
+  {
+   "code": "LK1127",
+   "district": "LK11",
+   "en": "Thimbirigasyaya"
+  },
+  {
+   "code": "LK1130",
+   "district": "LK11",
+   "en": "Dehiwala"
+  },
+  {
+   "code": "LK1131",
+   "district": "LK11",
+   "en": "Ratmalana"
+  },
+  {
+   "code": "LK1133",
+   "district": "LK11",
+   "en": "Moratuwa"
+  },
+  {
+   "code": "LK1136",
+   "district": "LK11",
+   "en": "Kesbewa"
+  },
+  {
+   "code": "LK1203",
+   "district": "LK12",
+   "en": "Negombo"
+  },
+  {
+   "code": "LK1206",
+   "district": "LK12",
+   "en": "Katana"
+  },
+  {
+   "code": "LK1209",
+   "district": "LK12",
+   "en": "Divulapitiya"
+  },
+  {
+   "code": "LK1212",
+   "district": "LK12",
+   "en": "Mirigama"
+  },
+  {
+   "code": "LK1215",
+   "district": "LK12",
+   "en": "Minuwangoda"
+  },
+  {
+   "code": "LK1218",
+   "district": "LK12",
+   "en": "Wattala"
+  },
+  {
+   "code": "LK1221",
+   "district": "LK12",
+   "en": "Ja Ela"
+  },
+  {
+   "code": "LK1224",
+   "district": "LK12",
+   "en": "Gampaha"
+  },
+  {
+   "code": "LK1227",
+   "district": "LK12",
+   "en": "Attanagalla"
+  },
+  {
+   "code": "LK1230",
+   "district": "LK12",
+   "en": "Dompe"
+  },
+  {
+   "code": "LK1233",
+   "district": "LK12",
+   "en": "Mahara"
+  },
+  {
+   "code": "LK1236",
+   "district": "LK12",
+   "en": "Kelaniya"
+  },
+  {
+   "code": "LK1239",
+   "district": "LK12",
+   "en": "Biyagama"
+  },
+  {
+   "code": "LK1303",
+   "district": "LK13",
+   "en": "Panadura"
+  },
+  {
+   "code": "LK1306",
+   "district": "LK13",
+   "en": "Bandaragama"
+  },
+  {
+   "code": "LK1309",
+   "district": "LK13",
+   "en": "Horana"
+  },
+  {
+   "code": "LK1310",
+   "district": "LK13",
+   "en": "Ingiriya"
+  },
+  {
+   "code": "LK1312",
+   "district": "LK13",
+   "en": "Bulathsinhala"
+  },
+  {
+   "code": "LK1315",
+   "district": "LK13",
+   "en": "Madurawala"
+  },
+  {
+   "code": "LK1318",
+   "district": "LK13",
+   "en": "Millaniya"
+  },
+  {
+   "code": "LK1321",
+   "district": "LK13",
+   "en": "Kalutara"
+  },
+  {
+   "code": "LK1324",
+   "district": "LK13",
+   "en": "Beruwala"
+  },
+  {
+   "code": "LK1327",
+   "district": "LK13",
+   "en": "Dodangoda"
+  },
+  {
+   "code": "LK1330",
+   "district": "LK13",
+   "en": "Matugama"
+  },
+  {
+   "code": "LK1333",
+   "district": "LK13",
+   "en": "Agalawatta"
+  },
+  {
+   "code": "LK1336",
+   "district": "LK13",
+   "en": "Palindanuwara"
+  },
+  {
+   "code": "LK1339",
+   "district": "LK13",
+   "en": "Walallawita"
+  },
+  {
+   "code": "LK2103",
+   "district": "LK21",
+   "en": "Tumpane"
+  },
+  {
+   "code": "LK2106",
+   "district": "LK21",
+   "en": "Poojapitiya"
+  },
+  {
+   "code": "LK2109",
+   "district": "LK21",
+   "en": "Akurana"
+  },
+  {
+   "code": "LK2112",
+   "district": "LK21",
+   "en": "Pathadumbara"
+  },
+  {
+   "code": "LK2115",
+   "district": "LK21",
+   "en": "Panvila"
+  },
+  {
+   "code": "LK2118",
+   "district": "LK21",
+   "en": "Ududumbara"
+  },
+  {
+   "code": "LK2121",
+   "district": "LK21",
+   "en": "Minipe"
+  },
+  {
+   "code": "LK2124",
+   "district": "LK21",
+   "en": "Medadumbara"
+  },
+  {
+   "code": "LK2127",
+   "district": "LK21",
+   "en": "Kundasale"
+  },
+  {
+   "code": "LK2130",
+   "district": "LK21",
+   "en": "Gangawata Korale"
+  },
+  {
+   "code": "LK2133",
+   "district": "LK21",
+   "en": "Harispattuwa"
+  },
+  {
+   "code": "LK2134",
+   "district": "LK21",
+   "en": "Hatharaliyadda"
+  },
+  {
+   "code": "LK2136",
+   "district": "LK21",
+   "en": "Yatinuwara"
+  },
+  {
+   "code": "LK2139",
+   "district": "LK21",
+   "en": "Udunuwara"
+  },
+  {
+   "code": "LK2142",
+   "district": "LK21",
+   "en": "Doluwa"
+  },
+  {
+   "code": "LK2145",
+   "district": "LK21",
+   "en": "Pathahewaheta"
+  },
+  {
+   "code": "LK2148",
+   "district": "LK21",
+   "en": "Deltota"
+  },
+  {
+   "code": "LK2151",
+   "district": "LK21",
+   "en": "Udapalatha"
+  },
+  {
+   "code": "LK2154",
+   "district": "LK21",
+   "en": "Ganga Ihala Korale"
+  },
+  {
+   "code": "LK2157",
+   "district": "LK21",
+   "en": "Pasbagekorale"
+  },
+  {
+   "code": "LK2203",
+   "district": "LK22",
+   "en": "Galewela"
+  },
+  {
+   "code": "LK2206",
+   "district": "LK22",
+   "en": "Dambulla"
+  },
+  {
+   "code": "LK2209",
+   "district": "LK22",
+   "en": "Naula"
+  },
+  {
+   "code": "LK2212",
+   "district": "LK22",
+   "en": "Pallepola"
+  },
+  {
+   "code": "LK2215",
+   "district": "LK22",
+   "en": "Yatawatta"
+  },
+  {
+   "code": "LK2218",
+   "district": "LK22",
+   "en": "Matale"
+  },
+  {
+   "code": "LK2221",
+   "district": "LK22",
+   "en": "Ambanganga"
+  },
+  {
+   "code": "LK2224",
+   "district": "LK22",
+   "en": "Laggala"
+  },
+  {
+   "code": "LK2227",
+   "district": "LK22",
+   "en": "Wilgamuwa"
+  },
+  {
+   "code": "LK2230",
+   "district": "LK22",
+   "en": "Rattota"
+  },
+  {
+   "code": "LK2233",
+   "district": "LK22",
+   "en": "Ukuwela"
+  },
+  {
+   "code": "LK2303",
+   "district": "LK23",
+   "en": "Kothmale East"
+  },
+  {
+   "code": "LK2306",
+   "district": "LK23",
+   "en": "Hanguranketa"
+  },
+  {
+   "code": "LK2309",
+   "district": "LK23",
+   "en": "Nildandahinna"
+  },
+  {
+   "code": "LK2312",
+   "district": "LK23",
+   "en": "Nuwara Eliya"
+  },
+  {
+   "code": "LK2315",
+   "district": "LK23",
+   "en": "Ambagamuwa Korale"
+  },
+  {
+   "code": "LK2318",
+   "district": "LK23",
+   "en": "Mathurata"
+  },
+  {
+   "code": "LK2321",
+   "district": "LK23",
+   "en": "Kothmale West"
+  },
+  {
+   "code": "LK2324",
+   "district": "LK23",
+   "en": "Walapane"
+  },
+  {
+   "code": "LK2327",
+   "district": "LK23",
+   "en": "Thalawakele"
+  },
+  {
+   "code": "LK2330",
+   "district": "LK23",
+   "en": "Norwood"
+  },
+  {
+   "code": "LK3103",
+   "district": "LK31",
+   "en": "Bentota"
+  },
+  {
+   "code": "LK3106",
+   "district": "LK31",
+   "en": "Balapitiya"
+  },
+  {
+   "code": "LK3109",
+   "district": "LK31",
+   "en": "Karandeniya"
+  },
+  {
+   "code": "LK3112",
+   "district": "LK31",
+   "en": "Elpitiya"
+  },
+  {
+   "code": "LK3115",
+   "district": "LK31",
+   "en": "Niyagama"
+  },
+  {
+   "code": "LK3118",
+   "district": "LK31",
+   "en": "Thawalama"
+  },
+  {
+   "code": "LK3121",
+   "district": "LK31",
+   "en": "Neluwa"
+  },
+  {
+   "code": "LK3124",
+   "district": "LK31",
+   "en": "Nagoda"
+  },
+  {
+   "code": "LK3127",
+   "district": "LK31",
+   "en": "Baddegama"
+  },
+  {
+   "code": "LK3130",
+   "district": "LK31",
+   "en": "Welivitiya-Divitura"
+  },
+  {
+   "code": "LK3133",
+   "district": "LK31",
+   "en": "Ambalangoda"
+  },
+  {
+   "code": "LK3134",
+   "district": "LK31",
+   "en": "Gonapinuwala"
+  },
+  {
+   "code": "LK3136",
+   "district": "LK31",
+   "en": "Hikkaduwa"
+  },
+  {
+   "code": "LK3139",
+   "district": "LK31",
+   "en": "Galle 4 Gravets"
+  },
+  {
+   "code": "LK3142",
+   "district": "LK31",
+   "en": "Bope-Poddala"
+  },
+  {
+   "code": "LK3145",
+   "district": "LK31",
+   "en": "Akmeemana"
+  },
+  {
+   "code": "LK3148",
+   "district": "LK31",
+   "en": "Yakkalamulla"
+  },
+  {
+   "code": "LK3151",
+   "district": "LK31",
+   "en": "Imaduwa"
+  },
+  {
+   "code": "LK3154",
+   "district": "LK31",
+   "en": "Habaraduwa"
+  },
+  {
+   "code": "LK3157",
+   "district": "LK31",
+   "en": "Wanduramba"
+  },
+  {
+   "code": "LK3160",
+   "district": "LK31",
+   "en": "Madampagama"
+  },
+  {
+   "code": "LK3163",
+   "district": "LK31",
+   "en": "Rathgama"
+  },
+  {
+   "code": "LK3203",
+   "district": "LK32",
+   "en": "Pitabaddara"
+  },
+  {
+   "code": "LK3206",
+   "district": "LK32",
+   "en": "Kotapola"
+  },
+  {
+   "code": "LK3209",
+   "district": "LK32",
+   "en": "Pasgoda"
+  },
+  {
+   "code": "LK3212",
+   "district": "LK32",
+   "en": "Mulatiyana"
+  },
+  {
+   "code": "LK3215",
+   "district": "LK32",
+   "en": "Athuraliya"
+  },
+  {
+   "code": "LK3218",
+   "district": "LK32",
+   "en": "Akuressa"
+  },
+  {
+   "code": "LK3221",
+   "district": "LK32",
+   "en": "Welipitiya"
+  },
+  {
+   "code": "LK3224",
+   "district": "LK32",
+   "en": "Malimbada"
+  },
+  {
+   "code": "LK3227",
+   "district": "LK32",
+   "en": "Kaburupitiya"
+  },
+  {
+   "code": "LK3230",
+   "district": "LK32",
+   "en": "Hakmana"
+  },
+  {
+   "code": "LK3233",
+   "district": "LK32",
+   "en": "Kirinda Puhulwella"
+  },
+  {
+   "code": "LK3236",
+   "district": "LK32",
+   "en": "Thihagoda"
+  },
+  {
+   "code": "LK3239",
+   "district": "LK32",
+   "en": "Weligama"
+  },
+  {
+   "code": "LK3242",
+   "district": "LK32",
+   "en": "Matara Four Gravets"
+  },
+  {
+   "code": "LK3245",
+   "district": "LK32",
+   "en": "Devinuwara"
+  },
+  {
+   "code": "LK3248",
+   "district": "LK32",
+   "en": "Dikwella"
+  },
+  {
+   "code": "LK3303",
+   "district": "LK33",
+   "en": "Sooriyawewa"
+  },
+  {
+   "code": "LK3306",
+   "district": "LK33",
+   "en": "Lunugamwehera"
+  },
+  {
+   "code": "LK3309",
+   "district": "LK33",
+   "en": "Thissamaharama"
+  },
+  {
+   "code": "LK3312",
+   "district": "LK33",
+   "en": "Hambantota"
+  },
+  {
+   "code": "LK3315",
+   "district": "LK33",
+   "en": "Ambalantota"
+  },
+  {
+   "code": "LK3318",
+   "district": "LK33",
+   "en": "Angunakolapelessa"
+  },
+  {
+   "code": "LK3321",
+   "district": "LK33",
+   "en": "Weeraketiya"
+  },
+  {
+   "code": "LK3324",
+   "district": "LK33",
+   "en": "Katuwana"
+  },
+  {
+   "code": "LK3325",
+   "district": "LK33",
+   "en": "Walasmulla"
+  },
+  {
+   "code": "LK3327",
+   "district": "LK33",
+   "en": "Okewela"
+  },
+  {
+   "code": "LK3330",
+   "district": "LK33",
+   "en": "Beliatta"
+  },
+  {
+   "code": "LK3333",
+   "district": "LK33",
+   "en": "Tangalle"
+  },
+  {
+   "code": "LK4103",
+   "district": "LK41",
+   "en": "Islands North (Kayts)"
+  },
+  {
+   "code": "LK4104",
+   "district": "LK41",
+   "en": "Karainagar"
+  },
+  {
+   "code": "LK4106",
+   "district": "LK41",
+   "en": "Valikamam West (Chankanai)"
+  },
+  {
+   "code": "LK4109",
+   "district": "LK41",
+   "en": "Valikamam South West (Sandilipay)"
+  },
+  {
+   "code": "LK4112",
+   "district": "LK41",
+   "en": "Valikamam North (Thllippalai)"
+  },
+  {
+   "code": "LK4115",
+   "district": "LK41",
+   "en": "Valikamam South (Uduvil)"
+  },
+  {
+   "code": "LK4118",
+   "district": "LK41",
+   "en": "Valikamam East (Kopay)"
+  },
+  {
+   "code": "LK4121",
+   "district": "LK41",
+   "en": "Vadamaradchchi South-West (Karaveddy)"
+  },
+  {
+   "code": "LK4124",
+   "district": "LK41",
+   "en": "Vadamaradchchi East"
+  },
+  {
+   "code": "LK4127",
+   "district": "LK41",
+   "en": "Vadamaradchi North (Point Pedro)"
+  },
+  {
+   "code": "LK4130",
+   "district": "LK41",
+   "en": "Thenmaradchi (Chavakachcheri)"
+  },
+  {
+   "code": "LK4133",
+   "district": "LK41",
+   "en": "Nallur"
+  },
+  {
+   "code": "LK4136",
+   "district": "LK41",
+   "en": "Jaffna"
+  },
+  {
+   "code": "LK4139",
+   "district": "LK41",
+   "en": "Islands South (Velanai)"
+  },
+  {
+   "code": "LK4142",
+   "district": "LK41",
+   "en": "Delft"
+  },
+  {
+   "code": "LK4203",
+   "district": "LK42",
+   "en": "Mannar Town"
+  },
+  {
+   "code": "LK4206",
+   "district": "LK42",
+   "en": "Manthai West"
+  },
+  {
+   "code": "LK4209",
+   "district": "LK42",
+   "en": "Madhu"
+  },
+  {
+   "code": "LK4212",
+   "district": "LK42",
+   "en": "Nanaddan"
+  },
+  {
+   "code": "LK4215",
+   "district": "LK42",
+   "en": "Musali"
+  },
+  {
+   "code": "LK4303",
+   "district": "LK43",
+   "en": "Vavuniya North"
+  },
+  {
+   "code": "LK4306",
+   "district": "LK43",
+   "en": "Vavuniya South"
+  },
+  {
+   "code": "LK4309",
+   "district": "LK43",
+   "en": "Vavuniya"
+  },
+  {
+   "code": "LK4312",
+   "district": "LK43",
+   "en": "Vengalacheddikulam"
+  },
+  {
+   "code": "LK4403",
+   "district": "LK44",
+   "en": "Thunukkai"
+  },
+  {
+   "code": "LK4406",
+   "district": "LK44",
+   "en": "Manthai East"
+  },
+  {
+   "code": "LK4409",
+   "district": "LK44",
+   "en": "Puthukkudiyiruppu"
+  },
+  {
+   "code": "LK4412",
+   "district": "LK44",
+   "en": "Oddusuddan"
+  },
+  {
+   "code": "LK4415",
+   "district": "LK44",
+   "en": "Maritimepattu"
+  },
+  {
+   "code": "LK4418",
+   "district": "LK44",
+   "en": "Welioya"
+  },
+  {
+   "code": "LK4503",
+   "district": "LK45",
+   "en": "Pachchilaipalli"
+  },
+  {
+   "code": "LK4506",
+   "district": "LK45",
+   "en": "Kandavalai"
+  },
+  {
+   "code": "LK4509",
+   "district": "LK45",
+   "en": "Karachchi"
+  },
+  {
+   "code": "LK4512",
+   "district": "LK45",
+   "en": "Poonakary"
+  },
+  {
+   "code": "LK5103",
+   "district": "LK51",
+   "en": "Koralai Pattu North"
+  },
+  {
+   "code": "LK5104",
+   "district": "LK51",
+   "en": "Koralai Pattu Central"
+  },
+  {
+   "code": "LK5106",
+   "district": "LK51",
+   "en": "Koralai Pattu West"
+  },
+  {
+   "code": "LK5109",
+   "district": "LK51",
+   "en": "Koralai Pattu"
+  },
+  {
+   "code": "LK5110",
+   "district": "LK51",
+   "en": "Koralai Pattu South"
+  },
+  {
+   "code": "LK5115",
+   "district": "LK51",
+   "en": "Eravur Pattu"
+  },
+  {
+   "code": "LK5118",
+   "district": "LK51",
+   "en": "Manmunai North"
+  },
+  {
+   "code": "LK5121",
+   "district": "LK51",
+   "en": "Manmunai West"
+  },
+  {
+   "code": "LK5124",
+   "district": "LK51",
+   "en": "Kattankudy"
+  },
+  {
+   "code": "LK5127",
+   "district": "LK51",
+   "en": "Manmunai Pattu"
+  },
+  {
+   "code": "LK5130",
+   "district": "LK51",
+   "en": "Manmunai South West"
+  },
+  {
+   "code": "LK5133",
+   "district": "LK51",
+   "en": "Porativu Pattu"
+  },
+  {
+   "code": "LK5136",
+   "district": "LK51",
+   "en": "Manmunai South & Eruvil Pattu"
+  },
+  {
+   "code": "LK5139",
+   "district": "LK51",
+   "en": "Eravur Town"
+  },
+  {
+   "code": "LK5203",
+   "district": "LK52",
+   "en": "Dehiattakandiya"
+  },
+  {
+   "code": "LK5206",
+   "district": "LK52",
+   "en": "Padiyathalawa"
+  },
+  {
+   "code": "LK5209",
+   "district": "LK52",
+   "en": "Mahaoya"
+  },
+  {
+   "code": "LK5212",
+   "district": "LK52",
+   "en": "Uhana"
+  },
+  {
+   "code": "LK5215",
+   "district": "LK52",
+   "en": "Ampara"
+  },
+  {
+   "code": "LK5216",
+   "district": "LK52",
+   "en": "Navithanveli"
+  },
+  {
+   "code": "LK5218",
+   "district": "LK52",
+   "en": "Sammanthurai"
+  },
+  {
+   "code": "LK5221",
+   "district": "LK52",
+   "en": "Kalmunai"
+  },
+  {
+   "code": "LK5225",
+   "district": "LK52",
+   "en": "Sainthamaruthu"
+  },
+  {
+   "code": "LK5227",
+   "district": "LK52",
+   "en": "Karaitivu"
+  },
+  {
+   "code": "LK5230",
+   "district": "LK52",
+   "en": "Nintavur"
+  },
+  {
+   "code": "LK5233",
+   "district": "LK52",
+   "en": "Addalaichenai"
+  },
+  {
+   "code": "LK5234",
+   "district": "LK52",
+   "en": "Irakkamam"
+  },
+  {
+   "code": "LK5236",
+   "district": "LK52",
+   "en": "Akkaraipattu"
+  },
+  {
+   "code": "LK5239",
+   "district": "LK52",
+   "en": "Alayadivembu"
+  },
+  {
+   "code": "LK5242",
+   "district": "LK52",
+   "en": "Damana"
+  },
+  {
+   "code": "LK5245",
+   "district": "LK52",
+   "en": "Tirukkovil"
+  },
+  {
+   "code": "LK5248",
+   "district": "LK52",
+   "en": "Pottuvil"
+  },
+  {
+   "code": "LK5251",
+   "district": "LK52",
+   "en": "Lahugala"
+  },
+  {
+   "code": "LK5303",
+   "district": "LK53",
+   "en": "Padavi Sri Pura"
+  },
+  {
+   "code": "LK5306",
+   "district": "LK53",
+   "en": "Kuchchaweli"
+  },
+  {
+   "code": "LK5309",
+   "district": "LK53",
+   "en": "Gomarankadawala"
+  },
+  {
+   "code": "LK5312",
+   "district": "LK53",
+   "en": "Morawewa"
+  },
+  {
+   "code": "LK5315",
+   "district": "LK53",
+   "en": "Town & Gravets"
+  },
+  {
+   "code": "LK5318",
+   "district": "LK53",
+   "en": "Thambalagamuwa"
+  },
+  {
+   "code": "LK5321",
+   "district": "LK53",
+   "en": "Kantale"
+  },
+  {
+   "code": "LK5324",
+   "district": "LK53",
+   "en": "Kinniya"
+  },
+  {
+   "code": "LK5327",
+   "district": "LK53",
+   "en": "Muthur"
+  },
+  {
+   "code": "LK5330",
+   "district": "LK53",
+   "en": "Seruvila"
+  },
+  {
+   "code": "LK5333",
+   "district": "LK53",
+   "en": "Verugal"
+  },
+  {
+   "code": "LK6103",
+   "district": "LK61",
+   "en": "Giribawa"
+  },
+  {
+   "code": "LK6106",
+   "district": "LK61",
+   "en": "Galgamuwa"
+  },
+  {
+   "code": "LK6109",
+   "district": "LK61",
+   "en": "Ehetuwewa"
+  },
+  {
+   "code": "LK6112",
+   "district": "LK61",
+   "en": "Ambanpola"
+  },
+  {
+   "code": "LK6115",
+   "district": "LK61",
+   "en": "Kotawehera"
+  },
+  {
+   "code": "LK6118",
+   "district": "LK61",
+   "en": "Rasnayakapura"
+  },
+  {
+   "code": "LK6121",
+   "district": "LK61",
+   "en": "Nikaweratiya"
+  },
+  {
+   "code": "LK6124",
+   "district": "LK61",
+   "en": "Maho"
+  },
+  {
+   "code": "LK6127",
+   "district": "LK61",
+   "en": "Polpitigama"
+  },
+  {
+   "code": "LK6130",
+   "district": "LK61",
+   "en": "Ibbagamuwa"
+  },
+  {
+   "code": "LK6133",
+   "district": "LK61",
+   "en": "Ganewatta"
+  },
+  {
+   "code": "LK6136",
+   "district": "LK61",
+   "en": "Wariyapola"
+  },
+  {
+   "code": "LK6139",
+   "district": "LK61",
+   "en": "Kobeigane"
+  },
+  {
+   "code": "LK6142",
+   "district": "LK61",
+   "en": "Bingiriya"
+  },
+  {
+   "code": "LK6145",
+   "district": "LK61",
+   "en": "Panduwasnuwara West"
+  },
+  {
+   "code": "LK6148",
+   "district": "LK61",
+   "en": "Panduwasnuwara East"
+  },
+  {
+   "code": "LK6149",
+   "district": "LK61",
+   "en": "Bamunakotuwa"
+  },
+  {
+   "code": "LK6151",
+   "district": "LK61",
+   "en": "Maspotha"
+  },
+  {
+   "code": "LK6154",
+   "district": "LK61",
+   "en": "Kurunegala"
+  },
+  {
+   "code": "LK6157",
+   "district": "LK61",
+   "en": "Mallawapitiya"
+  },
+  {
+   "code": "LK6160",
+   "district": "LK61",
+   "en": "Mawathagama"
+  },
+  {
+   "code": "LK6163",
+   "district": "LK61",
+   "en": "Rideegama"
+  },
+  {
+   "code": "LK6166",
+   "district": "LK61",
+   "en": "Weerabugedara"
+  },
+  {
+   "code": "LK6169",
+   "district": "LK61",
+   "en": "Kuliyapitiya East"
+  },
+  {
+   "code": "LK6172",
+   "district": "LK61",
+   "en": "Kuliyapitiya West"
+  },
+  {
+   "code": "LK6175",
+   "district": "LK61",
+   "en": "Udubaddawa"
+  },
+  {
+   "code": "LK6178",
+   "district": "LK61",
+   "en": "Pannala"
+  },
+  {
+   "code": "LK6181",
+   "district": "LK61",
+   "en": "Narammala"
+  },
+  {
+   "code": "LK6184",
+   "district": "LK61",
+   "en": "Alawwa"
+  },
+  {
+   "code": "LK6187",
+   "district": "LK61",
+   "en": "Polgahawela"
+  },
+  {
+   "code": "LK6203",
+   "district": "LK62",
+   "en": "Kalpitiya"
+  },
+  {
+   "code": "LK6206",
+   "district": "LK62",
+   "en": "Vanathavilluwa"
+  },
+  {
+   "code": "LK6209",
+   "district": "LK62",
+   "en": "Karuwalagaswewa"
+  },
+  {
+   "code": "LK6212",
+   "district": "LK62",
+   "en": "Nawagattegama"
+  },
+  {
+   "code": "LK6215",
+   "district": "LK62",
+   "en": "Puttalam"
+  },
+  {
+   "code": "LK6218",
+   "district": "LK62",
+   "en": "Mundel"
+  },
+  {
+   "code": "LK6221",
+   "district": "LK62",
+   "en": "Mahakumbukkadawala"
+  },
+  {
+   "code": "LK6224",
+   "district": "LK62",
+   "en": "Anamaduwa"
+  },
+  {
+   "code": "LK6227",
+   "district": "LK62",
+   "en": "Pallama"
+  },
+  {
+   "code": "LK6230",
+   "district": "LK62",
+   "en": "Arachchikattuwa"
+  },
+  {
+   "code": "LK6233",
+   "district": "LK62",
+   "en": "Chilaw"
+  },
+  {
+   "code": "LK6236",
+   "district": "LK62",
+   "en": "Madampe"
+  },
+  {
+   "code": "LK6239",
+   "district": "LK62",
+   "en": "Mahawewa"
+  },
+  {
+   "code": "LK6242",
+   "district": "LK62",
+   "en": "Nattandiya"
+  },
+  {
+   "code": "LK6245",
+   "district": "LK62",
+   "en": "Wennappuwa"
+  },
+  {
+   "code": "LK6248",
+   "district": "LK62",
+   "en": "Dankotuwa"
+  },
+  {
+   "code": "LK7103",
+   "district": "LK71",
+   "en": "Padaviya"
+  },
+  {
+   "code": "LK7106",
+   "district": "LK71",
+   "en": "Kebithigollewa"
+  },
+  {
+   "code": "LK7109",
+   "district": "LK71",
+   "en": "Medawachchiya"
+  },
+  {
+   "code": "LK7112",
+   "district": "LK71",
+   "en": "Mahawilachchiya"
+  },
+  {
+   "code": "LK7115",
+   "district": "LK71",
+   "en": "Nuwaragam Palatha Central"
+  },
+  {
+   "code": "LK7118",
+   "district": "LK71",
+   "en": "Rambewa"
+  },
+  {
+   "code": "LK7121",
+   "district": "LK71",
+   "en": "Kahatagasdigiliya"
+  },
+  {
+   "code": "LK7124",
+   "district": "LK71",
+   "en": "Horowpathana"
+  },
+  {
+   "code": "LK7127",
+   "district": "LK71",
+   "en": "Galenbidunuwewa"
+  },
+  {
+   "code": "LK7130",
+   "district": "LK71",
+   "en": "Mihinthale"
+  },
+  {
+   "code": "LK7133",
+   "district": "LK71",
+   "en": "Nuwaragam Palatha East"
+  },
+  {
+   "code": "LK7136",
+   "district": "LK71",
+   "en": "Nachchaduwa"
+  },
+  {
+   "code": "LK7139",
+   "district": "LK71",
+   "en": "Nochchiyagama"
+  },
+  {
+   "code": "LK7142",
+   "district": "LK71",
+   "en": "Rajanganaya"
+  },
+  {
+   "code": "LK7145",
+   "district": "LK71",
+   "en": "Thambuththegama"
+  },
+  {
+   "code": "LK7148",
+   "district": "LK71",
+   "en": "Thalawa"
+  },
+  {
+   "code": "LK7151",
+   "district": "LK71",
+   "en": "Thirappane"
+  },
+  {
+   "code": "LK7154",
+   "district": "LK71",
+   "en": "Kekirawa"
+  },
+  {
+   "code": "LK7157",
+   "district": "LK71",
+   "en": "Palugaswewa"
+  },
+  {
+   "code": "LK7160",
+   "district": "LK71",
+   "en": "Ipalogama"
+  },
+  {
+   "code": "LK7163",
+   "district": "LK71",
+   "en": "Galnewa"
+  },
+  {
+   "code": "LK7166",
+   "district": "LK71",
+   "en": "Palagala"
+  },
+  {
+   "code": "LK7203",
+   "district": "LK72",
+   "en": "Higurakgoda"
+  },
+  {
+   "code": "LK7206",
+   "district": "LK72",
+   "en": "Medirigiriya"
+  },
+  {
+   "code": "LK7209",
+   "district": "LK72",
+   "en": "Lankapura"
+  },
+  {
+   "code": "LK7210",
+   "district": "LK72",
+   "en": "Welikanda"
+  },
+  {
+   "code": "LK7212",
+   "district": "LK72",
+   "en": "Dimbulagala"
+  },
+  {
+   "code": "LK7215",
+   "district": "LK72",
+   "en": "Thamankaduwa"
+  },
+  {
+   "code": "LK7218",
+   "district": "LK72",
+   "en": "Elahera"
+  },
+  {
+   "code": "LK8103",
+   "district": "LK81",
+   "en": "Mahiyanganaya"
+  },
+  {
+   "code": "LK8106",
+   "district": "LK81",
+   "en": "Rideemaliyadda"
+  },
+  {
+   "code": "LK8109",
+   "district": "LK81",
+   "en": "Meegahakiula"
+  },
+  {
+   "code": "LK8112",
+   "district": "LK81",
+   "en": "Kandeketiya"
+  },
+  {
+   "code": "LK8115",
+   "district": "LK81",
+   "en": "Soranathota"
+  },
+  {
+   "code": "LK8118",
+   "district": "LK81",
+   "en": "Passara"
+  },
+  {
+   "code": "LK8119",
+   "district": "LK81",
+   "en": "Lunugala"
+  },
+  {
+   "code": "LK8121",
+   "district": "LK81",
+   "en": "Badulla"
+  },
+  {
+   "code": "LK8124",
+   "district": "LK81",
+   "en": "Hali-Ela"
+  },
+  {
+   "code": "LK8127",
+   "district": "LK81",
+   "en": "Uvaparanagama"
+  },
+  {
+   "code": "LK8130",
+   "district": "LK81",
+   "en": "Welimada"
+  },
+  {
+   "code": "LK8133",
+   "district": "LK81",
+   "en": "Bandarawela"
+  },
+  {
+   "code": "LK8136",
+   "district": "LK81",
+   "en": "Ella"
+  },
+  {
+   "code": "LK8139",
+   "district": "LK81",
+   "en": "Haputale"
+  },
+  {
+   "code": "LK8142",
+   "district": "LK81",
+   "en": "Haldummulla"
+  },
+  {
+   "code": "LK8203",
+   "district": "LK82",
+   "en": "Bibile"
+  },
+  {
+   "code": "LK8206",
+   "district": "LK82",
+   "en": "Madulla"
+  },
+  {
+   "code": "LK8209",
+   "district": "LK82",
+   "en": "Medagama"
+  },
+  {
+   "code": "LK8212",
+   "district": "LK82",
+   "en": "Siyambalanduwa"
+  },
+  {
+   "code": "LK8215",
+   "district": "LK82",
+   "en": "Monaragala"
+  },
+  {
+   "code": "LK8218",
+   "district": "LK82",
+   "en": "Badalkumbura"
+  },
+  {
+   "code": "LK8221",
+   "district": "LK82",
+   "en": "Wellawaya"
+  },
+  {
+   "code": "LK8224",
+   "district": "LK82",
+   "en": "Buttala"
+  },
+  {
+   "code": "LK8227",
+   "district": "LK82",
+   "en": "Katharagama"
+  },
+  {
+   "code": "LK8230",
+   "district": "LK82",
+   "en": "Thanamalwila"
+  },
+  {
+   "code": "LK8233",
+   "district": "LK82",
+   "en": "Sevanagala"
+  },
+  {
+   "code": "LK9103",
+   "district": "LK91",
+   "en": "Eheliyagoda"
+  },
+  {
+   "code": "LK9106",
+   "district": "LK91",
+   "en": "Kuruvita"
+  },
+  {
+   "code": "LK9109",
+   "district": "LK91",
+   "en": "Kiriella"
+  },
+  {
+   "code": "LK9112",
+   "district": "LK91",
+   "en": "Ratnapura"
+  },
+  {
+   "code": "LK9115",
+   "district": "LK91",
+   "en": "Imbulpe"
+  },
+  {
+   "code": "LK9118",
+   "district": "LK91",
+   "en": "Balangoda"
+  },
+  {
+   "code": "LK9121",
+   "district": "LK91",
+   "en": "Opanayake"
+  },
+  {
+   "code": "LK9124",
+   "district": "LK91",
+   "en": "Pelmadulla"
+  },
+  {
+   "code": "LK9127",
+   "district": "LK91",
+   "en": "Elapatha"
+  },
+  {
+   "code": "LK9130",
+   "district": "LK91",
+   "en": "Ayagama"
+  },
+  {
+   "code": "LK9133",
+   "district": "LK91",
+   "en": "Kalawana"
+  },
+  {
+   "code": "LK9136",
+   "district": "LK91",
+   "en": "Nivithigala"
+  },
+  {
+   "code": "LK9139",
+   "district": "LK91",
+   "en": "Kahawattha"
+  },
+  {
+   "code": "LK9142",
+   "district": "LK91",
+   "en": "Godakawela"
+  },
+  {
+   "code": "LK9145",
+   "district": "LK91",
+   "en": "Weligepola"
+  },
+  {
+   "code": "LK9148",
+   "district": "LK91",
+   "en": "Embilipitiya"
+  },
+  {
+   "code": "LK9151",
+   "district": "LK91",
+   "en": "Kolonna"
+  },
+  {
+   "code": "LK9154",
+   "district": "LK91",
+   "en": "Kalthota"
+  },
+  {
+   "code": "LK9203",
+   "district": "LK92",
+   "en": "Rambukkana"
+  },
+  {
+   "code": "LK9206",
+   "district": "LK92",
+   "en": "Mawanella"
+  },
+  {
+   "code": "LK9209",
+   "district": "LK92",
+   "en": "Aranayake"
+  },
+  {
+   "code": "LK9212",
+   "district": "LK92",
+   "en": "Kegalle"
+  },
+  {
+   "code": "LK9215",
+   "district": "LK92",
+   "en": "Galigamuwa"
+  },
+  {
+   "code": "LK9218",
+   "district": "LK92",
+   "en": "Warakapola"
+  },
+  {
+   "code": "LK9221",
+   "district": "LK92",
+   "en": "Ruwanwella"
+  },
+  {
+   "code": "LK9224",
+   "district": "LK92",
+   "en": "Bulathkohipitiya"
+  },
+  {
+   "code": "LK9227",
+   "district": "LK92",
+   "en": "Yatiyantota"
+  },
+  {
+   "code": "LK9230",
+   "district": "LK92",
+   "en": "Dehiowita"
+  },
+  {
+   "code": "LK9233",
+   "district": "LK92",
+   "en": "Deraniyagala"
+  }
+ ]
+}

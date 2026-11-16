@@ -164,7 +164,8 @@ revoke all on function public.owns_report_photo(text) from public, anon;
 grant execute on function public.owns_report_photo(text) to authenticated;
 
 
--- Uploads: a random <uuid>.jpg at the top of the bucket, or (until 0011) the old folder named after
+-- Uploads: a random <uuid>.jpg at the top of the bucket, or (until the photo-path cleanup, the next
+-- free migration number after the landslide migration) the old folder named after
 -- the caller's own id. There are still no select, update or delete policies, so nobody can list
 -- the bucket or replace a file that is already there.
 drop policy if exists "Users upload photos into their own folder" on storage.objects;

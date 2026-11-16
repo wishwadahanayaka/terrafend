@@ -182,7 +182,7 @@ describe('0009: photos', () => {
     }
   })
 
-  it('lets a signed-in user upload a random name or (until 0011) the old own folder, and nothing else', () => {
+  it('lets a signed-in user upload a random name or (until the photo-path cleanup) the old own folder, and nothing else', () => {
     expect(m0009Code).toMatch(/create policy "Signed-in users upload photos"\s+on storage\.objects for insert\s+to authenticated/)
     expect(m0009Code).toContain("(storage.foldername(name))[1] = auth.uid()::text")
     expect(m0009Code).toMatch(/drop policy if exists "Users upload photos into their own folder" on storage\.objects;/)

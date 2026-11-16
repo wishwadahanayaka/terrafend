@@ -7,7 +7,8 @@ source, time and link only. Never the article text.
 Approved 15 Nov 2026, with these changes to the first draft:
 
 - The migration is **0010** (`0010_news_feed.sql`), because it runs first. The photo-path cleanup that
-  was planned as 0010 (for about 29 Nov 2026) becomes **0011**.
+  was planned as 0010 (for about 29 Nov 2026) takes the next free number after the landslide
+  migration (0011, `docs/news-map-plan.md`) when it is written.
 - The User-Agent's contact is the GitHub repository, not an email address.
 - The AI-written Sinhala and Tamil keyword lists are used for now, clearly marked for native review.
   The owner reviews the Sinhala list using the real kept and missed headlines while the feed is watched.
